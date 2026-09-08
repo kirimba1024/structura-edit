@@ -53,6 +53,15 @@ def main():
             for button in bar.transforms:
                 assert button.isVisible() and button.geometry().right() < bar.width()
             bar.grab().save("/private/tmp/structura-transform-bar.png")
+            window.grab().save("/private/tmp/structura-cell-layout.png")
+            pinned = [widget.geometry() for widget in (window.save_button, window.controls)]
+            scene_rect = window.plotter.geometry()
+            window.progress.set_progress("Preparing a large clipboard", 100_000, 500_000)
+            window.progress.show()
+            app.processEvents()
+            assert [widget.geometry() for widget in (window.save_button, window.controls)] == pinned
+            assert window.plotter.geometry() == scene_rect
+            window.progress.finish()
             QTest.mouseClick(bar.apply, Qt.MouseButton.LeftButton)
             settle(window)
             assert not placement.active and window.session.history.cursor == 1

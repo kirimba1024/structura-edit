@@ -3,9 +3,10 @@ from time import monotonic
 
 from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon, QImage, QPixmap, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QLabel, QListView, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QListView, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import CONTROL_HEIGHT, GRID
+from .controls import CellLabel
 from .selection_stats import selection_materials
 
 
@@ -24,8 +25,7 @@ class SelectionStats(QWidget):
         self.toggle.setToolTip("Show blocks in the selected region")
         self.toggle.setAccessibleName("Selection block counts")
         self.toggle.toggled.connect(self._toggle)
-        self.info = QLabel()
-        self.info.setFixedHeight(CONTROL_HEIGHT)
+        self.info = CellLabel()
         self.info.setToolTip(COUNTS_HINT)
         self.items = QListView()
         self.items.setFlow(QListView.Flow.LeftToRight)

@@ -1,16 +1,18 @@
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QToolButton, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QProgressBar, QToolButton, QWidget
 
-from .appearance import ACCENT, PANEL_PRESSED, PROGRESS_DELAY_MS
+from .appearance import ACCENT, CONTROL_HEIGHT, GRID, PANEL_PRESSED, PROGRESS_DELAY_MS
+from .controls import CellLabel
 
 class TaskProgress(QWidget):
     cancelled = Signal()
 
     def __init__(self):
         super().__init__()
-        self.label = QLabel()
+        self.setFixedSize(GRID * 90, CONTROL_HEIGHT)
+        self.label = CellLabel()
         self.bar = QProgressBar()
-        self.bar.setFixedSize(90, 4)
+        self.bar.setFixedSize(GRID * 20, GRID)
         self.bar.setTextVisible(False)
         self.bar.setStyleSheet(f"QProgressBar {{ border: 0; background: {PANEL_PRESSED}; }} "
                               f"QProgressBar::chunk {{ background: {ACCENT}; }}")
@@ -20,10 +22,11 @@ class TaskProgress(QWidget):
         self.cancel.setAccessibleName("Cancel task")
         self.cancel.setAutoRaise(True)
         self.cancel.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.cancel.setFixedSize(CONTROL_HEIGHT, CONTROL_HEIGHT)
         self.cancel.clicked.connect(self.cancelled)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setSpacing(GRID)
         for widget in (self.label, self.bar, self.cancel):
             layout.addWidget(widget)
         self.delay = QTimer(self)

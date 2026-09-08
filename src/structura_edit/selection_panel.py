@@ -1,7 +1,8 @@
 from PySide6.QtCore import QEvent, Qt, Signal
-from PySide6.QtWidgets import QAbstractButton, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QAbstractButton, QGridLayout, QHBoxLayout, QPushButton, QSpinBox, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import CONTROL_HEIGHT, GRID
+from .controls import CellLabel
 
 
 class SelectionPanel(QWidget):
@@ -19,17 +20,20 @@ class SelectionPanel(QWidget):
         self.adjust_buttons = {}
         self.preview_button = None
         layout = QVBoxLayout(self)
-        self.info = QLabel("No selection")
+        self.info = CellLabel("No selection")
         layout.addWidget(self.info)
         grid = QGridLayout()
         self.fields = [[], []]
         for row, name in enumerate(("Min", "Max")):
-            label = QLabel(name)
+            label = CellLabel(name)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setToolTip("Block coordinates · both endpoints included")
             grid.addWidget(label, 0, row + 1)
             grid.setColumnStretch(row + 1, 1)
         for axis, name in enumerate("XYZ"):
-            grid.addWidget(QLabel(name), axis + 1, 0)
+            label = CellLabel(name, width=CONTROL_HEIGHT)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            grid.addWidget(label, axis + 1, 0)
             for row in range(2):
                 field = QSpinBox()
                 field.setKeyboardTracking(False)
@@ -41,7 +45,7 @@ class SelectionPanel(QWidget):
         self.setFocusProxy(self.fields[0][0])
         layout.addLayout(grid)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Camera"))
+        row.addWidget(CellLabel("Camera", width=GRID * 21))
         for index, name in enumerate("AB"):
             button = QPushButton(f"Set {name} · {index + 1}")
             button.setToolTip(f"Set corner {name} at the camera's cell, even in empty space · {index + 1}")
@@ -52,36 +56,36 @@ class SelectionPanel(QWidget):
         adjustments = QVBoxLayout(self.adjustments)
         adjustments.setContentsMargins(0, 0, 0, 0)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Step"))
+        row.addWidget(CellLabel("Step", width=GRID * 15))
         self.step = QSpinBox()
         self.step.setRange(1, 30_000_000)
         self.step.setKeyboardTracking(False)
-        self.step.setFixedWidth(GRID * 20)
+        self.step.setMinimumWidth(0)
         self.step.setAccessibleName("Selection adjustment step")
         row.addWidget(self.step, 1)
         for name, sign in (("Grow", 1), ("Shrink", -1)):
-            button = QPushButton(name + " all")
+            button = QPushButton(name)
+            button.setFixedWidth(GRID * (16 if sign > 0 else 22))
             button.setToolTip(f"{name} all six faces by the step · selection bounds only")
             button.clicked.connect(lambda checked=False, s=sign: self._grow(s))
             self.adjust_buttons[button] = ("grow", sign)
             row.addWidget(button)
         adjustments.addLayout(row)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Shift"))
+        row.addWidget(CellLabel("Shift", width=GRID * 18))
         for axis, name in enumerate("XYZ"):
             for sign in (-1, 1):
                 button = QToolButton()
                 button.setText(name + ("−" if sign < 0 else "+"))
-                button.setFixedSize(GRID * 12, CONTROL_HEIGHT)
+                button.setMinimumWidth(GRID * 9)
                 button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
                 button.setToolTip(f"Shift bounds {'−' if sign < 0 else '+'}{name} by the step · blocks stay in place")
                 button.clicked.connect(lambda checked=False, a=axis, s=sign: self._shift(a, s))
                 self.adjust_buttons[button] = ("shift", tuple(sign if i == axis else 0 for i in range(3)))
-                row.addWidget(button)
+                row.addWidget(button, 1)
         adjustments.addLayout(row)
         layout.addWidget(self.adjustments)
-        self.hint = QLabel("Click a block to start")
-        self.hint.setFixedHeight(CONTROL_HEIGHT)
+        self.hint = CellLabel("Click a block to start")
         layout.addWidget(self.hint)
         self.step.valueChanged.connect(lambda: self._preview(self.preview_button))
         row = QHBoxLayout()

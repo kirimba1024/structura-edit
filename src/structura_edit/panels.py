@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
 )
 
 from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS
+from .appearance import GRID
+from .controls import CellCheckBox, CellLabel
 
 
 class OperationPanel(QWidget):
@@ -22,17 +24,22 @@ class OperationPanel(QWidget):
         self.materials = QStringListModel(self)
         layout = QVBoxLayout(self)
         self.form = QFormLayout()
+        self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+        self.form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.mode = QComboBox()
         self.mode.addItems(REGION_COMMANDS)
-        self.form.addRow("Action", self.mode)
+        labels = ["Action", *(parameter.label + "…" for parameter in PARAMETERS.values() if isinstance(parameter.default, str))]
+        label_width = max(self.fontMetrics().horizontalAdvance(label) for label in labels) + GRID * 4
+        label_width = (label_width + GRID - 1) // GRID * GRID
+        self.form.addRow(CellLabel("Action", width=label_width), self.mode)
         for key, parameter in PARAMETERS.items():
             value = parameter.default
             if isinstance(value, bool):
-                field = QCheckBox(parameter.label)
+                field = CellCheckBox(parameter.label)
                 field.toggled.connect(self.changed)
             elif isinstance(value, tuple):
                 field = QWidget()
-                axes = QHBoxLayout(field)
+                axes = QVBoxLayout(field)
                 axes.setContentsMargins(0, 0, 0, 0)
                 field.inputs = []
                 for axis in "XYZ":
@@ -57,13 +64,13 @@ class OperationPanel(QWidget):
                 self.form.addRow(field)
             else:
                 button = QPushButton(parameter.label + "…")
+                button.setFixedWidth(label_width)
                 button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-                button.setToolTip(f"Choose {parameter.label.lower()} from loaded and recent materials")
+                button.setToolTip("Choose a material from loaded and recent blocks")
                 button.clicked.connect(lambda checked=False, name=key: self.material_requested.emit(name))
                 self.form.addRow(button, field)
         layout.addLayout(self.form)
-        self.info = QLabel()
-        self.info.setWordWrap(True)
+        self.info = CellLabel()
         layout.addWidget(self.info)
         self.preview = QPushButton("Preview")
         self.preview.clicked.connect(self.preview_requested)

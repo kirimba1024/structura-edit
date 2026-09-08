@@ -14,7 +14,7 @@ PARAMETERS = {
         Parameter("source", "From", "minecraft:stone", "Block ID, or complete state for an exact match"),
         Parameter("target", "To", "minecraft:stone", "Material to place"),
         Parameter("offset", "Offset X / Y / Z", (0, 0, 0), "Integer displacement of the selected blocks"),
-        Parameter("mask", "Only material", "", "Restrict changes to a block ID or complete state"),
+        Parameter("mask", "Only", "", "Restrict changes to a block ID or complete state"),
         Parameter("surface", "Only exposed blocks", False, "A non-air block with an exposed face"),
         Parameter("preserve_properties", "Keep compatible properties", True, "Retain matching properties such as stair direction when changing material"),
     )

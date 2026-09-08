@@ -2,10 +2,12 @@ from pathlib import Path
 from time import perf_counter
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMainWindow, QMessageBox, QSizePolicy, QToolButton
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QToolButton
 
 from .camera import FreeCamera
 from .commands import PARAMETERS
+from .controls import CellLabel
+from .appearance import CONTROL_HEIGHT, GRID
 from .theme import apply_theme
 from .jobs import PROTECTED_JOBS, Worker
 from .menus import EditorMenus
@@ -70,10 +72,10 @@ class EditorWindow(QMainWindow):
         })
         self.placement.bar.bind_actions(self.menus.actions)
         self.entities_action = self.menus.actions["entities"]
-        self.status = QLabel("Open a schematic or world")
-        self.status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.status = CellLabel("Open a schematic or world")
         self.statusBar().addWidget(self.status, 1)
         self.statusBar().setSizeGripEnabled(False)
+        self.statusBar().setFixedHeight(CONTROL_HEIGHT + GRID)
         self.refresh_button = QToolButton()
         self.refresh_button.setDefaultAction(self.menus.actions["refresh"])
         self.refresh_button.setText("Refresh · F5")
@@ -84,12 +86,12 @@ class EditorWindow(QMainWindow):
         self.save_button.setDefaultAction(self.menus.actions["save"])
         self.save_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.statusBar().addPermanentWidget(self.save_button)
-        self.controls = QLabel("WASD · RMB look · M map")
+        self.controls = CellLabel("WASD · RMB look · M map", width=GRID * 72)
         self.controls.setToolTip(CONTROLS)
         self.statusBar().addPermanentWidget(self.controls)
         self.progress = TaskProgress()
         self.progress.cancelled.connect(self.cancel_task)
-        self.statusBar().addPermanentWidget(self.progress)
+        self.statusBar().addWidget(self.progress)
         self._connect_ui()
         self._last_tick = perf_counter()
         self.timer = QTimer(self)

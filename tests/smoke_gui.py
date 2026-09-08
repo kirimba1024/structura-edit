@@ -256,9 +256,9 @@ def check_selection_adjustments(window):
     actions.set_bounds((3, 3, 3), (6, 6, 6))
     camera, actors = window.plotter.camera.position, tuple(window.scene.actors)
     revision = window.session.revision
-    for text, expected in (("Grow all", Selection((2, 2, 2), (7, 7, 7))),
+    for text, expected in (("Grow", Selection((2, 2, 2), (7, 7, 7))),
                            ("X+", Selection((3, 2, 2), (8, 7, 7))),
-                           ("Shrink all", Selection((4, 3, 3), (7, 6, 6)))):
+                           ("Shrink", Selection((4, 3, 3), (7, 6, 6)))):
         buttons = panel.findChildren(QPushButton) + panel.findChildren(QToolButton)
         button = next(button for button in buttons if button.text() == text)
         previous = window.selection()
