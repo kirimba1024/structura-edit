@@ -28,8 +28,26 @@ class Selection:
     def __post_init__(self):
         object.__setattr__(self, "lower", _position(self.lower))
         object.__setattr__(self, "upper", _position(self.upper))
-        if any(lo < 0 or hi <= lo for lo, hi in zip(self.lower, self.upper)):
-            raise ValueError("Selection bounds must satisfy 0 <= lower < upper")
+        if any(lo < 0 for lo in self.lower):
+            raise ValueError("Outside document bounds")
+        if any(hi <= lo for lo, hi in zip(self.lower, self.upper)):
+            raise ValueError("Keep at least 1 block per axis")
+
+    @classmethod
+    def from_corners(cls, first, second):
+        first, second = _position(first), _position(second)
+        return cls(tuple(min(a, b) for a, b in zip(first, second)),
+                   tuple(max(a, b) + 1 for a, b in zip(first, second)))
+
+    def shifted(self, offset):
+        offset = _position(offset)
+        return Selection(tuple(p + d for p, d in zip(self.lower, offset)),
+                         tuple(p + d for p, d in zip(self.upper, offset)))
+
+    def expanded(self, amount):
+        if isinstance(amount, bool) or not isinstance(amount, Integral):
+            raise ValueError("Selection step must be an integer")
+        return Selection(tuple(p - amount for p in self.lower), tuple(p + amount for p in self.upper))
 
     @property
     def volume(self):

@@ -19,7 +19,7 @@ def check_map(window, output):
     view = window.plotter
     images = dict(canvas.images)
     camera = view.camera.position
-    window.select_all()
+    window.selection_actions.select_all()
     selection = window.selection()
     view.setFocus()
     QTest.keyPress(view, Qt.Key.Key_W)

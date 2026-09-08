@@ -217,6 +217,22 @@ def test_pick_uses_pointer_or_crosshair_without_exiting_flight_or_typing(navigat
     assert len(samples) == 3
 
 
+def test_camera_corner_keys_preserve_flight_and_stay_local_to_viewport(navigation):
+    corners = []
+    navigation.corner_requested.connect(corners.append)
+    navigation.start_fly()
+    QTest.keyPress(navigation.view, Qt.Key.Key_W)
+    QTest.keyClick(navigation.view, Qt.Key.Key_1)
+    QTest.keyClick(navigation.view, Qt.Key.Key_2)
+    key(navigation.view, QEvent.Type.KeyPress, Qt.Key.Key_2, repeat=True)
+    assert corners == [0, 1] and navigation.looking and Qt.Key.Key_W in navigation.keys
+    field = QLineEdit(navigation.view)
+    QTest.keyClicks(field, "12")
+    navigation.placing = True
+    QTest.keyClick(navigation.view, Qt.Key.Key_1)
+    assert field.text() == "12" and corners == [0, 1]
+
+
 def test_captured_mouse_does_not_repeat_rotation_and_restores_cursor(navigation, monkeypatch):
     from structura_edit import mouse_look
 

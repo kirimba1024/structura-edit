@@ -115,12 +115,12 @@ class WorldController:
             bounds = tuple(tuple(p - o for p, o in zip(bound, session.origin)) for bound in old_selection)
             try:
                 session.select(bounds)
-                window.set_selection_bounds(*bounds)
+                window.selection_actions.set_bounds(*bounds)
                 if old_anchor is not None:
                     window.selected.anchor = tuple(p - o for p, o in zip(old_anchor, session.origin))
                 window.selected.set_extending(extending)
             except ValueError:
-                window.clear_selection()
+                window.selection_actions.clear()
         window.camera.needs_render = True
         window.camera.render()
         window.status.setText(f"{session.world_name} · {session.dimension} · {len(session.loaded_chunks)} chunks · "

@@ -7,7 +7,7 @@ import numpy as np
 from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
 from PySide6.QtGui import QFocusEvent, QMouseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QComboBox, QToolBar
+from PySide6.QtWidgets import QApplication, QComboBox, QPushButton, QToolBar, QToolButton
 
 from structura_edit.ui import EditorWindow
 
@@ -209,7 +209,7 @@ def check_minimap(window):
 
 
 def check_panel_focus(window):
-    window.select_all()
+    window.selection_actions.select_all()
     window.show_operation("Fill")
     field = window.operation.fields["target"]
     field.setText("minecraft:gold_block")
@@ -236,9 +236,70 @@ def check_panel_focus(window):
     assert window.selection() == original
     QTest.keyClick(lower, Qt.Key.Key_Return)
     assert window.selection().lower[0] == 12
-    window.select_all()
+    lower.selectAll()
+    QTest.keyClicks(lower, "16")
+    QTest.keyClick(lower, Qt.Key.Key_Escape)
+    assert window.selection().lower[0] == 12 and lower.value() == 12
+    assert not window.panels.docks["selection"].isVisible()
+    assert window.focusWidget() is window.plotter
+    window.selection_actions.select_all()
     window.panels.dismiss()
     QApplication.processEvents()
+
+
+def check_selection_adjustments(window):
+    from structura_edit import Selection
+    from structura_edit.picking import EMPTY
+
+    actions, panel = window.selection_actions, window.panels.selection
+    window.panels.show("selection")
+    actions.set_bounds((3, 3, 3), (6, 6, 6))
+    camera, actors = window.plotter.camera.position, tuple(window.scene.actors)
+    revision = window.session.revision
+    for text, expected in (("Grow all", Selection((2, 2, 2), (7, 7, 7))),
+                           ("X+", Selection((3, 2, 2), (8, 7, 7))),
+                           ("Shrink all", Selection((4, 3, 3), (7, 6, 6)))):
+        buttons = panel.findChildren(QPushButton) + panel.findChildren(QToolButton)
+        button = next(button for button in buttons if button.text() == text)
+        previous = window.selection()
+        QApplication.sendEvent(button, QEvent(QEvent.Type.Enter))
+        assert window.selection() == previous and window.selected.preview == expected
+        assert window.overlay.temporary.bounds == (expected.lower, expected.upper)
+        QApplication.sendEvent(button, QEvent(QEvent.Type.Leave))
+        assert window.selection() == previous and window.selected.preview is None
+        assert window.overlay.temporary.bounds is None
+        QApplication.sendEvent(button, QEvent(QEvent.Type.Enter))
+        QTest.mouseClick(button, Qt.MouseButton.LeftButton)
+        assert window.selection() == expected
+        assert window.selected.preview is None
+    panel.step.setFocus()
+    panel.step.selectAll()
+    QTest.keyClicks(panel.step, "2")
+    button = next(button for button in panel.findChildren(QToolButton) if button.text() == "Z+")
+    QTest.mouseClick(button, Qt.MouseButton.LeftButton)
+    assert window.selection() == Selection((4, 3, 5), (7, 6, 8))
+    before = window.selection()
+    actions.adjust("grow", -2)
+    assert window.selection() == before and "at least 1 block" in window.status.text()
+    assert window.plotter.camera.position == camera
+    assert tuple(window.scene.actors) == actors and window.session.revision == revision
+    assert not window.worker.busy and not window.views.render_queued and not window.views.map_queued
+    actions.clear()
+    sx, sy, sz = window.session.size
+    first, second = (0, sy - 1, 0), (sx - 1, sy - 1, sz - 1)
+    assert (window.session.state_at(first) or "minecraft:air").split("[", 1)[0] in EMPTY
+    for code, position in ((Qt.Key.Key_1, first), (Qt.Key.Key_2, second)):
+        window.move_camera(tuple(p + 0.25 for p in position))
+        QTest.keyClick(window.plotter, code)
+    assert window.selection() == Selection.from_corners(first, second)
+    assert window.selected.anchor == first and window.selected.opposite == second
+    before = window.selection()
+    window.move_camera((-0.25, 2, 2))
+    QTest.keyClick(window.plotter, Qt.Key.Key_1)
+    assert window.selection() == before and "outside" in window.status.text().lower()
+    assert not window.worker.busy and window.session.revision == revision
+    assert tuple(window.scene.actors) == actors
+    window.panels.dismiss()
 
 
 def check_edits(window, point, output):
@@ -288,7 +349,7 @@ def check_edits(window, point, output):
     settle(window)
     assert window.session.state_at(point) == "minecraft:gold_block"
     assert window.session.state_at(destination) == previous_destination
-    window.set_selection_bounds(point, tuple(v + 1 for v in point))
+    window.selection_actions.set_bounds(point, tuple(v + 1 for v in point))
     window.show_operation("Fill")
     window.operation.fields["target"].setFocus()
     window.operation.fields["target"].clear()
@@ -351,6 +412,7 @@ def main():
         check_minimap(window)
         check_navigation(window)
         check_panel_focus(window)
+        check_selection_adjustments(window)
         point = check_selection(window)
         check_materials(window, point)
         saved = check_edits(window, point, output)
@@ -363,6 +425,7 @@ def main():
                       camera="timer-driven held keys, release, focus loss, RMB look",
                       focus="preview preserves active inspector and text; coordinates commit on Enter",
                       selection="single block, live Shift region, click to commit, release to cancel",
+                      bounds="grow, shrink, axis shifts, typed step, independent camera corners, atomic boundary rejection; no jobs or block edits",
                       materials="pick without edits, exact state search, From/To routing, Escape focus, preview isolation",
                       editing="fill, move, preview, apply, undo, redo, discard, recipe isolation, save and reload",
                       minimap="six projections, navigation without click-through, edge coverage, resize, collapse and expand")

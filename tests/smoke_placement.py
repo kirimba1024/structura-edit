@@ -30,7 +30,7 @@ def main():
     try:
         window.open_path(path)
         settle(window)
-        window.set_selection_bounds((2, 0, 2), (3, 1, 3))
+        window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         window.placement.start("take")
         settle(window)
         placement = window.placement

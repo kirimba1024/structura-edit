@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QSizePolicy, QSpinBox, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import GRID
+from .selection_stats_ui import SelectionStats
 
 
 class PlacementBar(QWidget):
@@ -23,6 +24,7 @@ class PlacementBar(QWidget):
         self.actions.setSpacing(4)
         self.size_label = QLabel()
         self.actions.addWidget(self.size_label)
+        self.stats = SelectionStats()
         self.placement = QWidget()
         layout = QVBoxLayout(self.placement)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -71,6 +73,7 @@ class PlacementBar(QWidget):
         layout.setContentsMargins(GRID, GRID, GRID, GRID)
         layout.setSpacing(0)
         layout.addWidget(self.selection)
+        layout.addWidget(self.stats)
         layout.addWidget(self.placement)
         self.hide()
 
@@ -89,6 +92,7 @@ class PlacementBar(QWidget):
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self.actions.addWidget(button)
         self.actions.addStretch()
+        self.actions.addWidget(self.stats.toggle)
 
     def _coordinates_changed(self):
         self.position_changed.emit(tuple(field.value() for field in self.coordinates))

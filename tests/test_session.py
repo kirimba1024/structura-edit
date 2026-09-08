@@ -208,6 +208,9 @@ def test_randomized_undo_redo_matches_cell_oracle(edit):
         assert edit.palette_counts(edit.select()) == counts
         assert edit.palette_counts(by_state=False) == Counter(
             state.split("[", 1)[0] for state in states[cursor].values() if state is not None)
+        selected = edit.select(((0, 0, 0), (2, 1, 2)))
+        assert edit.palette_counts(selected) == Counter(
+            state for position, state in states[cursor].items() if position in selected and state is not None)
 
 
 def test_replace_material_retains_only_compatible_properties(edit):

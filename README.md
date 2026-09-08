@@ -326,9 +326,8 @@ take=False, include_air=False)` prepares one change. Take checks that its source
 revision is still current and removes source blocks only at Apply. Copying
 between documents preserves block states, block-entity NBT and extra block
 record fields; it does not translate Minecraft versions or copy entities/biomes.
-The destination must fit inside the document. Cursor placement and its GUI
-Copy/Take/Paste actions are still being implemented; Move/Duplicate currently
-use the offset panel described above.
+The destination must fit inside the document. The GUI uses the shared clipboard
+placement workflow described above; Move blocks uses the offset panel.
 
 Selection menus expose the implemented operations and a compact material
 histogram. The Python panel supplies a disposable `edit` branch and `selection`.

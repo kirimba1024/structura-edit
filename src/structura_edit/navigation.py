@@ -14,7 +14,8 @@ BOOST = 4
 CONTROLS = ("Hold WASD / arrows: fly · E / Space: up · Q: down · Shift: faster\n"
             "Hold RMB: look · Shift+`: toggle freelook · Escape / click: exit\n"
             "− / +: speed · Mouse wheel while looking: speed · Shift+click: region\n"
-            "I / middle click: pick material · F: frame scene · M: map\n"
+            "I / middle click: pick material · 1 / 2: corner A / B at camera\n"
+            "F: frame scene · M: map\n"
             "Enter: apply preview · Escape: cancel")
 
 
@@ -22,6 +23,7 @@ class Navigation(QObject):
     selected = Signal(object, bool)
     hovered = Signal(object)
     sampled = Signal(object)
+    corner_requested = Signal(int)
     extend_changed = Signal(bool)
     fit_requested = Signal()
     apply_requested = Signal()
@@ -103,7 +105,7 @@ class Navigation(QObject):
                     offset = (0, -offset[2], 0)
                 self.nudge_requested.emit(offset)
             return True
-        handled = key in MOVEMENT or key in SPEED_KEYS or fly_shortcut(event) or key in (Qt.Key.Key_Shift, Qt.Key.Key_F, Qt.Key.Key_I, Qt.Key.Key_Escape,
+        handled = key in MOVEMENT or key in SPEED_KEYS or fly_shortcut(event) or key in (Qt.Key.Key_Shift, Qt.Key.Key_F, Qt.Key.Key_I, Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_Escape,
                                             Qt.Key.Key_Return, Qt.Key.Key_Enter)
         if not handled:
             return False
@@ -128,6 +130,9 @@ class Navigation(QObject):
             self.fit_requested.emit()
         elif key == Qt.Key.Key_I:
             self.sample()
+        elif key in (Qt.Key.Key_1, Qt.Key.Key_2):
+            if not self.placing:
+                self.corner_requested.emit(key - Qt.Key.Key_1)
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.apply_requested.emit()
         elif key == Qt.Key.Key_Escape:

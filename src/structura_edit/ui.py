@@ -13,6 +13,7 @@ from .navigation import CONTROLS, Navigation
 from .placement_ui import PlacementController
 from .scene import Scene
 from .selection import RegionSelection
+from .selection_actions import SelectionActions
 from .task_progress import TaskProgress
 from .view_pipeline import ViewPipeline
 from .workbench import EditorPanels, Workbench
@@ -45,6 +46,9 @@ class EditorWindow(QMainWindow):
         self.views = ViewPipeline(self.scene, self.camera, self.minimap, self._run, self._rendered,
                                   cache_path=self.minimap.cache.path)
         self.panels = EditorPanels(self)
+        self.selection_actions = SelectionActions(self.selected, self.panels.selection, self.plotter.camera,
+                                                  available=lambda: self.session is not None and not self.placement.active
+                                                  and not self.worker.busy)
         self.operation = self.panels.operation
         self.world = WorldController(self)
         self.placement = PlacementController(self.scene, self.navigation, self._run)
@@ -53,7 +57,7 @@ class EditorWindow(QMainWindow):
             "open": self.open_dialog, "world": self.world.open_dialog, "save": self.save_dialog,
             "export": self.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
             "apply": self.apply_pending, "discard": self.discard_pending, "recipe": self.show_recipe,
-            "all": self.select_all, "clear": self.clear_selection,
+            "all": self.selection_actions.select_all, "clear": self.selection_actions.clear,
             "coordinates": lambda: self.panels.show("selection"), "materials": lambda: self.show_materials(),
             "fit": self.fit_scene, "map": self.minimap.toggle_large, "goto": self.camera_dialog, "refresh": self.world.refresh,
             "fly": self.fly_camera,
@@ -103,6 +107,7 @@ class EditorWindow(QMainWindow):
         self.navigation.selected.connect(self.scene_click)
         self.navigation.hovered.connect(self.scene_hover)
         self.navigation.sampled.connect(self.sample_material)
+        self.navigation.corner_requested.connect(self.selection_actions.at_camera)
         self.navigation.extend_changed.connect(self.extend_selection)
         self.navigation.fit_requested.connect(self.fit_scene)
         self.navigation.apply_requested.connect(self.apply_pending)
@@ -111,9 +116,9 @@ class EditorWindow(QMainWindow):
         self.minimap.navigate.connect(self.move_camera)
         self.minimap.large_changed.connect(self._map_changed)
         self.minimap.expanded_changed.connect(lambda expanded: self.views.request_maps() if expanded else None)
-        self.panels.selection.bounds_requested.connect(self.set_selection_bounds)
-        self.panels.selection.all_requested.connect(self.select_all)
-        self.panels.selection.clear_requested.connect(self.clear_selection)
+        self.selection_actions.changed.connect(self._selection_changed)
+        self.selection_actions.preview_changed.connect(lambda: self._show_selection(self.selected.preview or self.selected.region))
+        self.selection_actions.message.connect(self.status.setText)
         self.panels.materials.chosen.connect(self.choose_material)
         self.panels.materials.dismissed.connect(self.dismiss_materials)
         self.operation.material_requested.connect(self.show_materials)
@@ -143,8 +148,11 @@ class EditorWindow(QMainWindow):
         self.placement.set_context(self.session, self.selected.region, self.assets, busy=self.worker.busy,
                                     available=ready and self.pending is None and self.views.ready,
                                     visible=self.session is not None and not self.minimap.large and self.pending is None)
-        self.overlay.set_selection(None if placing else self.selected.region, None if placing else self.selected.preview)
-        self.panels.selection.setEnabled(self.session is not None and not placing)
+        self.placement.bar.stats.set_context(self.session, self.selected.region, self.assets,
+                                            visible=not placing and not self.minimap.large and self.pending is None)
+        self.overlay.set_selection(None if placing else self.selected.region, None if placing else self.selected.preview,
+                                   (self.selected.anchor, self.selected.opposite))
+        self.panels.selection.setEnabled(self.selection_actions.available())
         self.panels.materials.setEnabled(ready and not placing)
         self.operation.setEnabled(self.session is not None and not self.session.readonly and not placing)
         self.operation.preview.setEnabled(editable and selected)
@@ -271,7 +279,7 @@ class EditorWindow(QMainWindow):
         self.views.reset()
         self.scene.clear()
         self.selected.reset(session.size)
-        self.panels.selection.set_document(session.size)
+        self.panels.selection.set_document(session.size, session.origin)
         if not preserve_focus:
             self.navigation.stop()
             self.panels.dismiss()
@@ -292,24 +300,6 @@ class EditorWindow(QMainWindow):
             raise ValueError("Click a block to select it; Shift+click another block to extend the region")
         return self.selected.region
 
-    def set_selection_bounds(self, lower, upper):
-        if self.session is None:
-            return
-        try:
-            self.selected.set_bounds(lower, upper)
-            self._selection_changed()
-        except ValueError as error:
-            self.status.setText(str(error))
-
-    def select_all(self):
-        if self.session:
-            self.selected.select_all()
-            self._selection_changed()
-
-    def clear_selection(self):
-        self.selected.clear()
-        self._selection_changed()
-
     def _selection_changed(self):
         self._invalidate()
         selection = self.selected.region
@@ -323,7 +313,7 @@ class EditorWindow(QMainWindow):
         if self.placement.active:
             self.placement.pin(point)
             return
-        if not self.session or self.pending is not None or self.scene.display_revision != self.session.revision:
+        if not self.selection_actions.available() or self.pending is not None or self.scene.display_revision != self.session.revision:
             return
         hit = self.scene.hit_at(self.session, point)
         if hit is not None:
@@ -359,7 +349,7 @@ class EditorWindow(QMainWindow):
                 self._show_selection(self.selected.preview or self.selected.region)
 
     def _show_selection(self, selection):
-        self.overlay.set_selection(self.selected.region, self.selected.preview)
+        self.overlay.set_selection(self.selected.region, self.selected.preview, (self.selected.anchor, self.selected.opposite))
         self.overlay.set_hover(None)
         self.minimap.set_selection((selection.lower, selection.upper) if selection else None)
 
@@ -528,7 +518,7 @@ class EditorWindow(QMainWindow):
             self.render_scene()
         self.scene.display_revision = self.session.revision
         if destination is not None:
-            self.set_selection_bounds(*destination)
+            self.selection_actions.set_bounds(*destination)
         self.panels.dismiss()
         self._refresh_palette()
         (self.minimap if self.minimap.large else self.plotter).setFocus()
@@ -560,7 +550,7 @@ class EditorWindow(QMainWindow):
         if self.pending is not None:
             self.discard_pending()
         else:
-            self.clear_selection()
+            self.selection_actions.clear()
         self.panels.dismiss()
         self.plotter.setFocus()
 
@@ -666,6 +656,7 @@ class EditorWindow(QMainWindow):
         self.navigation.close()
         self.worker.close()
         self.minimap.cache.close()
+        self.placement.bar.stats.shutdown()
         self.plotter.close()
         event.accept()
 

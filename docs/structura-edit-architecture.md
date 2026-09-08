@@ -28,9 +28,13 @@
 | Подписи файлов и ресурсов | `file_state.py`, `resources.py` |
 | Неблокирующий индикатор общей очереди | `task_progress.py` |
 | Движение, Qt-ввод, удержание клавиш, захват мыши | `camera.py`, `navigation.py`, `navigation_keys.py`, `mouse_look.py` |
-| Регион и попадание луча | `selection.py`, `picking.py` |
+| Неизменяемый регион, его сдвиг и размер | `changes.py`: `Selection` |
+| Углы выделения и Shift-preview | `selection.py` |
+| Действия над границами, доступность и ошибки ввода | `selection_actions.py`; виджеты — `selection_panel.py` |
+| Попадание луча в блок | `picking.py` |
 | Виджеты и меню | `workbench.py`, `panels.py`, специализированные панели, `menus.py` |
 | Поиск загруженных материалов, ограниченный список последних | `materials.py` |
+| Состав выделения, текстуры и сворачиваемая сетка | `selection_stats.py`, `selection_stats_ui.py`: один фоновый расчёт, один актуальный запрос |
 | Общая сетка, шрифт и плоское оформление Qt | `appearance.py`, `theme.py`, `data/editor.qss` |
 | Сборка приложения и действия пользователя | `ui.py` |
 | Явное обновление мира и координаты | `world_ui.py`; пределы — `loading.py` |

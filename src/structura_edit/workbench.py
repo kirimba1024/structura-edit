@@ -82,13 +82,14 @@ class RecipePanel(QWidget):
 
 class EditorPanels:
     def __init__(self, window):
+        self.focus_target = window.plotter
         self.operation = OperationPanel()
         self.selection = SelectionPanel()
         self.materials = MaterialsPanel()
         self.recipe = RecipePanel()
         self.history = HistoryPanel()
         self.docks = {}
-        for name, title in (("operation", "Selection action"), ("selection", "Selection coordinates"),
+        for name, title in (("operation", "Selection action"), ("selection", "Selection bounds"),
                             ("materials", "Materials"), ("recipe", "Python recipe"), ("history", "History")):
             dock = QDockWidget(title, window)
             dock.setWidget(getattr(self, name))
@@ -103,7 +104,10 @@ class EditorPanels:
             close.setAccessibleName("Close panel")
             close.setFixedSize(CONTROL_HEIGHT, CONTROL_HEIGHT)
             close.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            close.clicked.connect(self.materials.dismissed if name == "materials" else dock.hide)
+            if name == "materials":
+                close.clicked.connect(self.materials.dismissed)
+            else:
+                close.clicked.connect(lambda checked=False, key=name: self.close(key))
             row.addWidget(close)
             dock.setTitleBarWidget(title_bar)
             dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
@@ -112,6 +116,11 @@ class EditorPanels:
             dock.setFixedWidth(PANEL_WIDTH)
             dock.hide()
             self.docks[name] = dock
+        self.selection.dismissed.connect(lambda: self.close("selection"))
+
+    def close(self, name):
+        self.docks[name].hide()
+        self.focus_target.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def show(self, name):
         for key, dock in self.docks.items():

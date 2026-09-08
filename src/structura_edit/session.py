@@ -119,7 +119,12 @@ class EditSession:
                     counts[self._states[index]] -= 1
                 counts[cell.state] += 1
         else:
-            counts = Counter(self._cell(p).state for p in self.positions() if p in selection)
+            base = self._document.source.present
+            if selection.volume < len(base) + len(self._cells):
+                positions = (p for p in selection.positions() if p in base or p in self._cells)
+            else:
+                positions = (p for p in self.positions() if p in selection)
+            counts = Counter(self._cells[p].state if p in self._cells else self._states[base[p]] for p in positions)
         if by_state:
             return +counts
         materials = Counter()

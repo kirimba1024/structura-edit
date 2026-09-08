@@ -91,7 +91,7 @@ class EditorMenus:
         self.actions["paste"].setEnabled(editable and clipboard and not preview and not placing)
         self.actions["import"].setEnabled(editable and not preview and not placing)
         for name in ("all", "clear", "coordinates"):
-            self.actions[name].setEnabled(session is not None and not placing)
+            self.actions[name].setEnabled(ready and not placing)
         self.actions["undo"].setEnabled(editable and session.can_undo)
         self.actions["redo"].setEnabled(editable and session.can_redo)
         self.actions["history"].setEnabled(session is not None)
