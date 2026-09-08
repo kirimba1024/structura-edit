@@ -2,7 +2,7 @@ import os
 
 os.environ["QT_API"] = "pyside6"
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QTimer, Qt, Signal
 from pyvistaqt import QtInteractor
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleUser
 
@@ -10,10 +10,12 @@ from .appearance import SCENE_BACKGROUND, TEXT
 
 class SceneView(QtInteractor):
     resized = Signal()
-    rendered = Signal()
 
     def __init__(self, parent):
         super().__init__(parent, auto_update=False, multi_samples=0)
+        self.frame_timer = QTimer(self)
+        self.frame_timer.setSingleShot(True)
+        self.frame_timer.timeout.connect(self._render)
         self.set_background(SCENE_BACKGROUND)
         self.enable_depth_peeling(number_of_peels=8)
         self.iren.interactor.SetInteractorStyle(vtkInteractorStyleUser())
@@ -25,8 +27,12 @@ class SceneView(QtInteractor):
 
     def render(self):
         if not self.suppress_rendering:
-            super().render()
-            self.rendered.emit()
+            timer = getattr(self, "frame_timer", None)
+            if timer is not None and not timer.isActive():
+                timer.start(0)
+
+    def paintEvent(self, event):
+        self.render()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

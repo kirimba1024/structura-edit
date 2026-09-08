@@ -54,10 +54,16 @@ def test_overlapping_move_preserves_payload_and_undo(edit, structure, tmp_path):
     assert edit.state_at((2, 0, 0)).startswith("minecraft:chest")
 
 
-def test_move_out_of_bounds_is_atomic_and_duplicate_preserves_source(edit):
+def test_move_expands_bounds_atomically_and_duplicate_preserves_source(edit):
     assert not edit.move(edit.select(), (0, 0, 0)) and not edit.dirty
-    with pytest.raises(ValueError):
-        edit.move(edit.select(), (1, 0, 0))
+    before_size = edit.size
+    change = edit.move(edit.select(), (1, 0, 0))
+    assert edit.size == before_size and not edit.dirty
+    edit.apply(change)
+    assert edit.size == (before_size[0] + 1, *before_size[1:])
+    assert edit.state_at((2, 0, 0)).startswith("minecraft:chest")
+    edit.undo()
+    assert edit.size == before_size
     assert not edit.dirty
     edit.apply(edit.move(edit.select(((1, 0, 0), (2, 1, 1))), (1, 0, 0), copy=True))
     assert edit.snapshot().block_nbt[(1, 0, 0)] == edit.snapshot().block_nbt[(2, 0, 0)]

@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+    QComboBox, QDialog, QDialogButtonBox, QFormLayout,
     QLabel, QSpinBox,
 )
 
 from .world_view import WorldView
 from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, check_world_budget
+from .height_slice import HeightSlice
 
 
 class WorldController:
@@ -21,11 +22,6 @@ class WorldController:
     @property
     def active(self):
         return isinstance(self.window.session, WorldView)
-
-    def open_dialog(self):
-        path = QFileDialog.getExistingDirectory(self.window, "Open Java world · folder containing level.dat")
-        if path:
-            self.open(path)
 
     def open(self, path):
         if self.window.worker.busy or not self.window._confirm_discard():
@@ -55,6 +51,9 @@ class WorldController:
                     vertical_radius=self.vertical_radius, assets=self.window.assets,
                     include_entities=self.window.entities_action.isChecked(), recenter=recenter, generation=self.generation,
                     preserve_edits=preserve_edits)
+        preserve_view = (preserve_edits and not recenter and self.active and str(self.window.session.path) == self.path
+                         and self.window.session.dimension == self.dimension)
+        args["height"] = self.window.slicing.value if preserve_view else HeightSlice()
         if self.window.worker.busy:
             self.queued = args
             self.window.status.setText("World refresh queued")
@@ -133,7 +132,7 @@ class WorldController:
 
     def settings(self):
         if not self.active:
-            self.open_dialog()
+            self.window.open_dialog()
             return
         window = self.window
         window.navigation.stop()

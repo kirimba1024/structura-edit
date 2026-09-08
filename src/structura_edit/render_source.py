@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from structura_core import parse_state
 
 from .cell_data import cell_payload
+from .height_slice import HeightSlice
 
 
 def preview_session(session, change=None):
@@ -15,12 +16,21 @@ def preview_session(session, change=None):
 
 
 class RenderSource:
-    def __init__(self, session):
+    def __init__(self, session, height=HeightSlice()):
         self.session = session
+        self.height = height
         self.base = session._document.source
         self.palette_raw = list(self.base.palette_raw)
         self.literals = {}
         self.palette = [str(state["Name"]) for state in self.palette_raw]
+
+    def entity_records(self):
+        result = {}
+        for key, value in self.session._entities.items():
+            record = value.unpack()
+            if self.height.includes_entity(record, self.session):
+                result[key] = record
+        return result
 
     def _index(self, cell):
         if cell.variant is not None:
@@ -37,7 +47,10 @@ class RenderSource:
         upper = self.session.size if upper is None else upper
         positions = self.session.positions() if whole else product(*(range(lo, hi) for lo, hi in zip(lower, upper)))
         present, block_nbt = {}, {}
+        low_y, high_y = self.height.interval(self.session)
         for position in positions:
+            if not low_y <= position[1] < high_y:
+                continue
             cell = self.session._cells.get(position)
             if cell is None:
                 index = self.base.present.get(position)
@@ -53,4 +66,4 @@ class RenderSource:
         return SimpleNamespace(size=tuple(hi - lo for lo, hi in zip(lower, upper)),
                                palette_raw=self.palette_raw, palette=self.palette,
                                present=present, block_nbt=block_nbt,
-                               entities=list(self.base.entities) if include_entities else [])
+                               entities=list(self.entity_records().values()) if include_entities else [])

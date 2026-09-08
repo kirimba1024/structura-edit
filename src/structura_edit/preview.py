@@ -54,6 +54,12 @@ def build_sections(sections, *, reset, assets=None, ghosts=None, progress=None):
     total = 0
     for index, (key, (source, origin, bounds)) in enumerate(sections.items()):
         data = build_geometry(source, assets, bounds)
+        if hasattr(source, "entity_keys"):
+            from .entity_picking import entity_bounds
+
+            data["entity_bounds"] = entity_bounds(source.entities, source.entity_keys, texture_bank(assets))
+            data["entity_markers"] = [(tuple(float(v) for v in record["pos"]), str(record["nbt"].get("id", "")) == "minecraft:player")
+                                      for record in source.entities]
         data["layers"] = {name: build_geometry(layer, assets, bounds)
                           for name, layer in zip(("added", "removed"), (ghosts or {}).get(key, ()))
                           if layer is not None and layer.present}

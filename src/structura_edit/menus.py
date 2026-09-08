@@ -15,10 +15,10 @@ class EditorMenus:
         edit = bar.addMenu("&Edit")
         selection = bar.addMenu("&Selection")
         view = bar.addMenu("&View")
+        objects = bar.addMenu("&Objects")
         self.selection_menu = selection
         entries = (
             (file, "open", "Open…", QKeySequence.StandardKey.Open),
-            (file, "world", "Open world…", None),
             (file, "save", "Save as…", QKeySequence.StandardKey.Save),
             (file, "export", "Export selection…", None),
             (file, "import", "Import schematic…", "Ctrl+Shift+I"),
@@ -30,9 +30,17 @@ class EditorMenus:
             (edit, "take", "Take", QKeySequence.StandardKey.Cut),
             (edit, "paste", "Paste", QKeySequence.StandardKey.Paste),
             (edit, "duplicate", "Duplicate", "Ctrl+D"),
+            (edit, "repeat", "Repeat selection…", None),
             (edit, "apply", "Apply preview", None),
             (edit, "discard", "Discard preview", None),
             (edit, "recipe", "Python recipe…", None),
+            (objects, "find_objects", "Find objects…", QKeySequence.StandardKey.Find),
+            (objects, "inspect", "Inspect selected object…", None),
+            (objects, "entity_all", "Select entities in region", None),
+            (objects, "entity_move", "Move entities…", None),
+            (objects, "entity_duplicate", "Duplicate entities…", None),
+            (objects, "entity_rotate", "Rotate entities…", None),
+            (objects, "entity_delete", "Delete entities…", None),
             (selection, "all", "Select all", None),
             (selection, "clear", "Clear selection", None),
             (selection, "coordinates", "Coordinates…", None),
@@ -40,10 +48,13 @@ class EditorMenus:
             (view, "fit", "Fit scene (F)", None),
             (view, "fly", "Fly / freelook (Shift+`)", None),
             (view, "map", "Map (M)", None),
+            (view, "height", "Height slice…", None),
             (view, "goto", "Go to coordinates…", None),
             (view, "refresh", "Refresh world", "F5"),
             (view, "world_settings", "World radius and location…", None),
             (view, "entities", "Show entities", None),
+            (view, "bounds", "Schematic / loaded-area outline", None),
+            (view, "chunks", "Chunk outlines", None),
             (view, "resources", "Minecraft resources…", None),
         )
         for menu, name, label, shortcut in entries:
@@ -51,9 +62,9 @@ class EditorMenus:
             action.triggered.connect(callbacks[name])
             if shortcut is not None:
                 action.setShortcut(QKeySequence(shortcut))
-            if name == "entities":
+            if name in ("entities", "bounds", "chunks"):
                 action.setCheckable(True)
-                action.setChecked(True)
+                action.setChecked(name != "chunks")
             menu.addAction(action)
             self.actions[name] = action
         selection.addSeparator()
@@ -72,7 +83,6 @@ class EditorMenus:
         for name in (*REGION_COMMANDS, "recipe"):
             self.actions[name].setEnabled(editable and selected and not placing)
         self.actions["open"].setEnabled(not busy)
-        self.actions["world"].setEnabled(not busy)
         self.actions["resources"].setEnabled(not busy and not placing)
         self.actions["entities"].setEnabled(not placing)
         self.actions["materials"].setEnabled(ready and not placing and not preview)

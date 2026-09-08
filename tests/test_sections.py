@@ -83,6 +83,27 @@ def test_section_seams_preserve_surface_area_materials_and_nbt(assets, name):
     assert edit.snapshot().block_nbt == edit._document.source.block_nbt
 
 
+@pytest.mark.parametrize("destination", [(-20, -2, -3), (50, 6, 4)])
+def test_expanded_placement_and_ghost_keep_all_sections(assets, destination):
+    from structura_edit.preview import build_preview, build_sections
+
+    edit = sample()
+    clipboard = edit.copy(edit.select(((15, 1, 1), (17, 2, 2))))
+    change = edit.paste(clipboard, destination, take=True)
+    expected = surfaces(build_preview(edit, change, assets=assets))
+    prepared = prepare_sections(edit, change, previous=(edit, None))
+    assert prepared["reset"]
+    actual = build_sections(**prepared, assets=assets)
+    assert combined(actual["sections"]) == pytest.approx(expected)
+    preview = build_sections(**prepare_sections(edit, change, ghost=change), assets=assets)
+    visible = combined(preview["sections"])
+    for section in preview["sections"].values():
+        if "added" in section["layers"]:
+            visible += surfaces(section["layers"]["added"])
+    assert visible == pytest.approx(expected)
+    assert prepare_sections(edit, previous=(edit, change))["reset"]
+
+
 @pytest.mark.parametrize("name", ["stone", "glass", "water", "oak_fence", "oak_stairs", "decorated_pot"])
 def test_ghost_partition_preserves_final_geometry_and_neighbor_connections(assets, name):
     from structura_edit.preview import build_preview, build_sections
@@ -187,3 +208,49 @@ def test_skipped_revisions_and_replaced_previews_restore_the_visible_state(tmp_p
         sections.update(build_sections(**prepare_sections(edit, change, previous=before), assets=assets)["sections"])
         assert combined(sections) == pytest.approx(surfaces(build_preview(edit, change, assets=assets)))
         before = edit.fork(), change
+
+
+def test_height_changes_rebuild_cut_faces_and_keep_distant_sections(assets):
+    from structura_edit.height_slice import HeightSlice
+    from structura_edit.preview import build_geometry, build_sections
+    from structura_edit.render_source import RenderSource
+
+    source = Structure.from_root(from_snbt('''{
+        DataVersion:3955,size:[3,64,3],palette:[{Name:"minecraft:stone"}],blocks:[],entities:[]
+    }'''))
+    source.present = {(x, y, z): 0 for x in range(3) for y in range(64) for z in range(3)}
+    edit = EditSession.from_structure(source)
+    previous = HeightSlice()
+    sections = build_sections(**prepare_sections(edit), assets=assets)["sections"]
+    for height in (HeightSlice("below", 47), HeightSlice("below", 46), HeightSlice("below", 16),
+                   HeightSlice("below", 15), HeightSlice("layer", 15), HeightSlice("layer", -10), HeightSlice()):
+        prepared = prepare_sections(edit, height=height, previous_height=previous, previous=(edit, None))
+        if previous == HeightSlice("below", 47) and height == HeightSlice("below", 46):
+            assert set(prepared["sections"]) == {(0, 2, 0), "entities"}
+        sections.update(build_sections(**prepared, assets=assets)["sections"])
+        expected = build_geometry(RenderSource(edit, height).region(), assets)
+        assert combined(sections) == pytest.approx(surfaces(expected))
+        previous = height
+    assert not edit.dirty and not edit.can_undo
+
+
+def test_height_slice_applies_to_removed_ghosts_and_expanded_placement(assets):
+    from structura_edit.height_slice import HeightSlice
+    from structura_edit.placement import Placement
+    from structura_edit.placement_jobs import prepare_placement
+    from structura_edit.preview import build_geometry, build_sections
+    from structura_edit.render_source import RenderSource, preview_session
+
+    edit = sample()
+    height = HeightSlice("below", 1)
+    change = edit.set_block((15, 1, 1), "minecraft:air")
+    result = build_sections(**prepare_sections(edit, change, ghost=change, height=height), assets=assets)
+    assert any(section["layers"].get("removed") for section in result["sections"].values())
+    hidden = build_sections(**prepare_sections(edit, change, ghost=change, height=HeightSlice("layer", 0)), assets=assets)
+    assert not any(section["layers"] for section in hidden["sections"].values())
+    clipboard = edit.copy(edit.select(((15, 1, 1), (17, 2, 2))))
+    placement = Placement(clipboard, (-2, -3, 0))
+    change, rendered = prepare_placement(edit, placement, height=height, assets=assets, section_bytes={})
+    assert rendered["reset"]
+    expected = build_geometry(RenderSource(preview_session(edit, change), height).region(include_entities=True), assets)
+    assert combined(rendered["sections"]) == pytest.approx(surfaces(expected))

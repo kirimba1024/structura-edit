@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from structura_edit.view_pipeline import ViewPipeline
 
 
@@ -84,3 +86,39 @@ def test_initial_framing_survives_replacing_an_inflight_request(edit):
     view.flush()
     calls.pop()[1]("next scene")
     assert framed == [edit.size]
+
+
+def test_height_requests_reject_stale_geometry_and_maps(edit):
+    from structura_edit.height_slice import HeightSlice
+
+    view, calls, frames, images = pipeline()
+    view.request(edit, None, None, True)
+    view.flush()
+    calls.pop()[1]("all layers")
+    view.flush()
+    stale_map = calls.pop()[1]
+    view.request(edit, None, None, True, height=HeightSlice("below", 0))
+    view.flush()
+    stale_render = calls.pop()[1]
+    view.request(edit, None, None, True, height=HeightSlice("layer", 1))
+    stale_render("wrong height")
+    stale_map("wrong map")
+    assert len(frames) == 1 and not images
+    assert view.scene.height == HeightSlice()
+    view.flush()
+    calls.pop()[1]("single layer")
+    assert view.scene.height == HeightSlice("layer", 1) and view.ready
+    assert view.displayed.height == view.scene.height
+
+
+def test_clipboard_budget_is_checked_before_creating_preview_actors(edit):
+    from structura_edit.loading import MAX_GEOMETRY_BYTES
+
+    view, calls, frames, _ = pipeline()
+    view.scene.section_bytes = {}
+    view.retained_geometry = lambda: 1024
+    view.request(edit, None, None, True)
+    view.flush()
+    with pytest.raises(ValueError, match="clipboard"):
+        calls.pop()[1]({"reset": True, "sections": {"new": {"geometry_bytes": MAX_GEOMETRY_BYTES}}})
+    assert not frames and not view.ready

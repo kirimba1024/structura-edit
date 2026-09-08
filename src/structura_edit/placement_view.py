@@ -9,21 +9,33 @@ class PlacementView:
     def __init__(self, plotter):
         self.plotter = plotter
         self.actors = []
+        self.block_actors = []
+        self.entity_actors = []
+        self.include_blocks = self.include_entities = True
+        self.geometry_bytes = 0
         self.bounds = BoundsMarker(plotter, ACCENT, width=2)
         self.anchor = BoundsMarker(plotter, ACCENT, width=2)
         self.source = BoundsMarker(plotter, REMOVAL, width=1)
 
     def load(self, geometry):
         actors = add_geometry(self.plotter, geometry)
+        try:
+            entities = add_geometry(self.plotter, geometry["entities"]) if "entities" in geometry else []
+        except Exception:
+            remove_geometry(self.plotter, actors)
+            raise
         self.clear()
-        self.actors = actors
-        for actor in actors:
+        self.block_actors, self.entity_actors = actors, entities
+        self.actors = actors + entities
+        self.geometry_bytes = geometry["geometry_bytes"]
+        for actor in self.actors:
             actor.SetPickable(False)
             actor.SetUseBounds(False)
             actor.SetForceOpaque(False)
             actor.GetProperty().SetOpacity(actor.GetProperty().GetOpacity() * GHOST_OPACITY)
 
     def show(self, placement, reason):
+        self.include_blocks, self.include_entities = placement.include_blocks, placement.include_entities
         for actor in self.actors:
             actor.SetPosition(*placement.position)
         self.bounds.set_bounds(placement.bounds)
@@ -39,5 +51,16 @@ class PlacementView:
     def clear(self):
         remove_geometry(self.plotter, self.actors)
         self.actors = []
+        self.block_actors = []
+        self.entity_actors = []
+        self.geometry_bytes = 0
         for marker in (self.bounds, self.anchor, self.source):
             marker.set_bounds(None)
+
+    def set_visible(self, visible):
+        for actor in self.block_actors:
+            actor.SetVisibility(visible and self.include_blocks)
+        for actor in self.entity_actors:
+            actor.SetVisibility(visible and self.include_entities)
+        for actor in self.bounds.actors + self.anchor.actors + self.source.actors:
+            actor.SetVisibility(visible)

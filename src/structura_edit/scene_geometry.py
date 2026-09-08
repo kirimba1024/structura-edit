@@ -25,7 +25,7 @@ def add_geometry(plotter, data):
                 actor = plotter.add_mesh(mesh, texture=texture, smooth_shading=False,
                                          ambient=0.35, reset_camera=False, render=False)
                 actors.append(actor)
-                actor.SetForceOpaque(mode == "OPAQUE")
+                actor.SetForceOpaque(mode != "BLEND")
         for points, faces, rgba in data["flat"]:
             if len(points):
                 actors.append(plotter.add_mesh(

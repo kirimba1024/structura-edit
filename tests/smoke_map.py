@@ -11,13 +11,14 @@ from PySide6.QtWidgets import QApplication
 
 from smoke_gui import check_map_proportions, mouse_move, settle
 from structura_edit.map_projection import VIEWS
+from structura_edit.loading import MAP_TILE_SIZE
 from structura_edit.ui import EditorWindow
 
 
 def check_map(window, output):
     minimap, canvas = window.minimap, window.minimap.canvas
     view = window.plotter
-    images = dict(canvas.images)
+    renderer = minimap.maps.previous[1]
     camera = view.camera.position
     window.selection_actions.select_all()
     selection = window.selection()
@@ -32,6 +33,9 @@ def check_map(window, output):
     QTest.qWait(120)
     QTest.keyRelease(minimap, Qt.Key.Key_W)
     assert view.camera.position == camera
+    settle(window)
+    assert minimap.maps.previous[1] is renderer
+    images = dict(canvas.images)
     minimap.grab().save(str(output / "map-six.png"))
     QTest.mouseClick(canvas, Qt.MouseButton.LeftButton, pos=canvas.tile_rect("top").center().toPoint())
     assert canvas.layout.focused == "top"
@@ -74,6 +78,10 @@ def check_map(window, output):
     assert not minimap.large and view.hasFocus()
     assert window.selection() == selection and view.camera.position == camera
     assert all(canvas.images[key] is image for key, image in images.items())
+    settle(window)
+    assert minimap.maps.previous[1] is renderer
+    for name in VIEWS:
+        assert (canvas.screen_point(canvas.position, name) - canvas.tile_rect(name).center()).manhattanLength() < 1e-6
     assert not window.worker.busy and not window.views.map_queued
     QTest.mouseClick(minimap.header, Qt.MouseButton.LeftButton)
     assert minimap.collapsed
@@ -114,19 +122,22 @@ def settle_cache(cache):
 
 def check_atlas(window, output):
     minimap, canvas = window.minimap, window.minimap.canvas
+    minimap.set_large(True)
+    settle(window)
     first = minimap.cache.spec
     assert first is not None and minimap.cache.path.is_file()
-    minimap.set_large(True)
     canvas.layout.focused = "top"
     canvas.layout.zoom["top"] = 0.25
     x, _, z = first["origin"]
     canvas.layout.centers["top"] = QPointF(x + 72, z + 24)
+    canvas.layout.panned.add("top")
     canvas.view_changed.emit()
     settle_cache(minimap.cache)
     def cached_pixel():
         for (view, left, top), image in canvas.tiles.items():
-            if view == "top" and left <= x + 8 < left + image.width() and top <= z + 8 < top + image.height():
-                return image.pixelColor(x + 8 - left, z + 8 - top)
+            if view == "top" and left <= x + 8 < left + MAP_TILE_SIZE and top <= z + 8 < top + MAP_TILE_SIZE:
+                scale = image.width() // MAP_TILE_SIZE
+                return image.pixelColor((x + 8 - left) * scale, (z + 8 - top) * scale)
         raise AssertionError("Previously visited area is missing from the map")
     original = cached_pixel()
     assert original.alpha() == 255
@@ -163,7 +174,7 @@ def main():
             check_atlas(window, args.output)
         check_progress(window)
         assert np.isfinite(window.plotter.camera.position).all()
-        result = dict(map="M/Escape, six views, focus switching, pan, wheel/pinch anchored zoom, trackpad scroll, resize, no flight or rebuilds",
+        result = dict(map="M/Escape, centered compact views, focus switching, pan, wheel/pinch anchored zoom, trackpad scroll, resize, no flight or scene rebuilds",
                       focus="M types normally in text fields; closing restores viewport focus",
                       progress="delayed busy indicator, cancellation, no document changes")
         if window.world.active:

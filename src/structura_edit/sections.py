@@ -6,6 +6,7 @@ import numpy as np
 from .loading import CHUNK_SIZE, check_preview_budget
 from .render_source import RenderSource, preview_session
 from .picking import EMPTY
+from .height_slice import HeightSlice, slice_sections
 
 
 ENTITIES = "entities"
@@ -44,26 +45,41 @@ def changed_positions(before, current):
     return (p for p in positions if before._cells.get(p) != current._cells.get(p))
 
 
-def prepare_sections(session, change=None, *, previous=None, include_entities=True, previous_entities=True, ghost=None, original=None):
-    check_preview_budget(session.size)
+def prepare_sections(session, change=None, *, previous=None, include_entities=True, previous_entities=True,
+                     ghost=None, original=None, height=HeightSlice(), previous_height=HeightSlice()):
     current = preview_session(session, change)
-    reset = previous is None or previous[0]._id != session._id
+    check_preview_budget(current.size)
+    previous_session = preview_session(*previous) if previous else None
+    reset = previous_session is None or previous_session._id != current._id
+    reset = reset or previous_session.size != current.size or previous_session.origin != current.origin
     if reset:
         keys = {section_key(position) for position in current.positions()}
     else:
-        before = preview_session(*previous)
-        keys = affected_sections(changed_positions(before, current), session.size)
-    source = RenderSource(current)
-    changed = set(ghost.positions) if ghost else set()
-    removed = {item.position for item in ghost.changes if item.after.state.split("[", 1)[0] in EMPTY} if ghost else set()
-    original = RenderSource(original or session) if removed else None
+        keys = affected_sections(changed_positions(previous_session, current), current.size)
+        if height != previous_height:
+            occupied = {section_key(position) for position in current.positions()}
+            keys.update(slice_sections(occupied, previous_height.interval(previous_session),
+                                       height.interval(current), current.size, CHUNK_SIZE))
+    source = RenderSource(current, height)
+    offset = ghost.resize.offset if ghost and ghost.resize is not None else (0, 0, 0)
+    def shifted(position):
+        return tuple(p + d for p, d in zip(position, offset))
+    changed = {shifted(position) for position in ghost.positions} if ghost else set()
+    removed = {shifted(item.position) for item in ghost.changes if item.after.state.split("[", 1)[0] in EMPTY} if ghost else set()
+    original = original or session
+    if removed and any(offset):
+        from .document_resize import resize_document
+
+        original = original.fork()
+        resize_document(original, ghost.resize)
+    original = RenderSource(original, height) if removed else None
     sections = {}
     ghosts = {}
     for key in sorted(keys):
         lower = tuple(value * CHUNK_SIZE for value in key)
-        upper = tuple(min(value + CHUNK_SIZE, length) for value, length in zip(lower, session.size))
+        upper = tuple(min(value + CHUNK_SIZE, length) for value, length in zip(lower, current.size))
         start = tuple(max(0, value - 1) for value in lower)
-        stop = tuple(min(value + 1, length) for value, length in zip(upper, session.size))
+        stop = tuple(min(value + 1, length) for value, length in zip(upper, current.size))
         bounds = tuple(tuple(value - origin for value, origin in zip(bound, start)) for bound in (lower, upper))
         region = source.region(start, stop)
         if changed:
@@ -81,9 +97,10 @@ def prepare_sections(session, change=None, *, previous=None, include_entities=Tr
                             before.emit_mask[p] = True
                 ghosts[key] = after, before
         sections[key] = region, start, bounds
-    if reset or include_entities != previous_entities:
+    if reset or height != previous_height or include_entities != previous_entities or previous_session._entities != current._entities:
+        records = source.entity_records() if include_entities else {}
         entities = SimpleNamespace(size=(1, 1, 1), palette=["minecraft:air"],
                                    palette_raw=[], present={}, block_nbt={},
-                                   entities=list(source.base.entities) if include_entities else [])
+                                   entities=list(records.values()), entity_keys=tuple(records))
         sections[ENTITIES] = entities, (0, 0, 0), None
     return dict(sections=sections, reset=reset, ghosts=ghosts)

@@ -4,7 +4,15 @@ QMainWindow, QDialog, QDockWidget, QStatusBar, QMenuBar, QMenu { background: $PA
 QWidget#panelTitle { background: $PANEL_PRESSED; border-bottom: 1px solid $BORDER; }
 QStatusBar { border-top: 1px solid $BORDER; }
 QStatusBar::item { border: 0; }
-QWidget#placementBar { background: $PANEL_BACKGROUND; border-top: 1px solid $BORDER; }
+QWidget[contextBar="true"] { background: $PANEL_BACKGROUND; border-top: 1px solid $BORDER; }
+QWidget#objectSearch { background: $PANEL_BACKGROUND; border: 1px solid $BORDER; }
+QTabWidget#nbtTabs::pane { border: 1px solid $BORDER; }
+QTabWidget#nbtTabs QTabBar::tab {
+    background: $PANEL_PRESSED; border: 1px solid $BORDER; border-radius: 0;
+    padding: 2px 8px; min-height: ${CONTROL_CONTENT}px;
+}
+QTabWidget#nbtTabs QTabBar::tab:selected { background: $PANEL_BACKGROUND; border-bottom-color: $PANEL_BACKGROUND; }
+QTabWidget#nbtTabs QTabBar::tab:hover { background: $PANEL_HOVER; }
 QLabel[cell="true"] { background: $PANEL_PRESSED; border: 1px solid $BORDER; padding: 1px 4px; }
 QPushButton, QToolButton {
     background: $PANEL_BACKGROUND; border: 1px solid $BORDER; border-radius: 0;

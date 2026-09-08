@@ -10,29 +10,33 @@ class WorldChanges:
         self.document_id = document_id
         self.history = history
         self.patch = {}
+        self.entities = {}
         self.revision = 0
         self.state_id = uuid4().hex
 
-    def _updated(self, changes, *, reverse=False):
-        patch = self.patch.copy()
+    def _updated(self, changes, *, reverse=False, entities=False):
+        patch = (self.entities if entities else self.patch).copy()
         for delta in changes:
             before, after = (delta.after, delta.before) if reverse else (delta.before, delta.after)
-            baseline = patch[delta.position][0] if delta.position in patch else before
+            key = delta.key if entities else delta.position
+            baseline = patch[key][0] if key in patch else before
             if after == baseline:
-                patch.pop(delta.position, None)
+                patch.pop(key, None)
             else:
-                patch[delta.position] = baseline, after
+                patch[key] = baseline, after
         return patch
 
     def apply(self, change):
         if not change:
             return 0
         patch = self._updated(change.changes)
-        if len(patch) > MAX_PENDING_BLOCKS:
+        entities = self._updated(change.entities, entities=True)
+        if len(patch) + len(entities) > MAX_PENDING_BLOCKS:
             raise ValueError(f"Pending world changes exceed {MAX_PENDING_BLOCKS:,} blocks; save before editing more")
         state_id = uuid4().hex
         self.history.append(change, self.state_id, state_id)
         self.patch = patch
+        self.entities = entities
         self.state_id = state_id
         self.revision += 1
         return len(change)
@@ -43,6 +47,7 @@ class WorldChanges:
             return False
         entry, change = self.history.get(index)
         self.patch = self._updated(change.changes, reverse=undo)
+        self.entities = self._updated(change.entities, reverse=undo, entities=True)
         self.history.cursor += -1 if undo else 1
         self.state_id = entry.before if undo else entry.after
         self.revision += 1
@@ -51,5 +56,6 @@ class WorldChanges:
     def fork(self):
         branch = copy(self)
         branch.patch = self.patch.copy()
+        branch.entities = self.entities.copy()
         branch.history = History(self.history.cache_limit, persistent=False)
         return branch

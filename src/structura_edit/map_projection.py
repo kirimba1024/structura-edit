@@ -1,5 +1,21 @@
+from math import floor
+
+
 VIEWS = ("top", "north", "west", "bottom", "south", "east")
 LABELS = ("Top", "North", "West", "Bottom", "South", "East")
+
+
+def camera_cut(position, size):
+    return tuple(min(length, max(-1, floor(value))) for value, length in zip(position, size))
+
+
+def slice_bounds(size, cut, view):
+    axis = depth_axis(view)
+    if cut is None:
+        return 0, size[axis]
+    if view in ("top", "south", "east"):
+        return 0, min(size[axis], max(0, cut[axis] + 1))
+    return min(size[axis], max(0, cut[axis])), size[axis]
 
 
 def depth_axis(view):

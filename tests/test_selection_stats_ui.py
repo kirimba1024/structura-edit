@@ -59,3 +59,19 @@ def test_disclosure_runs_off_gui_coalesces_changes_and_never_shows_stale_counts(
         stats.shutdown()
         host.close()
         host.deleteLater()
+
+
+def test_material_counts_use_compact_cells_and_explain_empty_space_only_in_tooltip(qt_app, edit):
+    stats = SelectionStats()
+    stats.context = edit, edit.select(), None
+    try:
+        stats._show_rows([("minecraft:oak_leaves", 22, None, (40, 100, 20)), ("mod:soil", 5, None, (100, 50, 20))])
+        assert stats.items.gridSize().width() < 80
+        assert stats.items.gridSize().width() % 4 == 0
+        assert stats.info.text() == "27 blocks · 2 types"
+        assert "Empty space is not counted" in stats.info.toolTip()
+        assert stats.model.item(0).toolTip() == "Oak Leaves\nminecraft:oak_leaves\n22 blocks"
+        assert stats.model.item(1).toolTip() == "Soil\nmod:soil\n5 blocks"
+    finally:
+        stats.shutdown()
+        stats.deleteLater()

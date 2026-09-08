@@ -5,7 +5,8 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QWidget
 
 from .map_layout import MapLayout, projection_rect
-from .map_projection import LABELS, VIEWS, depth_axis, project, unproject
+from .loading import MAP_TILE_SIZE
+from .map_projection import LABELS, VIEWS, depth_axis, project, unproject, slice_bounds
 from .appearance import ACCENT, BORDER, MAP_BACKGROUND, PANEL_BACKGROUND, REMOVAL, TEXT
 
 
@@ -16,6 +17,8 @@ class MapCanvas(QWidget):
     def __init__(self):
         super().__init__()
         self.images = {}
+        self.image_pixels = {}
+        self.map_cut = None
         self.tiles = {}
         self.origin = (0, 0, 0)
         self.dimension = None
@@ -29,12 +32,16 @@ class MapCanvas(QWidget):
         self.selection = None
         self.entities = []
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setToolTip("M: expand · Click: enlarge view · Drag / trackpad scroll: pan · Wheel / pinch: zoom · F: camera · Double-click: go here")
+        self.setToolTip("M: expand / close · Click: enlarge view\n"
+                       "Drag / two fingers: pan · Wheel / pinch: zoom\n"
+                       "F: center on camera · Double-click: go here")
 
     def set_images(self, images):
-        self.images = {view: QImage(pixels.data, pixels.shape[1], pixels.shape[0], pixels.strides[0],
+        self.images = {view: self.images[view] if pixels is self.image_pixels.get(view) and view in self.images else
+                      QImage(pixels.data, pixels.shape[1], pixels.shape[0], pixels.strides[0],
                                   QImage.Format.Format_RGBA8888 if pixels.shape[2] == 4 else QImage.Format.Format_RGB888).copy()
                        for view, pixels in images.items()}
+        self.image_pixels = images
         self.update()
 
     def tile_rect(self, view):
@@ -56,13 +63,11 @@ class MapCanvas(QWidget):
             painter.save()
             painter.setClipRect(rect)
             if self.layout.large:
-                painter.setOpacity(0.85)
                 for (tile_view, x, y), image in self.tiles.items():
                     if tile_view == view:
-                        target = self.image_rect(QRectF(x, y, image.width(), image.height()), view)
+                        target = self.image_rect(QRectF(x, y, MAP_TILE_SIZE, MAP_TILE_SIZE), view)
                         if target.intersects(rect):
                             painter.drawImage(target, image)
-                painter.setOpacity(1)
             if view in self.images:
                 target = self.image_rect(projection_rect(self.origin, self.size_blocks, view), view)
                 painter.drawImage(target, self.images[view])
@@ -80,6 +85,9 @@ class MapCanvas(QWidget):
                 painter.drawRect(selection)
             painter.setPen(QPen(QColor(TEXT), 1))
             for position, player in self.entities:
+                lower, upper = slice_bounds(self.size_blocks, self.map_cut, view)
+                if not lower <= position[depth_axis(view)] < upper:
+                    continue
                 painter.setBrush(QColor("#f5f3e8" if player else "#e4ce68"))
                 point = self.screen_point(position, view)
                 painter.drawRect(QRectF(round(point.x()) - 2, round(point.y()) - 2, 4, 4))
@@ -105,9 +113,9 @@ class MapCanvas(QWidget):
             label = label.upper()
             if rect.width() < 96:
                 label = label[:1]
-            if self.layout.large and self.dimension and rect.width() > 200:
+            if self.layout.large and self.map_cut is not None and rect.width() > 200:
                 axis = depth_axis(view)
-                label += f" · {'XYZ'[axis]} {self.origin[axis]}…{self.origin[axis] + self.size_blocks[axis]}"
+                label += f" · {'XYZ'[axis]} {self.origin[axis] + self.map_cut[axis]}"
             label_rect = QRectF(rect.topLeft() + QPointF(3, 2), QSizeF(painter.fontMetrics().size(0, label)))
             painter.fillRect(label_rect.adjusted(-2, -1, 2, 1), QColor(PANEL_BACKGROUND))
             painter.setPen(QColor(TEXT))

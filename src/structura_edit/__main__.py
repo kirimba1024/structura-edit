@@ -10,6 +10,8 @@ def main(argv=None):
     source.add_argument("--world", help="Java world folder containing level.dat")
     parser.add_argument("--assets", help="Minecraft client JAR or extracted assets/minecraft folder")
     parser.add_argument("--region", help="Named Litematic region to view")
+    parser.add_argument("--palette-index", type=int, default=0, help="Java NBT palette variant")
+    parser.add_argument("--source-data-version", type=int, help="Source Java DataVersion for Sponge v1 without version metadata")
     args = parser.parse_args(argv)
     try:
         from .ui import launch
@@ -17,7 +19,10 @@ def main(argv=None):
         parser.exit(2, f"Install structura-edit[gui] to open the workbench.\n{error}\n")
     if args.world and args.region:
         parser.error("--region applies to Litematic files; choose a world dimension in View")
-    return launch(args.path, assets=args.assets, region=args.region, world=args.world)
+    if args.world and (args.palette_index or args.source_data_version is not None):
+        parser.error("Palette and source version options apply to schematic files")
+    return launch(args.path, assets=args.assets, region=args.region, palette_index=args.palette_index,
+                  source_data_version=args.source_data_version, world=args.world)
 
 
 if __name__ == "__main__":

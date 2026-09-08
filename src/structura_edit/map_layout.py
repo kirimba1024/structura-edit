@@ -17,6 +17,7 @@ class MapLayout:
         self.large = False
         self.focused = None
         self.centers = {}
+        self.panned = set()
         self.zoom = dict.fromkeys(VIEWS, 1.0)
         self.framed_size = (1, 1, 1)
 
@@ -25,6 +26,7 @@ class MapLayout:
         self.centers = {view: projection_rect(self.canvas.origin, self.framed_size, view).center() for view in VIEWS}
         self.zoom = dict.fromkeys(VIEWS, 1.0)
         self.focused = None
+        self.panned.clear()
 
     def tile_rect(self, view):
         width, height = self.canvas.width(), self.canvas.height()
@@ -45,17 +47,22 @@ class MapLayout:
         source = projection_rect(self.canvas.origin, self.canvas.size_blocks, view)
         tile = self.tile_rect(view)
         if not self.large or self.focused is not None and self.focused != view:
-            scale = min(tile.width() / source.width(), tile.height() / source.height())
-            center = source.center()
+            width, height = plane_size(self.framed_size, view)
+            scale = min(tile.width() / width, tile.height() / height)
+            center = self.camera_center(view)
         else:
             width, height = plane_size(self.framed_size, view)
             quota = MAX_MAP_VISIBLE_TILES if self.focused == view else MAX_MAP_VISIBLE_TILES // len(VIEWS)
             span = (int(quota ** 0.5) - 1) * MAP_TILE_SIZE
             scale = max(max(tile.width(), tile.height()) / span,
                         min(tile.width() / width, tile.height() / height) * self.zoom[view])
-            center = self.centers.get(view, source.center())
+            center = self.centers.get(view, source.center()) if view in self.panned else self.camera_center(view)
         width, height = tile.width() / scale, tile.height() / scale
         return QRectF(center.x() - width / 2, center.y() - height / 2, width, height)
+
+    def camera_center(self, view):
+        position = tuple(p + o for p, o in zip(self.canvas.position, self.canvas.origin))
+        return QPointF(*project(position, (0, 0, 0), view))
 
     def to_screen(self, point, view):
         tile, area = self.tile_rect(view), self.area(view)
@@ -71,12 +78,15 @@ class MapLayout:
         tile, area = self.tile_rect(view), self.area(view)
         self.centers[view] = area.center() - QPointF(delta.x() * area.width() / tile.width(),
                                                    delta.y() * area.height() / tile.height())
+        self.panned.add(view)
 
     def zoom_at(self, view, point, factor):
         before = self.from_screen(point, view)
+        self.centers[view] = self.area(view).center()
+        self.panned.add(view)
         self.zoom[view] = min(64, max(0.125, self.zoom[view] * factor))
         self.centers[view] = self.area(view).center() + before - self.from_screen(point, view)
 
     def recenter(self):
-        position = tuple(p + o for p, o in zip(self.canvas.position, self.canvas.origin))
-        self.centers = {view: QPointF(*project(position, (0, 0, 0), view)) for view in VIEWS}
+        self.panned.clear()
+        self.centers = {view: self.camera_center(view) for view in VIEWS}

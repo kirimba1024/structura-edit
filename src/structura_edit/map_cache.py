@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import sqlite3
+from math import isqrt
 from contextlib import closing, contextmanager
 from pathlib import Path
 from time import time
@@ -10,17 +11,18 @@ import numpy as np
 from PIL import Image
 
 from .appearance import MAP_BACKGROUND
-from .map_projection import VIEWS, depth_axis, plane_size, project
-from .map_images import MAP_RENDER_VERSION
+from .map_projection import VIEWS, depth_axis, plane_size, project, slice_bounds
+from .map_images import MAP_RENDER_VERSION, MAP_TEXTURE_SIZE
 from .file_state import fingerprint, resource_stamp
 from .loading import MAP_TILE_SIZE as TILE_SIZE, MAX_MAP_VISIBLE_TILES as MAX_VISIBLE_TILES
 
 
 MAX_DISK_BYTES = 48 * 1024**2
 MAX_TILES = 4096
+MAX_READ_PIXELS = 16_777_216
 
 
-def map_spec(session, assets, path):
+def map_spec(session, assets, path, *, cut=None):
     if path is None or not hasattr(session, "map_identity"):
         return None
     resource = (str(Path(assets).resolve()), resource_stamp(assets)) if assets else None
@@ -29,7 +31,8 @@ def map_spec(session, assets, path):
     slabs = {}
     for view in VIEWS:
         axis = depth_axis(view)
-        slabs[view] = f"{view}:{session.origin[axis]}:{session.origin[axis] + session.size[axis]}"
+        lower, upper = slice_bounds(session.size, cut, view)
+        slabs[view] = f"{view}:{session.origin[axis] + lower}:{session.origin[axis] + upper}"
     return dict(path=str(path), space=space, slabs=slabs, origin=session.origin, size=session.size,
                 loaded=session.loaded_chunks, stamps=session.map_stamps, volatile=session.dirty)
 
@@ -46,10 +49,12 @@ def connect(path):
         yield db
 
 
-def decode(data):
+def decode(data, scale=MAP_TEXTURE_SIZE):
     with Image.open(io.BytesIO(data)) as image:
-        if image.size != (TILE_SIZE, TILE_SIZE) or image.mode != "RGBA":
+        if image.size != (TILE_SIZE * MAP_TEXTURE_SIZE,) * 2 or image.mode != "RGBA":
             raise ValueError("Invalid map tile")
+        if scale != MAP_TEXTURE_SIZE:
+            image = image.resize((TILE_SIZE * scale,) * 2, Image.Resampling.BOX)
         return np.array(image)
 
 
@@ -98,7 +103,8 @@ def store_maps(spec, images):
         invalidate(db, spec["space"])
         for view, pixels in result.items():
             width, height = plane_size(spec["size"], view)
-            pixels = np.array(Image.fromarray(pixels).resize((width, height), Image.Resampling.BOX))
+            scale = MAP_TEXTURE_SIZE
+            pixels = np.array(Image.fromarray(pixels).resize((width * scale, height * scale), Image.Resampling.NEAREST))
             a = project(spec["origin"], (0, 0, 0), view)
             b = project(tuple(p + s for p, s in zip(spec["origin"], spec["size"])), (0, 0, 0), view)
             left, top = min(a[0], b[0]), min(a[1], b[1])
@@ -107,14 +113,15 @@ def store_maps(spec, images):
                     key = spec["space"], spec["slabs"][view], x, y
                     row = db.execute("SELECT image, stamps FROM tiles WHERE space=? AND slab=? AND x=? AND y=?", key).fetchone()
                     try:
-                        tile = decode(row[0]) if row else np.zeros((TILE_SIZE, TILE_SIZE, 4), dtype=np.uint8)
+                        tile = decode(row[0]) if row else np.zeros((TILE_SIZE * scale, TILE_SIZE * scale, 4), dtype=np.uint8)
                         stamps = json.loads(row[1]) if row else {}
                     except (ValueError, OSError):
-                        tile, stamps = np.zeros((TILE_SIZE, TILE_SIZE, 4), dtype=np.uint8), {}
+                        tile, stamps = np.zeros((TILE_SIZE * scale, TILE_SIZE * scale, 4), dtype=np.uint8), {}
                     stamps.update(spec["stamps"])
                     lo_x, lo_y = max(left, x), max(top, y)
                     hi_x, hi_y = min(left + width, x + TILE_SIZE), min(top + height, y + TILE_SIZE)
-                    tile[lo_y - y:hi_y - y, lo_x - x:hi_x - x] = pixels[lo_y - top:hi_y - top, lo_x - left:hi_x - left]
+                    tile[(lo_y - y) * scale:(hi_y - y) * scale, (lo_x - x) * scale:(hi_x - x) * scale] = (
+                        pixels[(lo_y - top) * scale:(hi_y - top) * scale, (lo_x - left) * scale:(hi_x - left) * scale])
                     if not tile[:, :, 3].any():
                         db.execute("DELETE FROM tiles WHERE space=? AND slab=? AND x=? AND y=?", key)
                         continue
@@ -131,7 +138,7 @@ def store_maps(spec, images):
     return result, spec
 
 
-def read_tiles(spec, areas):
+def read_tiles(spec, areas, scales=None):
     if not Path(spec["path"]).exists():
         return {}
     result = {}
@@ -143,9 +150,11 @@ def read_tiles(spec, areas):
                 "ORDER BY ABS(x - ?) + ABS(y - ?) LIMIT ?",
                 (spec["space"], spec["slabs"][view], right, TILE_SIZE, left, bottom, TILE_SIZE, top,
                  (left + right) / 2, (top + bottom) / 2, MAX_VISIBLE_TILES // len(areas))).fetchall()
+            scale = min((scales or {}).get(view, 1), MAP_TEXTURE_SIZE,
+                        max(1, isqrt(MAX_READ_PIXELS // max(1, len(areas) * len(rows) * TILE_SIZE**2))))
             for rowid, x, y, image in rows:
                 try:
-                    result[view, x, y] = decode(image)
+                    result[view, x, y] = decode(image, scale)
                 except (ValueError, OSError):
                     db.execute("DELETE FROM tiles WHERE rowid=?", (rowid,))
                     continue

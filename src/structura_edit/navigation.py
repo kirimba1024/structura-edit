@@ -11,8 +11,9 @@ MIN_SPEED = 0.5
 MAX_SPEED = 256.0
 BOOST = 4
 
-CONTROLS = ("Hold WASD / arrows: fly · E / Space: up · Q: down · Shift: faster\n"
-            "Hold RMB: look · Shift+`: toggle freelook · Escape / click: exit\n"
+CONTROLS = ("Move mouse / one finger: look after opening · Escape: release cursor · Click: select at crosshair\n"
+            "Hold WASD / arrows: fly · E / Space: up · Q: down · Shift: faster\n"
+            "Shift+`: resume freelook · Hold RMB: temporary look\n"
             "− / +: speed · Mouse wheel while looking: speed · Shift+click: region\n"
             "I / middle click: pick material · 1 / 2: corner A / B at camera\n"
             "F: frame scene · M: map\n"
@@ -39,6 +40,7 @@ class Navigation(QObject):
         self.placing = False
         self.held = HeldKeys()
         self.mouse_look = MouseLook(view, capture=capture_mouse)
+        self.resume_look = False
         self.press_position = None
         self.hover_position = None
         self.hover_dirty = False
@@ -64,11 +66,16 @@ class Navigation(QObject):
 
     def start_fly(self):
         if self.enabled:
+            if self.mouse_look.capture and (not self.view.isVisible() or not self.view.window().isActiveWindow()):
+                self.suspend()
+                self.resume_look = True
+                return
             self.stop()
             self.view.setFocus()
             self.mouse_look.start(self.view.mapFromGlobal(QCursor.pos()), latched=True)
 
     def stop(self, *, restore_cursor=True):
+        self.resume_look = False
         extending = Qt.Key.Key_Shift in self.keys
         self.held.clear()
         if extending:
@@ -78,6 +85,11 @@ class Navigation(QObject):
         self.press_position = None
         self.mouse_look.stop(restore=restore_cursor)
         self.hovered.emit(None)
+
+    def suspend(self):
+        resume = self.resume_look or self.mouse_look.latched
+        self.stop(restore_cursor=False)
+        self.resume_look = resume
 
     def release_key(self, event):
         extending = Qt.Key.Key_Shift in self.keys
@@ -157,7 +169,7 @@ class Navigation(QObject):
         if kind == QEvent.Type.ApplicationDeactivate or (
                 kind in (QEvent.Type.WindowDeactivate, QEvent.Type.WindowBlocked)
                 and watched is self.view.window()):
-            self.stop(restore_cursor=False)
+            self.suspend()
         if watched is not self.view:
             if kind == QEvent.Type.KeyRelease:
                 self.release_key(event)
@@ -166,12 +178,12 @@ class Navigation(QObject):
                 self.mouse_look.stop()
             return False
         if kind in (QEvent.Type.FocusOut, QEvent.Type.Hide):
-            self.stop(restore_cursor=False)
+            self.suspend()
         if kind == QEvent.Type.Leave and not self.looking:
             self.hover_position = None
             self.hovered.emit(None)
         if not self.enabled or QApplication.activePopupWidget() is not None:
-            self.stop(restore_cursor=False)
+            self.suspend()
             return False
         if kind in (QEvent.Type.ShortcutOverride, QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
             return self.keyboard(event)
@@ -189,7 +201,8 @@ class Navigation(QObject):
                 self.sample(event.position().toPoint())
                 return True
             if self.mouse_look.latched:
-                self.stop()
+                if event.button() == Qt.MouseButton.LeftButton:
+                    self.selected.emit(self.view.rect().center(), bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier))
                 return True
             self.view.setFocus()
             if event.button() == Qt.MouseButton.RightButton:
@@ -200,7 +213,7 @@ class Navigation(QObject):
                 self.press_position = event.position().toPoint()
             return True
         if kind == QEvent.Type.MouseButtonRelease:
-            if event.button() == Qt.MouseButton.RightButton:
+            if event.button() == Qt.MouseButton.RightButton and not self.mouse_look.latched:
                 delta = self.mouse_look.sample()
                 if not delta.isNull():
                     self.camera.look(delta.x(), delta.y())
@@ -215,18 +228,24 @@ class Navigation(QObject):
         if kind == QEvent.Type.MouseMove:
             self.hover_position = event.position().toPoint()
             self.hover_dirty = True
-            self.mouse_look.move(event.position().toPoint())
+            self.mouse_look.move(event.position())
             return True
         return False
 
     def tick(self, elapsed):
         if not self.enabled or QApplication.activePopupWidget() is not None or QApplication.activeModalWidget() is not None:
-            self.stop(restore_cursor=False)
+            self.suspend()
             return
+        if self.resume_look and self.view.hasFocus() and self.view.isVisible() and self.view.window().isActiveWindow():
+            self.start_fly()
+        was_latched = self.mouse_look.latched
         delta = self.mouse_look.sample()
+        if was_latched and not self.looking:
+            self.resume_look = True
         if not delta.isNull():
             self.camera.look(delta.x(), delta.y())
-        self.camera.step(self.held.axes, self.flight_speed, min(max(elapsed, 0), 0.1))
+        axes = self.held.axes
+        self.camera.step(axes, self.flight_speed, min(max(elapsed, 0), 0.1))
         self.hover_dirty = self.hover_dirty or self.camera.needs_render
         self.camera.render()
         self.hover_elapsed += elapsed
@@ -238,4 +257,5 @@ class Navigation(QObject):
 
     def close(self):
         self.stop()
+        self.mouse_look.close()
         QApplication.instance().removeEventFilter(self)

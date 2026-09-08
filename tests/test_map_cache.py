@@ -124,3 +124,25 @@ def test_external_chunk_and_resource_changes_invalidate_their_cache(tmp_path):
     before = map_spec(session, assets, first["path"])
     texture.write_bytes(b"changed nested texture")
     assert map_spec(session, assets, first["path"])["space"] != before["space"]
+
+
+@pytest.mark.parametrize("view", VIEWS)
+def test_cache_preserves_texture_pixels_at_global_projection_coordinates(tmp_path, view):
+    from structura_edit.map_cache import TILE_SIZE
+    from structura_edit.map_projection import project
+
+    spec = snapshot(tmp_path, (-16, 16, -16))
+    texture = np.arange(16 * 16 * 3, dtype=np.uint8).reshape(16, 16, 3)
+    pixels = np.tile(texture, (16, 16, 1))
+    store_maps(spec, {view: pixels})
+    first = project(spec["origin"], (0, 0, 0), view)
+    last = project(tuple(p + s for p, s in zip(spec["origin"], spec["size"])), (0, 0, 0), view)
+    left, top = min(first[0], last[0]), min(first[1], last[1])
+    areas = {view: (left, top, left + 16, top + 16)}
+    tiles = read_tiles(spec, areas, {view: 16})
+    (_, x, y), tile = next(iter(tiles.items()))
+    assert tile.shape == (TILE_SIZE * 16, TILE_SIZE * 16, 4)
+    assert np.array_equal(tile[(top - y) * 16:(top - y + 16) * 16,
+                              (left - x) * 16:(left - x + 16) * 16, :3], pixels)
+    overview = next(iter(read_tiles(spec, areas).values()))
+    assert overview.shape == (TILE_SIZE, TILE_SIZE, 4)

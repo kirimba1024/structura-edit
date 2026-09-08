@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QToolButton, QVBoxLayout
 from .appearance import MAP_HEADER_HEIGHT
 from .map_canvas import MapCanvas
 from .map_cache_ui import MapCacheView
+from .camera_maps import CameraMaps
 from .navigation_keys import control_key
 
 
@@ -22,6 +23,7 @@ class MiniMap(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.canvas = MapCanvas()
         self.cache = MapCacheView(self.canvas, cache_dir)
+        self.maps = CameraMaps(self.canvas, self.cache)
         self.canvas.navigate.connect(self._navigate)
         self.header = self._button("", "Map projections", self._header_clicked)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -93,10 +95,12 @@ class MiniMap(QWidget):
 
     def _update_layout(self):
         self.canvas.setVisible(not self.collapsed)
-        self.header.setText("Six views" if self.large else "MAP +" if self.collapsed else "MAP −")
+        self.header.setText("Camera slices" if self.large else "MAP +" if self.collapsed else "MAP −")
         self.expand.setText("M ×" if self.large else "M +")
         self.expand.setToolTip("Close map (M / Escape)" if self.large else "Expand map (M)")
         self.center.setVisible(self.large)
+        self.maps.active = not self.collapsed
+        self.maps.update()
         self.reposition()
         self.expanded_changed.emit(not self.collapsed)
 
@@ -111,12 +115,15 @@ class MiniMap(QWidget):
 
     def set_document(self, session):
         self.cache.set_source(None)
+        self.maps.reset()
         same_source = getattr(self, "source", None) == (session.path, getattr(session, "dimension", None))
         self.source = session.path, getattr(session, "dimension", None)
         self.canvas.size_blocks = session.size
         self.canvas.origin = session.origin
         self.canvas.dimension = getattr(session, "dimension", None)
         self.canvas.images.clear()
+        self.canvas.image_pixels.clear()
+        self.canvas.map_cut = None
         self.canvas.tiles.clear()
         self.canvas.selection = None
         if not same_source:
@@ -128,6 +135,7 @@ class MiniMap(QWidget):
 
     def set_camera(self, position, direction):
         self.canvas.position, self.canvas.direction = tuple(position), tuple(direction)
+        self.maps.update()
         self.canvas.update()
 
     def set_selection(self, bounds):

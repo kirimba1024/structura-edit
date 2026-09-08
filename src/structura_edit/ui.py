@@ -10,12 +10,20 @@ from .controls import CellLabel
 from .appearance import CONTROL_HEIGHT, GRID
 from .theme import apply_theme
 from .jobs import PROTECTED_JOBS, Worker
+from .height_slice_ui import HeightSliceController
+from .height_slice import HeightSlice
+from .object_ui import ObjectController
 from .menus import EditorMenus
 from .navigation import CONTROLS, Navigation
 from .placement_ui import PlacementController
+from .placement_review import PlacementReview
+from .repeat_ui import RepeatController
 from .scene import Scene
+from .scene_guides import SceneGuides
 from .selection import RegionSelection
 from .selection_actions import SelectionActions
+from .source_dialog import STRUCTURE_FILTER, SourceDialog, source_version_options
+from .source_loading import SourceVersionRequired
 from .task_progress import TaskProgress
 from .view_pipeline import ViewPipeline
 from .workbench import EditorPanels, Workbench
@@ -23,7 +31,8 @@ from .world_ui import WorldController
 
 
 class EditorWindow(QMainWindow):
-    def __init__(self, path=None, *, assets=None, region=None, off_screen=False, cache_dir=None):
+    def __init__(self, path=None, *, assets=None, region=None, palette_index=0, source_data_version=None,
+                 off_screen=False, cache_dir=None):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, off_screen)
         self.setWindowTitle("Structura Edit")
@@ -43,37 +52,60 @@ class EditorWindow(QMainWindow):
         self.minimap = self.workbench.minimap
         self.overlay = self.workbench.overlay
         self.scene = Scene(self.plotter)
+        self.guides = SceneGuides(self.plotter)
         self.camera = FreeCamera(self.plotter, self.minimap.set_camera)
         self.navigation = Navigation(self.plotter, self.camera, capture_mouse=not off_screen)
         self.views = ViewPipeline(self.scene, self.camera, self.minimap, self._run, self._rendered,
-                                  cache_path=self.minimap.cache.path)
+                                  cache_path=self.minimap.cache.path,
+                                  map_updates=self.minimap.maps,
+                                  retained_geometry=lambda: self.placement.view.geometry_bytes)
         self.panels = EditorPanels(self)
         self.selection_actions = SelectionActions(self.selected, self.panels.selection, self.plotter.camera,
                                                   available=lambda: self.session is not None and not self.placement.active
-                                                  and not self.worker.busy)
+                                                  and not self.repeat.active and not self.worker.busy)
         self.operation = self.panels.operation
         self.world = WorldController(self)
         self.placement = PlacementController(self.scene, self.navigation, self._run)
-        self.workbench.scene_layout.addWidget(self.placement.bar)
+        self.placement_review = PlacementReview(self)
+        self.repeat = RepeatController(self)
+        self.placement.bar.destination.materials = self.operation.materials
+        self.repeat.bar.destination.materials = self.operation.materials
+        self.objects = ObjectController(self)
+        self.slicing = HeightSliceController(self)
         self.menus = EditorMenus(self, {
-            "open": self.open_dialog, "world": self.world.open_dialog, "save": self.save_dialog,
+            "open": self.open_dialog, "save": self.save_dialog,
             "export": self.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
             "apply": self.apply_pending, "discard": self.discard_pending, "recipe": self.show_recipe,
             "all": self.selection_actions.select_all, "clear": self.selection_actions.clear,
             "coordinates": lambda: self.panels.show("selection"), "materials": lambda: self.show_materials(),
             "fit": self.fit_scene, "map": self.minimap.toggle_large, "goto": self.camera_dialog, "refresh": self.world.refresh,
             "fly": self.fly_camera,
+            "height": self.slicing.show,
             "history": lambda: self.panels.show("history"),
             "world_settings": self.world.settings, "entities": self._entities_changed,
             "resources": self.choose_assets, "operation": self.show_operation,
             "copy": lambda: self.placement.start("copy"), "take": lambda: self.placement.start("take"),
             "paste": lambda: self.placement.start("paste"), "duplicate": lambda: self.placement.start("duplicate"),
-            "import": self.import_dialog,
+            "repeat": self.repeat.start,
+            "bounds": self._guides_changed, "chunks": self._guides_changed,
+            "import": self.import_dialog, "inspect": self.objects.inspect, "entity_all": self.objects.select_region,
+            "find_objects": self.objects.finder.show,
+            "entity_move": lambda: self.objects.transform("Move"),
+            "entity_duplicate": lambda: self.objects.transform("Duplicate"),
+            "entity_rotate": lambda: self.objects.transform("Rotate"),
+            "entity_delete": lambda: self.objects.transform("Delete"),
         })
         self.placement.bar.bind_actions(self.menus.actions)
         self.entities_action = self.menus.actions["entities"]
         self.status = CellLabel("Open a schematic or world")
         self.statusBar().addWidget(self.status, 1)
+        self.error_message = ""
+        self.error_button = QToolButton()
+        self.error_button.setText("Error…")
+        self.error_button.setToolTip("View and copy the full error")
+        self.error_button.clicked.connect(self.show_error)
+        self.statusBar().addWidget(self.error_button)
+        self.error_button.hide()
         self.statusBar().setSizeGripEnabled(False)
         self.statusBar().setFixedHeight(CONTROL_HEIGHT + GRID)
         self.refresh_button = QToolButton()
@@ -86,7 +118,7 @@ class EditorWindow(QMainWindow):
         self.save_button.setDefaultAction(self.menus.actions["save"])
         self.save_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.statusBar().addPermanentWidget(self.save_button)
-        self.controls = CellLabel("WASD · RMB look · M map", width=GRID * 72)
+        self.controls = CellLabel("Mouse look · Esc cursor · M map", width=GRID * 72)
         self.controls.setToolTip(CONTROLS)
         self.statusBar().addPermanentWidget(self.controls)
         self.progress = TaskProgress()
@@ -100,11 +132,11 @@ class EditorWindow(QMainWindow):
         self.timer.start(16)
         self._sync()
         if path:
-            QTimer.singleShot(0, lambda: self.open_path(path, region=region))
+            QTimer.singleShot(0, lambda: self.open_path(path, region=region, palette_index=palette_index,
+                                                       source_data_version=source_data_version))
 
     def _connect_ui(self):
         self.workbench.open_requested.connect(self.open_dialog)
-        self.workbench.world_requested.connect(self.world.open_dialog)
         self.workbench.demo_requested.connect(self.open_demo)
         self.navigation.selected.connect(self.scene_click)
         self.navigation.hovered.connect(self.scene_hover)
@@ -116,6 +148,7 @@ class EditorWindow(QMainWindow):
         self.navigation.cancel_requested.connect(self.escape)
         self.navigation.speed_changed.connect(lambda speed: self.status.setText(f"Flight speed: {speed:.1f} blocks/s"))
         self.minimap.navigate.connect(self.move_camera)
+        self.minimap.maps.failed.connect(self._error)
         self.minimap.large_changed.connect(self._map_changed)
         self.minimap.expanded_changed.connect(lambda expanded: self.views.request_maps() if expanded else None)
         self.selection_actions.changed.connect(self._selection_changed)
@@ -143,17 +176,22 @@ class EditorWindow(QMainWindow):
         editable = ready and not self.session.readonly
         selected = self.selected.region is not None
         preview_ready = bool(self.pending) and self.views.ready
-        placing = self.placement.active
+        placing = self.placement.active or self.repeat.active
         self.menus.sync(self.session, busy=self.worker.busy, selected=selected,
                         preview=self.pending is not None, preview_ready=preview_ready, world_active=self.world.active,
                         placing=placing, clipboard=self.placement.clipboard is not None)
-        self.placement.set_context(self.session, self.selected.region, self.assets, busy=self.worker.busy,
-                                    available=ready and self.pending is None and self.views.ready,
-                                    visible=self.session is not None and not self.minimap.large and self.pending is None)
+        self.placement.set_context(self.session, self.selected.region, self.assets,
+                                    busy=self.worker.busy or (self.placement.active and not self.views.ready and self.placement_review.plan is None),
+                                    available=ready and self.pending is None and self.views.ready and not self.repeat.active,
+                                    visible=self.session is not None and not self.minimap.large and not self.repeat.active
+                                    and (self.pending is None or self.placement_review.plan is not None),
+                                    scene_ready=self.views.ready, review=self.placement_review.plan)
         self.placement.bar.stats.set_context(self.session, self.selected.region, self.assets,
                                             visible=not placing and not self.minimap.large and self.pending is None)
-        self.overlay.set_selection(None if placing else self.selected.region, None if placing else self.selected.preview,
-                                   (self.selected.anchor, self.selected.opposite))
+        self._show_selection(self.selected.region)
+        self.objects.sync()
+        self.slicing.sync()
+        self.repeat.sync()
         self.panels.selection.setEnabled(self.selection_actions.available())
         self.panels.materials.setEnabled(ready and not placing)
         self.operation.setEnabled(self.session is not None and not self.session.readonly and not placing)
@@ -172,7 +210,7 @@ class EditorWindow(QMainWindow):
             self.setWindowTitle(f"{'* ' if self.session.dirty else ''}{name} — Structura Edit")
 
     def _map_changed(self, large):
-        self.navigation.stop()
+        self.navigation.suspend()
         self.navigation.enabled = self.session is not None and not large
         self._sync()
 
@@ -183,6 +221,7 @@ class EditorWindow(QMainWindow):
     def _run(self, kind, callback, **args):
         if self.worker.busy:
             return False
+        self.error_button.hide()
         self._job = kind, callback
         self.worker.submit(kind, **args)
         self.progress.start(kind.capitalize(), cancellable=kind not in PROTECTED_JOBS)
@@ -190,7 +229,10 @@ class EditorWindow(QMainWindow):
             messages = {"open": "Opening…", "world": "Loading world…", "render": "Building preview…",
                         "save": "Saving…", "recipe": "Running recipe…", "operation": "Preparing change…", "export": "Exporting…",
                         "apply": "Applying…", "history": "Restoring history…"}
-            messages.update(clipboard="Preparing clipboard…", placement="Preparing placement…")
+            messages.update(clipboard="Preparing clipboard…", placement="Preparing placement…", objects="Preparing object data…")
+            messages["repeat"] = "Preparing copies…"
+            messages["placement_plan"] = "Checking placement rule…"
+            messages["object_search"] = "Finding objects…"
             self.status.setText(messages[kind])
         self._sync()
         return True
@@ -224,10 +266,18 @@ class EditorWindow(QMainWindow):
 
     def _error(self, message):
         self.placement.failed()
+        self.error_message = message
+        self.error_button.show()
         self.status.setText(message.splitlines()[0] if message else "Operation failed")
         self.status.setToolTip(self.status.text())
         self.panels.recipe.output.setPlainText(message)
         self._sync()
+
+    def show_error(self):
+        from .error_details import show_error
+
+        self.navigation.stop()
+        show_error(self, self.error_message)
 
     def cancel_task(self):
         if self._job and self._job[0] in PROTECTED_JOBS:
@@ -235,6 +285,10 @@ class EditorWindow(QMainWindow):
         self.worker.close()
         self._job = None
         self.world.queued = None
+        if self.session and self.views.displayed is not None:
+            offset = tuple(old - new for old, new in zip(self.views.displayed.state.origin, self.session.origin))
+            if any(offset):
+                self.camera.translate(offset)
         self.views.reset()
         self.pending = None
         self.placement.cancel()
@@ -253,29 +307,42 @@ class EditorWindow(QMainWindow):
         return answer == QMessageBox.StandardButton.Discard
 
     def open_dialog(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Open structure or level.dat", "", "Minecraft (*.nbt *.snbt *.schem *.litematic *.mcstructure level.dat)")
-        if path:
-            self.open_path(path)
+        dialog = SourceDialog(self)
+        if dialog.exec():
+            self.open_path(dialog.path)
 
     def open_demo(self):
         from importlib.resources import files
 
         self.open_path(str(files("structura_render").joinpath("data/examples/demo.nbt")))
 
-    def open_path(self, path, region=None):
+    def open_path(self, path, region=None, *, palette_index=0, source_data_version=None):
         path = Path(path).expanduser()
         if path.is_dir() or path.name == "level.dat":
             self.world.open(path if path.is_dir() else path.parent)
             return
         if not self.worker.busy and self._confirm_discard():
             self.navigation.stop()
-            self._run("open", self._opened, path=str(path), region=region)
+            self._run("open", self._opened, path=str(path), region=region, palette_index=palette_index,
+                      source_data_version=source_data_version)
 
     def _opened(self, session, *, rendered=None, fit=True, preserve_focus=False):
+        if isinstance(session, SourceVersionRequired):
+            options = source_version_options(self, session)
+            if options is not None:
+                self._run("open", self._opened, **options)
+            else:
+                self.status.setText("Open cancelled")
+            return
         self.placement.cancel()
         if not session.readonly:
             session.history.prepare()
         self.session = session
+        if not preserve_focus:
+            self.slicing.reset(session)
+        if rendered is not None and rendered.get("height", HeightSlice()) != self.slicing.value:
+            rendered = None
+        self.objects.reset()
         self.pending = None
         self._input_revision += 1
         self.views.reset()
@@ -290,12 +357,15 @@ class EditorWindow(QMainWindow):
         self.navigation.enabled = not self.minimap.large
         self._selection_changed()
         self._refresh_palette()
-        self.views.request(session, None, self.assets, self.entities_action.isChecked(), fit=fit, data=rendered)
+        self.views.request(session, None, self.assets, self.entities_action.isChecked(), fit=fit, data=rendered,
+                           height=self.slicing.value)
         if rendered is None:
             self.world.queued = None
         if not preserve_focus:
             (self.minimap if self.minimap.large else self.plotter).setFocus()
         self._sync()
+        if not preserve_focus:
+            self.navigation.start_fly()
 
     def selection(self):
         if self.selected.region is None:
@@ -317,8 +387,14 @@ class EditorWindow(QMainWindow):
             return
         if not self.selection_actions.available() or self.pending is not None or self.scene.display_revision != self.session.revision:
             return
+        entity = self.scene.entity_at(self.session, point)
+        if entity is not None:
+            self.objects.select(entity, extend)
+            return
         hit = self.scene.hit_at(self.session, point)
         if hit is not None:
+            self.objects.keys.clear()
+            self.objects.refresh()
             self.selected.select_block(hit.position, extend=extend)
             self._selection_changed()
 
@@ -351,8 +427,18 @@ class EditorWindow(QMainWindow):
                 self._show_selection(self.selected.preview or self.selected.region)
 
     def _show_selection(self, selection):
-        self.overlay.set_selection(self.selected.region, self.selected.preview, (self.selected.anchor, self.selected.opposite))
+        if self.placement.active:
+            self.overlay.set_selection(None)
+            return
+        display = self.views.displayed.state if self.views.displayed is not None else self.session
+        offset = tuple(old - new for old, new in zip(self.session.origin, display.origin)) if self.session and display else (0, 0, 0)
+        def shifted(region):
+            return region.shifted(offset) if region is not None else None
+        corners = tuple(tuple(v + d for v, d in zip(corner, offset)) if corner is not None else None
+                        for corner in (self.selected.anchor, self.selected.opposite))
+        self.overlay.set_selection(shifted(self.selected.region), shifted(self.selected.preview), corners)
         self.overlay.set_hover(None)
+        selection = shifted(selection)
         self.minimap.set_selection((selection.lower, selection.upper) if selection else None)
 
     def show_operation(self, mode):
@@ -450,29 +536,51 @@ class EditorWindow(QMainWindow):
             if kind == "recipe":
                 change, output = result
                 self.panels.recipe.output.setPlainText(output)
+            elif kind == "repeat":
+                self.repeat.plan = result
+                change = result.change
             else:
                 change = result
-                if args["values"].get("target"):
+                if kind == "operation" and args["values"].get("target"):
                     from structura_core.nbt import parse_state, state_key
 
                     self.remember_material(state_key(parse_state(args["values"]["target"])))
             self.session._check_change(change)
             self.pending = change
-            self.operation.info.setText(f"Preview · {len(change):,} changed cells")
+            self.operation.info.setText(f"Preview · {len(change):,} changes")
             self.render_scene()
         self._run(kind, received, session=self.session.fork(), selection=selection, **args)
 
     def render_scene(self, fit=False):
         if self.session:
-            self.views.request(self.session, self.pending, self.assets, self.entities_action.isChecked(), fit=fit)
+            self.views.request(self.session, self.pending, self.assets, self.entities_action.isChecked(), fit=fit,
+                               height=self.slicing.value)
             self._sync()
 
     def _rendered(self, data):
+        state = self.views.displayed.state
+        canvas = self.minimap.canvas
+        if (canvas.size_blocks, canvas.origin) != (state.size, state.origin):
+            self.minimap.set_document(state)
+        canvas.entities = self.scene.entity_markers
+        canvas.update()
+        self._guides_changed()
+        self.objects.refresh()
         self.status.setText("Preview · Enter to apply · Escape to discard" if self.pending is not None else
                             "Minecraft textures" if data["textured"] else "Block colours · View → Minecraft resources for textures")
+        for plan in (self.placement_review.plan, self.repeat.plan):
+            if plan is not None and self.pending is plan.change:
+                self.status.setText(plan.summary + " · Preview")
         if data["warnings"]:
             self.panels.recipe.output.setPlainText("\n".join(data["warnings"]))
+        if self.session.path and self.session.path.suffix.lower() == ".schematic" and self.pending is None:
+            self.status.setText(self.status.text() + " · Legacy converted · Save as NBT")
         self._sync()
+
+    def _guides_changed(self):
+        state = self.views.displayed.state if self.views.displayed is not None else self.session
+        self.guides.update(state, bounds=self.menus.actions["bounds"].isChecked(),
+                           chunks=self.menus.actions["chunks"].isChecked())
 
     def _entities_changed(self):
         if self.world.active:
@@ -497,13 +605,18 @@ class EditorWindow(QMainWindow):
 
     def apply_pending(self):
         if self.placement.active:
-            self.placement.apply(include_entities=self.entities_action.isChecked())
+            if self.placement.model is not None and self.placement.model.destination.mode != "all":
+                self.placement_review.apply()
+            else:
+                self.placement.apply(include_entities=self.entities_action.isChecked())
             return
         if not self.pending or self.worker.busy or not self.views.ready:
             return
         destination = None
         if self.pending.label == "Move blocks" and self.operation.current == "Move blocks":
             offset = self.operation.values()["offset"]
+            if self.pending.resize is not None:
+                offset = tuple(v + d for v, d in zip(offset, self.pending.resize.offset))
             destination = tuple(tuple(p + d for p, d in zip(bound, offset))
                                 for bound in (self.selection().lower, self.selection().upper))
         count = len(self.pending)
@@ -512,6 +625,7 @@ class EditorWindow(QMainWindow):
                   session=self.session, change=self.pending)
 
     def _applied(self, session, count, destination, request):
+        self._resized_document(session)
         self.session = session
         self.pending = None
         if self.views.current is request:
@@ -528,6 +642,9 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def discard_pending(self):
+        if self.repeat.active:
+            self.repeat.close()
+            return
         if self.placement.active:
             self.escape()
             return
@@ -540,10 +657,13 @@ class EditorWindow(QMainWindow):
         if self.minimap.large:
             self.minimap.set_large(False)
             return
+        if self.repeat.active:
+            self.repeat.close()
+            return
         if self.placement.active:
             if self.placement.committing:
                 return
-            if self._job and self._job[0] in ("clipboard", "placement"):
+            if self._job and self._job[0] in ("clipboard", "placement", "placement_plan"):
                 self.cancel_task()
             else:
                 self.placement.cancel()
@@ -553,6 +673,7 @@ class EditorWindow(QMainWindow):
             self.discard_pending()
         else:
             self.selection_actions.clear()
+            self.objects.reset()
         self.panels.dismiss()
         self.plotter.setFocus()
 
@@ -582,6 +703,7 @@ class EditorWindow(QMainWindow):
         self._run("history", self._history_changed, session=self.session, index=index)
 
     def _history_changed(self, session):
+        self._resized_document(session)
         self.session = session
         self._refresh_palette()
         self.render_scene()
@@ -597,19 +719,33 @@ class EditorWindow(QMainWindow):
     def import_dialog(self):
         if not self.session or self.session.readonly or self.worker.busy or self.placement.active:
             return
-        path, _ = QFileDialog.getOpenFileName(self, "Import as placement", "",
-                                             "Minecraft (*.nbt *.snbt *.schem *.litematic *.mcstructure)")
+        path, _ = QFileDialog.getOpenFileName(self, "Import as placement", "", STRUCTURE_FILTER)
         if path:
             self.placement.start("import", path=path)
 
+    def _resized_document(self, session):
+        if self.session.size == session.size and self.session.origin == session.origin:
+            return
+        self.selected.reset(session.size)
+        self.panels.selection.set_document(session.size, session.origin)
+        self.minimap.set_document(session)
+        self._show_selection(None)
+        self.objects.reset()
+
     def _placement_applied(self, session, data, bounds, count):
+        self._resized_document(session)
         self.session = session
-        self.selected.set_bounds(*bounds)
+        clipped = tuple(tuple(max(0, min(p, size)) for p, size in zip(bound, session.size)) for bound in bounds)
+        self.selected.set_bounds(*clipped)
         self.panels.selection.set_selection(self.selected.region)
         self._refresh_palette()
-        self.views.request(session, None, self.assets, self.entities_action.isChecked(), data=data)
+        if data is None:
+            self.views.accept(session)
+            self.views.rebase(session)
+        else:
+            self.views.request(session, None, self.assets, self.entities_action.isChecked(), data=data, height=self.slicing.value)
         self._show_selection(self.selected.region)
-        self.status.setText(f"Placed {count:,} changed cells · Undo is available")
+        self.status.setText(f"Placed · {count:,} changes · Undo is available")
         self._sync()
 
     def export_dialog(self):
@@ -628,6 +764,8 @@ class EditorWindow(QMainWindow):
             self.world.save()
             return
         current = self.session.path or Path("structure.nbt")
+        if current.suffix.lower() == ".schematic":
+            current = current.with_suffix(".nbt")
         proposal = str(current.with_name(f"{current.stem}-edited{current.suffix}"))
         filters = "Sponge (*.schem)" if current.suffix == ".schem" else "Structure NBT (*.nbt);;Text NBT (*.snbt)"
         path, _ = QFileDialog.getSaveFileName(self, "Save edited schematic", proposal, filters)
@@ -658,18 +796,19 @@ class EditorWindow(QMainWindow):
         self.navigation.close()
         self.worker.close()
         self.minimap.cache.close()
+        self.minimap.maps.close()
         self.placement.bar.stats.shutdown()
         self.plotter.close()
         event.accept()
 
 
-def launch(path=None, *, assets=None, region=None, world=None):
+def launch(path=None, *, assets=None, region=None, palette_index=0, source_data_version=None, world=None):
     app = QApplication.instance()
     owns_app = app is None
     if owns_app:
         app = QApplication([])
     app.setApplicationName("Structura Edit")
-    window = EditorWindow(path, assets=assets, region=region)
+    window = EditorWindow(path, assets=assets, region=region, palette_index=palette_index, source_data_version=source_data_version)
     window.show()
     if world is not None:
         QTimer.singleShot(0, lambda: window.world.open(world))

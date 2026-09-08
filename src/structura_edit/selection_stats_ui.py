@@ -10,7 +10,7 @@ from .controls import CellLabel
 from .selection_stats import selection_materials
 
 
-COUNTS_HINT = "Selected region · current local edits · air excluded · hover a texture for its block name"
+COUNTS_HINT = "Blocks in the selected region. Empty space is not counted.\nHover a texture for its name and ID."
 
 
 class SelectionStats(QWidget):
@@ -100,7 +100,7 @@ class SelectionStats(QWidget):
     def _show_rows(self, rows):
         self.model.clear()
         width = max((self.fontMetrics().horizontalAdvance(f"{row[1]:,}") for row in rows), default=0) + 16 + GRID * 4
-        cell_size = QSize(max(GRID * 20, (width + GRID - 1) // GRID * GRID), CONTROL_HEIGHT)
+        cell_size = QSize(max(GRID * 12, (width + GRID - 1) // GRID * GRID), CONTROL_HEIGHT)
         self.items.setGridSize(cell_size)
         for name, count, pixels, color in rows:
             if pixels:
@@ -110,15 +110,16 @@ class SelectionStats(QWidget):
                 image.fill(QColor(*color))
             item = QStandardItem(QIcon(QPixmap.fromImage(image)), f"{count:,}")
             item.setSizeHint(cell_size)
-            detail = f"{name} · {count:,} blocks" + (" · texture unavailable" if pixels is None else "")
+            title = name.split(":", 1)[-1].replace("_", " ").title()
+            detail = f"{title}\n{name}\n{count:,} blocks"
             item.setToolTip(detail)
             item.setData(detail, Qt.ItemDataRole.AccessibleTextRole)
             item.setData(name, Qt.ItemDataRole.UserRole)
             self.model.appendRow(item)
         total = sum(row[1] for row in rows)
-        loaded = "loaded " if hasattr(self.context[0], "loaded_chunks") else ""
-        self.info.setText(f"{total:,} {loaded}blocks · {len(rows)} types · no air")
-        self.info.setToolTip(COUNTS_HINT)
+        loaded = "\nOnly loaded blocks are counted." if hasattr(self.context[0], "loaded_chunks") else ""
+        self.info.setText(f"{total:,} blocks · {len(rows)} types")
+        self.info.setToolTip(COUNTS_HINT + loaded)
         self.items.setVisible(bool(rows))
         self._fit_rows()
 

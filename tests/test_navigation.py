@@ -139,7 +139,7 @@ def test_escape_discards_pending_mouse_delta(navigation):
     assert np.allclose(navigation.camera.plotter.camera.direction, (0, 0, -1))
 
 
-def test_freelook_works_without_buttons_and_exit_click_does_not_select(navigation):
+def test_freelook_click_selects_without_losing_camera_and_escape_releases(navigation):
     view = navigation.view
     selected, extended = [], []
     navigation.selected.connect(lambda *args: selected.append(args))
@@ -154,9 +154,11 @@ def test_freelook_works_without_buttons_and_exit_click_does_not_select(navigatio
     navigation.tick(0.1)
     assert extended[-1] is False
     QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=QPoint(50, 50))
+    assert navigation.looking and navigation.keys and selected == [(view.rect().center(), False)]
+    QTest.keyClick(view, Qt.Key.Key_Escape)
     stopped = navigation.camera.plotter.camera.position
     navigation.tick(0.1)
-    assert not navigation.looking and not navigation.keys and not selected
+    assert not navigation.looking and not navigation.keys
     assert navigation.camera.plotter.camera.position == stopped
     navigation.start_fly()
     QApplication.sendEvent(view, QFocusEvent(QEvent.Type.FocusOut))
@@ -245,9 +247,11 @@ def test_captured_mouse_does_not_repeat_rotation_and_restores_cursor(navigation,
     monkeypatch.setattr(view, "grabMouse", lambda: pointer.update(grabbed=True))
     monkeypatch.setattr(view, "releaseMouse", lambda: pointer.update(grabbed=False))
     monkeypatch.setattr(QWidget, "mouseGrabber", lambda: view if pointer["grabbed"] else None)
+    monkeypatch.setattr(mouse_look, "relative_mouse", lambda view: None)
     navigation.mouse_look = mouse_look.MouseLook(view)
     QTest.mousePress(view, Qt.MouseButton.RightButton, pos=QPoint(40, 60))
     pointer["position"] += QPoint(30, -15)
+    navigation.mouse_look.move(view.mapFromGlobal(pointer["position"]))
     navigation.tick(1 / 60)
     camera = navigation.camera.plotter.camera
     assert camera.direction[0] > 0 and camera.direction[1] > 0
@@ -258,3 +262,48 @@ def test_captured_mouse_does_not_repeat_rotation_and_restores_cursor(navigation,
     QTest.mouseRelease(view, Qt.MouseButton.RightButton)
     assert pointer == {"position": QPoint(40, 60), "grabbed": False}
     assert not navigation.looking
+
+
+def test_freelook_resumes_after_focus_returns_but_not_after_escape(navigation, monkeypatch):
+    view = navigation.view
+    focused = {"value": True}
+    monkeypatch.setattr(view, "hasFocus", lambda: focused["value"])
+    monkeypatch.setattr(view, "isVisible", lambda: True)
+    monkeypatch.setattr(view, "isActiveWindow", lambda: focused["value"])
+    navigation.start_fly()
+    navigation.mouse_look.move(navigation.mouse_look.anchor + QPoint(60, -20))
+    QTest.keyPress(view, Qt.Key.Key_W)
+    focused["value"] = False
+    QApplication.sendEvent(view, QFocusEvent(QEvent.Type.FocusOut))
+    camera = navigation.camera.plotter.camera
+    position, direction = camera.position, camera.direction
+    for _ in range(10):
+        navigation.tick(1 / 60)
+    assert not navigation.looking and navigation.resume_look and not navigation.keys
+    assert camera.position == position and camera.direction == direction
+    focused["value"] = True
+    navigation.tick(1 / 60)
+    assert navigation.looking and not navigation.resume_look
+    assert camera.position == position and camera.direction == direction
+    navigation.mouse_look.move(navigation.mouse_look.anchor + QPoint(20, 10))
+    navigation.tick(1 / 60)
+    assert camera.position == position and camera.direction != direction
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    navigation.tick(1 / 60)
+    assert not navigation.looking and not navigation.resume_look
+
+
+def test_disabled_map_view_preserves_freelook_until_return(navigation, monkeypatch):
+    view = navigation.view
+    monkeypatch.setattr(view, "hasFocus", lambda: True)
+    monkeypatch.setattr(view, "isVisible", lambda: True)
+    monkeypatch.setattr(view, "isActiveWindow", lambda: True)
+    navigation.start_fly()
+    navigation.suspend()
+    navigation.enabled = False
+    for _ in range(10):
+        navigation.tick(1 / 60)
+    assert not navigation.looking and navigation.resume_look
+    navigation.enabled = True
+    navigation.tick(1 / 60)
+    assert navigation.looking and not navigation.resume_look

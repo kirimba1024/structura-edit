@@ -14,7 +14,7 @@ def test_surface_placement_and_pin_keep_integer_bounds(edit):
     assert not model.follow((0, 4, 0), (0, -1, 0), Hit((3, 0, 0), (0, 1, 0)))
     assert model.position == (0, 1, 1) and not model.following
     model.nudge((-1, 0, 0))
-    assert model.reason(edit).startswith("Outside")
+    assert not model.reason(edit)
 
 
 def test_empty_space_uses_placement_height_without_clamping(edit):
@@ -23,7 +23,7 @@ def test_empty_space_uses_placement_height_without_clamping(edit):
     assert model.position == (2, 0, 1)
     assert not model.follow((2.5, 4, 1.5), (1, 0, 0))
     model.follow((2.5, 4, 1.5), (-2, -1, 0))
-    assert model.position[0] < 0 and model.reason(edit)
+    assert model.position[0] < 0 and not model.reason(edit)
 
 
 def test_preparing_placement_does_not_apply_and_checks_combined_budget(edit):

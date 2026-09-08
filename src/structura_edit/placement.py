@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from math import floor
 
 from .changes import _position
+from .destination_rule import DestinationRule
 
 
 @dataclass
@@ -11,6 +12,10 @@ class Placement:
     take: bool = False
     following: bool = True
     include_air: bool = False
+    keep_placing: bool = False
+    destination: DestinationRule = DestinationRule()
+    include_blocks: bool = True
+    include_entities: bool = True
 
     @property
     def anchor(self):
@@ -24,11 +29,16 @@ class Placement:
     def reason(self, session):
         if session.readonly:
             return "View-only document"
-        if self.take and (session._id != self.clipboard.document_id or session.revision != self.clipboard.revision):
+        if not self.include_blocks and (not self.include_entities or not self.clipboard.entities):
+            return "Choose Blocks or Entities to place" if not self.include_entities else "No entities in this copy"
+        if self.take and not self.clipboard.can_take_from(session):
             return "Source changed · take again"
-        lower, upper = self.bounds
-        if any(lo < 0 or hi > size for lo, hi, size in zip(lower, upper, session.size)):
-            return "Outside bounds · edit XYZ"
+        from .document_resize import placement_extent
+
+        try:
+            placement_extent(session, self.position, self.clipboard.size)
+        except ValueError as error:
+            return str(error)
         return ""
 
     def set_position(self, position):

@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 from structura_core.nbt import Position
 
 from .cell_data import CellData
+from .entity_data import EntityData
 
 
 class StaleChangeError(ValueError):
@@ -77,14 +78,23 @@ class _Delta:
 
 
 @dataclass(frozen=True)
+class EntityDelta:
+    key: str
+    before: Optional[EntityData]
+    after: Optional[EntityData]
+
+
+@dataclass(frozen=True)
 class ChangeSet:
     document_id: str
     base_revision: int
     label: str
     changes: Tuple[_Delta, ...]
+    entities: Tuple[EntityDelta, ...] = ()
+    resize: object = None
 
     def __len__(self):
-        return len(self.changes)
+        return len(self.changes) + len(self.entities) + bool(self.resize)
 
     @property
     def positions(self):

@@ -16,7 +16,6 @@ from .appearance import CONTROL_HEIGHT, GRID, PANEL_WIDTH
 
 class Workbench(QStackedWidget):
     open_requested = Signal()
-    world_requested = Signal()
     demo_requested = Signal()
 
     def __init__(self, *, cache_dir=None):
@@ -29,8 +28,7 @@ class Workbench(QStackedWidget):
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         buttons = QHBoxLayout()
         buttons.addStretch()
-        for text, signal in (("Open schematic", self.open_requested), ("Open world", self.world_requested),
-                             ("Explore demo", self.demo_requested)):
+        for text, signal in (("Open", self.open_requested), ("Explore demo", self.demo_requested)):
             button = QPushButton(text)
             button.clicked.connect(signal)
             buttons.addWidget(button)

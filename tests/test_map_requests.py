@@ -23,7 +23,7 @@ def wait_for(condition):
 def test_slow_cache_read_respects_the_latest_source_and_view(qt_app, tmp_path, monkeypatch, action):
     started, release = threading.Event(), threading.Event()
     calls = []
-    def read(spec, areas):
+    def read(spec, areas, scales):
         calls.append(spec["space"])
         if len(calls) == 1:
             started.set()

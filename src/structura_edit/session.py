@@ -9,7 +9,8 @@ from structura_core.nbt import parse_state, state_key
 
 from .document import Document, copy_structure
 from .history import History
-from .changes import ChangeSet, Selection, StaleChangeError, _Cell, _Delta, _position
+from .entity_data import initial_entities, check_entities, write_entities
+from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
 from .cell_data import cell_payload, cell_record, material_data
 
 
@@ -22,6 +23,7 @@ class EditSession:
         self._states = tuple(state_key(p) for p in document.source.palette_raw)
         self._base_counts = Counter(document.source.present.values())
         self._cells = {}
+        self._entities = initial_entities(document.source)
         self.history = History(history_cache_limit)
         self.operation_limit = operation_limit
         self.revision = 0
@@ -105,6 +107,11 @@ class EditSession:
     def positions(self):
         yield from self._document.source.present
         yield from (p for p in self._cells if p not in self._document.source.present)
+
+    def find_objects(self, text="", **options):
+        from .object_search import ObjectSearch
+
+        return ObjectSearch().find(self, text, **options)
 
     def palette_counts(self, selection=None, *, by_state=True):
         if selection is not None:
@@ -192,19 +199,29 @@ class EditSession:
         self._check_selection(selection)
         if offset == (0, 0, 0):
             return ChangeSet(self._id, self.revision, "Duplicate" if copy else "Move blocks", ())
-        change = self.paste(self.copy(selection), tuple(p + d for p, d in zip(selection.lower, offset)),
+        change = self.paste(self.copy(selection, include_entities=False), tuple(p + d for p, d in zip(selection.lower, offset)),
                             take=not copy, include_air=True)
         return replace(change, label="Duplicate" if copy else "Move blocks")
 
-    def copy(self, selection):
+    def copy(self, selection, *, include_blocks=True, include_entities=True):
         from .clipboard import Clipboard
 
-        return Clipboard.capture(self, selection)
+        return Clipboard.capture(self, selection, include_blocks=include_blocks, include_entities=include_entities)
 
-    def paste(self, clipboard, position, *, take=False, include_air=False):
-        from .clipboard import place
+    def paste(self, clipboard, position, *, take=False, include_air=False, include_blocks=True, include_entities=True, destination=None):
+        from .clipboard_placement import plan_placement
+        from .destination_rule import DestinationRule
 
-        return place(self, clipboard, position, take=take, include_air=include_air)
+        return plan_placement(self, clipboard, (_position(position),), take=take, include_air=include_air,
+                              include_blocks=include_blocks, include_entities=include_entities,
+                              destination=destination or DestinationRule(), label="Take" if take else "Paste").change
+
+    def stack(self, selection, copies, step, *, include_air=False, include_blocks=True, include_entities=True, destination=None):
+        from .clipboard_placement import plan_stack
+        from .destination_rule import DestinationRule
+
+        return plan_stack(self, selection, copies, step, include_air=include_air, include_blocks=include_blocks, include_entities=include_entities,
+                          destination=destination or DestinationRule()).change
 
     def shape(self, selection, target, *, form="Box", mask=None, surface=False):
         from .operations import shape_positions
@@ -239,11 +256,15 @@ class EditSession:
             raise StaleChangeError("The document changed; create a fresh preview")
         if len(change) > self.operation_limit:
             raise ValueError("Change exceeds the changed-cell budget")
+        from .document_resize import check_resize
+
+        lower, upper = check_resize(self, change.resize)
+        check_entities(self, change.entities, (lower, upper))
         seen = set()
         states = set()
         bounds = self.select()
         for delta in change.changes:
-            if delta.position in seen or delta.position not in bounds:
+            if delta.position in seen or not all(lo <= v < hi for lo, v, hi in zip(lower, delta.position, upper)):
                 raise ValueError("Invalid or duplicate change position")
             seen.add(delta.position)
             if self._cell(delta.position) != delta.before:
@@ -283,6 +304,10 @@ class EditSession:
         self._transition = old_id, change
         for delta in change.changes:
             self._write(delta.position, delta.after)
+        write_entities(self._entities, change.entities)
+        from .document_resize import resize_document
+
+        resize_document(self, change.resize)
         self.revision += 1
         return len(change)
 
@@ -290,8 +315,12 @@ class EditSession:
         if not self.can_undo:
             return False
         entry, change = self.history.get(self.history.cursor - 1)
+        from .document_resize import resize_document
+
+        resize_document(self, change.resize, reverse=True)
         for delta in change.changes:
             self._write(delta.position, delta.before)
+        write_entities(self._entities, change.entities, reverse=True)
         self.history.cursor -= 1
         self._transition = self._state_id, change
         self._state_id = entry.before
@@ -304,6 +333,10 @@ class EditSession:
         entry, change = self.history.get(self.history.cursor)
         for delta in change.changes:
             self._write(delta.position, delta.after)
+        write_entities(self._entities, change.entities)
+        from .document_resize import resize_document
+
+        resize_document(self, change.resize)
         self.history.cursor += 1
         self._transition = self._state_id, change
         self._state_id = entry.after
@@ -313,18 +346,30 @@ class EditSession:
     def fork(self):
         branch = copy(self)
         branch._cells = self._cells.copy()
+        branch._entities = self._entities.copy()
         branch.history = History(self.history.cache_limit, persistent=False)
         return branch
 
     def diff(self, branch, label="Python recipe"):
         if branch._id != self._id:
             raise ValueError("Cannot compare unrelated documents")
+        resize = None
+        if branch.size != self.size or branch.origin != self.origin:
+            from .document_resize import DocumentResize, check_resize, resize_document
+
+            resize = DocumentResize(self.size, branch.size, tuple(old - new for old, new in zip(self.origin, branch.origin)))
+            check_resize(self, resize)
+            branch = branch.fork()
+            resize_document(branch, resize, reverse=True)
         changes = tuple(
             _Delta(p, self._cell(p), branch._cell(p))
             for p in self._cells.keys() | branch._cells.keys()
             if self._cell(p) != branch._cell(p)
         )
-        change = ChangeSet(self._id, self.revision, label, changes)
+        entities = tuple(EntityDelta(key, self._entities.get(key), branch._entities.get(key))
+                         for key in self._entities.keys() | branch._entities.keys()
+                         if self._entities.get(key) != branch._entities.get(key))
+        change = ChangeSet(self._id, self.revision, label, changes, entities, resize)
         self._check_change(change)
         return change
 
@@ -347,7 +392,7 @@ class EditSession:
         if change is not None:
             branch = self.fork()
             branch.apply(change)
-        structure = copy_structure(self._document.source)
+        structure = copy_structure(branch._document.source)
         literal_indices = {}
         for position, cell in branch._cells.items():
             index = cell.variant
@@ -360,13 +405,14 @@ class EditSession:
             structure.present[position] = index
             structure.block_nbt.pop(position, None)
             if cell.keep_nbt:
-                structure.block_nbt[position] = cell_payload(self._document.source, cell, position)
+                structure.block_nbt[position] = cell_payload(branch._document.source, cell, position)
             if cell.origin != position or cell.data is not None:
-                record = cell_record(self._document.source, cell)
+                record = cell_record(branch._document.source, cell)
                 if record is None:
                     structure._block_records.pop(position, None)
                 else:
                     structure._block_records[position] = deepcopy(record)
+        structure.entities = [value.unpack() for value in branch._entities.values()]
         structure.validate()
         return structure
 
@@ -374,7 +420,7 @@ class EditSession:
         path = path or self.path
         if path is None:
             raise ValueError("Choose a destination filename")
-        result = self._document.save(self.snapshot(), path, self._cells)
+        result = self._document.save(self.snapshot(), path, self._cells, self._entities)
         self._document = copy(self._document)
         self._document.path = result
         self._saved_state_id = self._state_id

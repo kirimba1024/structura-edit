@@ -9,6 +9,7 @@ from .changes import ChangeSet, _Cell, _Delta
 from .document import Document
 from .session import EditSession
 from .world_changes import WorldChanges
+from .world_object_changes import loaded_entities, visible_entities, portable_entities, entity_patches
 
 
 AIR_CELL = _Cell("minecraft:air")
@@ -27,12 +28,13 @@ class WorldView(EditSession):
         self.notices = region.notices
         self.dimensions = tuple(world.dimensions)
         self.world_name = world.name
+        self._base_entities = loaded_entities(self, region.entity_locations)
         self.world_changes = changes or WorldChanges(self._id, self.history)
         self._sync_changes()
 
     @property
     def dirty(self):
-        return bool(self.world_changes.patch)
+        return bool(self.world_changes.patch or self.world_changes.entities)
 
     def _cell(self, position):
         return super()._cell(position) or AIR_CELL
@@ -43,6 +45,7 @@ class WorldView(EditSession):
         self.history = state.history
         self._transition = None
         self._cells = {}
+        self._entities = visible_entities(self)
         for (dimension, x, y, z), (_, after) in state.patch.items():
             position = tuple(p - o for p, o in zip((x, y, z), self.origin))
             if dimension == self.dimension and all(0 <= p < s for p, s in zip(position, self.size)):
@@ -50,6 +53,12 @@ class WorldView(EditSession):
 
     def _check_change(self, change):
         super()._check_change(change)
+        for delta in change.entities:
+            if delta.after is not None:
+                position = delta.after.unpack()["pos"]
+                x, _, z = (float(p) + o for p, o in zip(position, self.origin))
+                if (int(x // 16), int(z // 16)) not in self.loaded_chunks:
+                    raise ValueError("Entity destination includes absent chunks; select a loaded area")
         for delta in change.changes:
             x, y, z = (p + o for p, o in zip(delta.position, self.origin))
             if (x // 16, z // 16) not in self.loaded_chunks:
@@ -69,7 +78,8 @@ class WorldView(EditSession):
                                self._portable(delta.before, delta.position), self._portable(delta.after, delta.position))
                         for delta in change.changes)
         changes = tuple(delta for delta in changes if delta.before != delta.after)
-        result = self.world_changes.apply(ChangeSet(self._id, self.revision, change.label, changes))
+        result = self.world_changes.apply(ChangeSet(self._id, self.revision, change.label, changes,
+                                                     portable_entities(self, change.entities)))
         self._sync_changes()
         return result
 
@@ -100,11 +110,13 @@ class WorldView(EditSession):
         snapshot = self.snapshot()
         patch = {position: tuple((cell.state, cell.data.nbt if cell.keep_nbt and cell.data else None) for cell in pair)
                  for position, pair in self.world_changes.patch.items()}
-        self.last_backup = save_world_patch(self.path, patch)
+        self.last_backup = save_world_patch(self.path, patch, entities=entity_patches(self.world_changes))
         self._document = Document(snapshot, path=self.path)
         self._states = tuple(state_key(p) for p in snapshot.palette_raw)
         self._base_counts = Counter(snapshot.present.values())
+        self._base_entities = self._entities.copy()
         self.world_changes.patch.clear()
+        self.world_changes.entities.clear()
         if hasattr(self, "map_stamps"):
             from .file_state import fingerprint
 

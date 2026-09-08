@@ -41,3 +41,32 @@ def test_worker_cancel_and_recover(edit):
         assert edit.state_at((0, 0, 0)) == "minecraft:stone"
     finally:
         worker.close()
+
+
+def test_changed_code_requires_restart_before_loading_mixed_modules(tmp_path):
+    from structura_edit.runtime_code import CodeVersion
+
+    path = tmp_path / "example.py"
+    path.write_text("value = 1\n")
+    version = CodeVersion((tmp_path,))
+    version.check()
+    path.write_text("value = 20\n")
+    with pytest.raises(RuntimeError, match="Restart Structura"):
+        version.check()
+
+
+def test_worker_search_returns_pages_and_observes_edits_after_cache_reuse(edit):
+    worker = Worker()
+    try:
+        for query, count in (({"kind": "all", "limit": 1}, 3), ({"text": "chest"}, 1)):
+            worker.submit("object_search", session=edit.fork(), query=query)
+            success, page = wait(worker)
+            assert success, page
+            assert page.total == count and len(page.rows) == 1
+        edit.apply(edit.set_block((1, 0, 0), "minecraft:air"))
+        worker.submit("object_search", session=edit.fork(), query={"text": "chest"})
+        success, page = wait(worker)
+        assert success, page
+        assert page.total == 0
+    finally:
+        worker.close()

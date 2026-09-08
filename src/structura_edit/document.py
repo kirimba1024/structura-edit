@@ -35,15 +35,19 @@ class Document:
             return cls(native.to_structure(data_version=source_data_version), path=path, native=native, readonly=native.version == 1)
         structure = load_structure(path, region=region, palette_index=palette_index,
                                    source_data_version=source_data_version, target_version=target_version, strict=strict)
-        return cls(structure, path=path, readonly=suffix not in (".nbt", ".snbt"))
+        return cls(structure, path=path, readonly=suffix not in (".nbt", ".snbt", ".schematic"))
 
-    def save(self, structure, path, cells):
+    def save(self, structure, path, cells, entities=None):
         if self.readonly:
             raise ValueError("This source is view-only in this release")
         path = Path(path)
         if isinstance(self.native, Schematic):
             if path.suffix.lower() != ".schem":
                 raise ValueError("Save this document as .schem; format conversion is a separate operation")
+            if structure.size != self.native.size or self.origin != self.native.offset:
+                from .schematic_resize import save_resized
+
+                return save_resized(self.native, structure, entities or {}, path, cells)
             output = deepcopy(self.native)
             if cells:
                 encoded = schematic_root(structure)
@@ -60,7 +64,7 @@ class Document:
                     if tuple(int(v) for v in record["Pos"]) not in cells
                 ]
                 for position, cell in cells.items():
-                    if cell.keep_nbt and cell.origin in original:
+                    if cell.keep_nbt and cell.data is None and cell.origin in original:
                         record = deepcopy(original[cell.origin])
                         record["Pos"] = IntArrayTag(position)
                         payload = record.get("Data", record) if output.version == 3 else record
@@ -71,9 +75,15 @@ class Document:
                     elif cell.keep_nbt and position in generated:
                         record = deepcopy(generated[position])
                         if output.version == 3:
-                            record = CompoundTag({"Pos": record.pop("Pos"), "Id": record.pop("Id"), "Data": record})
+                            wrapper = deepcopy(original.get(cell.origin, CompoundTag()))
+                            wrapper.update({"Pos": record.pop("Pos"), "Id": record.pop("Id"), "Data": record})
+                            record = wrapper
                         retained.append(record)
                 blocks["BlockEntities"] = ListTag(retained)
+            if entities is not None and [value.unpack() for value in entities.values()] != self.source.entities:
+                from .schematic_objects import updated_entities
+
+                output.root["Entities"] = updated_entities(output, entities)
             output.save(path)
         else:
             if path.suffix.lower() not in (".nbt", ".snbt"):

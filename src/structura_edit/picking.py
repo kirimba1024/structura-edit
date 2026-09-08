@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from math import floor, inf, isfinite, sqrt
 
+from .height_slice import HeightSlice
+
 
 EMPTY = {"minecraft:air", "minecraft:cave_air", "minecraft:void_air", "minecraft:structure_void"}
 
@@ -15,7 +17,7 @@ class Hit:
         return tuple(p + n for p, n in zip(self.position, self.normal))
 
 
-def pick_block(session, origin, direction):
+def pick_block(session, origin, direction, height=HeightSlice()):
     origin, direction = tuple(origin), tuple(direction)
     if len(origin) != 3 or len(direction) != 3 or not all(isfinite(v) for v in (*origin, *direction)):
         raise ValueError("Ray requires finite three-dimensional vectors")
@@ -24,6 +26,9 @@ def pick_block(session, origin, direction):
         return None
     direction = tuple(v / length for v in direction)
     lower, upper = [0, 0, 0], list(session.size)
+    lower[1], upper[1] = height.interval(session)
+    if lower[1] >= upper[1]:
+        return None
     entry, end, normal = 0.0, inf, (0, 0, 0)
     for axis, (o, d, lo, hi) in enumerate(zip(origin, direction, lower, upper)):
         if not d:

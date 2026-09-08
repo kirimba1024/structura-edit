@@ -1,9 +1,24 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, MAX_WORLD_BLOCKS, check_world_budget
 from .session import EditSession
 from .world_view import WorldView
 from .file_state import fingerprint
+
+
+@dataclass(frozen=True)
+class SourceVersionRequired:
+    options: dict
+
+
+def open_with_version_request(**options):
+    from structura_core.schematic import MissingSchematicDataVersion
+
+    try:
+        return open_source(**options)
+    except MissingSchematicDataVersion:
+        return SourceVersionRequired(options)
 
 
 def source_stamps(directory, center, radius):

@@ -19,7 +19,8 @@ def settle(window, timeout=45):
         window._tick()
         if (not window.worker.busy and window.world.queued is None and not window.views.render_queued
                 and (not window.views.map_queued or window.minimap.collapsed)):
-            return
+            if not window.minimap.maps.busy:
+                return
         QTest.qWait(10)
     raise AssertionError(f"GUI task timed out: {window.status.text()}")
 
@@ -90,7 +91,9 @@ def check_selection(window):
             columns[x, z] = max(y, columns.get((x, z), y))
     points = [(x, y, z) for (x, z), y in sorted(columns.items())]
     highest = max(p[1] for p in points)
-    points = [p for p in points if p[1] == highest]
+    highest_points = [p for p in points if p[1] == highest]
+    points = highest_points if len(highest_points) > 1 else sorted(points, key=lambda p: -p[1])[:2]
+    assert len(points) > 1, "Selection smoke requires two occupied columns"
     first, second = points[len(points) // 3], points[2 * len(points) // 3]
     view = window.plotter
     mouse_move(view, screen(window, first))
@@ -106,7 +109,7 @@ def check_selection(window):
     mouse_move(view, screen(window, second), modifiers=Qt.KeyboardModifier.ShiftModifier)
     window.navigation.tick(0.05)
     preview = window.selected.preview
-    assert preview is not None and preview.volume > 1
+    assert preview is not None and preview.volume > 1, (first, second, preview)
     assert window.selection().volume == 1
     assert window.minimap.canvas.selection == (preview.lower, preview.upper)
     assert window.overlay.temporary.bounds == (preview.lower, preview.upper)
@@ -196,6 +199,7 @@ def check_minimap(window):
     def selected(*args):
         clicks.append(args)
     window.navigation.selected.connect(selected)
+    window.move_camera(tuple(size / 2 for size in window.session.size))
     for view in VIEWS:
         before = window.plotter.camera.position
         target = tuple(size / 3 for size in window.session.size)
@@ -223,7 +227,7 @@ def check_panel_focus(window):
     assert not window.panels.docks["operation"].isVisible()
     assert window.focusWidget() is code
     assert code.toPlainText() == "wasd"
-    assert window.panels.recipe.apply.isEnabled()
+    assert window.panels.recipe.apply.isEnabled(), (window.status.text(), window.panels.recipe.output.toPlainText(), bool(window.pending), window.views.ready)
     assert not window.session.dirty
     window.discard_pending()
     settle(window)
@@ -409,6 +413,32 @@ def main():
         assert window.scene.actors
         assert not window.findChildren(QToolBar)
         assert not any(dock.isVisible() for dock in window.panels.docks.values())
+        assert window.navigation.looking
+        direction = window.plotter.camera.direction
+        position = window.plotter.camera.position
+        point = window.navigation.mouse_look.anchor + QPoint(60, -20)
+        mouse_move(window.plotter, point)
+        window.navigation.tick(1 / 60)
+        assert window.plotter.camera.position == position
+        assert not np.allclose(window.plotter.camera.direction, direction)
+        direction = window.plotter.camera.direction
+        window.navigation.tick(1 / 60)
+        assert np.allclose(window.plotter.camera.direction, direction)
+        QTest.keyClick(window.plotter, Qt.Key.Key_Escape)
+        assert not window.navigation.looking
+        viewport = window.plotter.geometry()
+        window.selection_actions.set_bounds((0, 0, 0), (1, 1, 1))
+        QApplication.processEvents()
+        assert window.placement.bar.isVisible()
+        assert window.plotter.geometry() == viewport
+        window.placement.bar.stats.toggle.click()
+        QTest.qWait(300)
+        assert window.plotter.geometry() == viewport
+        window.placement.bar.stats.toggle.click()
+        window.selection_actions.clear()
+        QApplication.processEvents()
+        assert not window.placement.bar.isVisible()
+        assert window.plotter.geometry() == viewport
         check_minimap(window)
         check_navigation(window)
         check_panel_focus(window)
@@ -422,7 +452,7 @@ def main():
         window.grab().save(str(output / "editor.png"))
         window.plotter.screenshot(str(output / "scene.png"))
         report = dict(open_seconds=opened, size=window.session.size, saved=str(saved),
-                      camera="timer-driven held keys, release, focus loss, RMB look",
+                      camera="automatic button-free look, fixed camera position, no repeated rotation, held keys, release, focus loss, RMB look",
                       focus="preview preserves active inspector and text; coordinates commit on Enter",
                       selection="single block, live Shift region, click to commit, release to cancel",
                       bounds="grow, shrink, axis shifts, typed step, independent camera corners, atomic boundary rejection; no jobs or block edits",

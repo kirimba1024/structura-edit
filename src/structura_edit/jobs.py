@@ -6,7 +6,7 @@ import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from time import monotonic
 
-from .source_loading import open_source
+from .source_loading import open_source, open_with_version_request
 
 PROTECTED_JOBS = {"save", "export", "apply", "history"}
 
@@ -19,7 +19,7 @@ class _Output(io.StringIO):
         return super().write(text[-16_000:])
 
 
-def execute(kind, args, progress=None):
+def execute(kind, args, progress=None, *, object_search=None):
     if kind in ("world", "render", "map", "clipboard", "placement"):
         from .resources import refresh_resources
 
@@ -32,13 +32,16 @@ def execute(kind, args, progress=None):
     if kind == "world":
         from .preview import build_sections
         from .sections import prepare_sections
+        from .height_slice import HeightSlice
 
         session = open_source(**{key: args[key] for key in
                                 ("path", "center", "dimension", "radius", "vertical_radius", "include_entities")},
                               world_changes=args.get("world_changes"))
-        return session, build_sections(**prepare_sections(session), assets=args["assets"], progress=progress)
+        height = args.get("height", HeightSlice())
+        rendered = build_sections(**prepare_sections(session, height=height), assets=args["assets"], progress=progress)
+        return session, dict(rendered, height=height)
     if kind == "open":
-        return open_source(**args)
+        return open_with_version_request(**args)
     if kind == "save":
         args["session"].save(args["path"])
         return args["session"]
@@ -74,10 +77,30 @@ def execute(kind, args, progress=None):
             except (OSError, ValueError, sqlite3.Error) as error:
                 return images, None, f"Map cache unavailable: {error}"
         return images, atlas, ""
+    if kind == "objects":
+        from .object_edits import prepare_object_change
+
+        return prepare_object_change(**args)
+    if kind == "object_search":
+        from .object_search import ObjectSearch
+
+        return (object_search or ObjectSearch()).find(args["session"], **args["query"])
     if kind == "operation":
         from .commands import COMMANDS
 
         return COMMANDS[args["mode"]].execute(args["session"], args["selection"], **args["values"])
+    if kind == "placement_plan":
+        from .clipboard_placement import plan_placement
+
+        placement = args["placement"]
+        return plan_placement(args["session"], placement.clipboard, (placement.position,), take=placement.take,
+                              include_air=placement.include_air, destination=placement.destination,
+                              include_blocks=placement.include_blocks, include_entities=placement.include_entities,
+                              label="Take" if placement.take else "Paste")
+    if kind == "repeat":
+        from .clipboard_placement import plan_stack
+
+        return plan_stack(args["session"], **{key: value for key, value in args.items() if key != "session"})
     if kind == "recipe":
         session = args["session"]
         branch = session.fork()
@@ -90,6 +113,11 @@ def execute(kind, args, progress=None):
 
 
 def _serve(connection):
+    from .runtime_code import CodeVersion
+    from .object_search import ObjectSearch
+
+    code = CodeVersion()
+    object_search = ObjectSearch()
     last_progress = 0
     def progress(label, done, total):
         nonlocal last_progress
@@ -101,7 +129,8 @@ def _serve(connection):
         while True:
             kind, args = connection.recv()
             try:
-                connection.send((True, execute(kind, args, progress)))
+                code.check()
+                connection.send((True, execute(kind, args, progress, object_search=object_search)))
             except BaseException as error:
                 connection.send((False, f"{type(error).__name__}: {error}\n{traceback.format_exc(limit=8)}"))
     except (EOFError, BrokenPipeError, OSError):

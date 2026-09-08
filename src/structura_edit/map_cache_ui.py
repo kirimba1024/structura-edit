@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from math import ceil, floor
+from math import ceil, floor, log2
 from pathlib import Path
 import sqlite3
 
@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, QStandardPaths, QTimer
 from PySide6.QtGui import QImage
 
 from .map_cache import TILE_SIZE, read_tiles
+from .map_images import MAP_TEXTURE_SIZE
 from .map_projection import VIEWS
 
 
@@ -39,11 +40,14 @@ class MapCacheView(QObject):
             return
         views = (self.canvas.layout.focused,) if self.canvas.layout.focused else VIEWS
         areas = {}
+        scales = {}
         for view in views:
             rect = self.canvas.layout.area(view)
             areas[view] = (floor(rect.left() / TILE_SIZE) * TILE_SIZE, floor(rect.top() / TILE_SIZE) * TILE_SIZE,
                            ceil(rect.right() / TILE_SIZE) * TILE_SIZE, ceil(rect.bottom() / TILE_SIZE) * TILE_SIZE)
-        request = self.spec, areas
+            pixels = self.canvas.tile_rect(view).width() * self.canvas.devicePixelRatioF() / rect.width()
+            scales[view] = min(MAP_TEXTURE_SIZE, 2 ** ceil(log2(max(1, pixels))))
+        request = self.spec, areas, scales
         self.pending = request if request != self.current or self.future is not None else None
         if self.pending is not None and not self.timer.isActive():
             self.timer.start()

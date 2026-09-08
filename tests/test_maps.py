@@ -27,7 +27,7 @@ def test_all_six_maps_are_built_and_bounded(edit):
 
 
 @pytest.mark.parametrize("view", VIEWS)
-@pytest.mark.parametrize("scale", [1, 4])
+@pytest.mark.parametrize("scale", [1, 4, 16])
 def test_cutout_and_translucent_layers_show_terrain_through_air_gaps(tmp_path, view, scale):
     from structura_render.projection_grid import VIEWS as AXES
     from structura_edit.map_images import build_source_maps
@@ -71,3 +71,17 @@ def test_fully_transparent_texture_never_tints_the_empty_map(tmp_path):
     source = SimpleNamespace(size=(3, 3, 3), present={(1, 2, 1): 0}, palette=["minecraft:poppy"],
                              palette_raw=[parse_state("minecraft:poppy")])
     assert all(np.all(image == ImageColor.getrgb(MAP_BACKGROUND)) for image in build_source_maps(source, tmp_path).values())
+
+
+def test_default_map_preserves_original_sixteen_pixel_texture(tmp_path):
+    from structura_edit.map_images import build_source_maps
+
+    directory = tmp_path / "textures/block"
+    directory.mkdir(parents=True)
+    texture = np.arange(16 * 16 * 3, dtype=np.uint8).reshape(16, 16, 3)
+    Image.fromarray(texture).save(directory / "stone.png")
+    source = SimpleNamespace(size=(1, 1, 1), present={(0, 0, 0): 0}, palette=["minecraft:stone"],
+                             palette_raw=[parse_state("minecraft:stone")])
+    images = build_source_maps(source, tmp_path)
+    assert all(image.shape == (16, 16, 3) for image in images.values())
+    assert np.array_equal(images["top"], texture)

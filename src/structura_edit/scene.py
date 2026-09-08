@@ -5,6 +5,7 @@ from .picking import pick_block
 from .loading import replacement_sizes
 from .appearance import GHOST_OPACITY, REMOVAL, REMOVAL_OPACITY
 from .scene_geometry import add_geometry
+from .height_slice import HeightSlice
 
 
 class Scene:
@@ -15,6 +16,11 @@ class Scene:
         self.ghost_actors = {}
         self.removed_bytes = {}
         self.display_revision = None
+        self.entity_bounds = {}
+        self.entity_keys = ()
+        self.entity_markers = []
+        self.entity_boxes = np.empty((0, 2, 3))
+        self.height = HeightSlice()
 
     @property
     def actors(self):
@@ -26,6 +32,10 @@ class Scene:
         self.section_bytes.clear()
         self.removed_bytes.clear()
         self.display_revision = None
+        self.entity_bounds = {}
+        self.entity_keys = ()
+        self.entity_markers = []
+        self.entity_boxes = np.empty((0, 2, 3))
 
     def replace(self, data, revision):
         sizes = replacement_sizes(data, self.section_bytes)
@@ -43,6 +53,12 @@ class Scene:
         else:
             for key in replacements:
                 self._remove(self.sections.get(key, []))
+        for section in data["sections"].values():
+            if "entity_bounds" in section:
+                self.entity_bounds = section["entity_bounds"]
+                self.entity_keys = tuple(self.entity_bounds)
+                self.entity_boxes = np.asarray(list(self.entity_bounds.values()))
+                self.entity_markers = section.get("entity_markers", [])
         self.sections.update(replacements)
         self.removed_bytes.update((key, section.get("layers", {}).get("removed", {}).get("geometry_bytes", 0))
                                   for key, section in data["sections"].items())
@@ -94,7 +110,13 @@ class Scene:
         self.plotter.render()
 
     def hit_at(self, session, point):
-        return pick_block(session, *self.ray_at(point))
+        return pick_block(session, *self.ray_at(point), height=self.height)
+
+    def entity_at(self, session, point):
+        from .entity_picking import nearest_entity
+
+        ray = self.ray_at(point)
+        return nearest_entity(self.entity_keys, self.entity_boxes, *ray, block=pick_block(session, *ray, height=self.height))
 
     def ray_at(self, point):
         renderer = self.plotter.renderer

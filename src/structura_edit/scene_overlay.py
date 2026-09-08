@@ -1,11 +1,14 @@
 from itertools import product
+from pathlib import Path
+from weakref import proxy
 
 import pyvista as pv
-from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import QWidget
+from vtkmodules.vtkCommonCore import VTK_FONT_FILE
+from vtkmodules.vtkPythonContext2D import vtkPythonItem
+from vtkmodules.vtkRenderingContext2D import vtkPen
+from vtkmodules.vtkRenderingContextOpenGL2 import vtkOpenGLContextActor
 
-from .appearance import ACCENT, GRID, HOVER, PANEL_BACKGROUND, SELECTION_FILL, TEMPORARY_FILL, TEXT
+from .appearance import ACCENT, FONT_SIZE, GRID, HOVER, PANEL_BACKGROUND, SELECTION_FILL, TEMPORARY_FILL, TEXT
 
 class BoundsMarker:
     def __init__(self, plotter, color, *, fill=0, width=1):
@@ -35,34 +38,32 @@ class BoundsMarker:
         return True
 
 
-class SceneOverlay(QWidget):
+class SceneOverlay:
     def __init__(self, plotter):
-        super().__init__(plotter)
         self.plotter = plotter
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.hover = BoundsMarker(plotter, HOVER)
         self.selection = BoundsMarker(plotter, ACCENT, fill=SELECTION_FILL, width=2)
         self.temporary = BoundsMarker(plotter, ACCENT, fill=TEMPORARY_FILL, width=0)
         self.looking = False
         self.corners = ()
-        plotter.resized.connect(self.reposition)
-        plotter.rendered.connect(self.update)
-        self.reposition()
+        self.actor = vtkOpenGLContextActor()
+        self.actor.SetPickable(False)
+        self.actor.SetUseBounds(False)
+        item = vtkPythonItem()
+        item.SetPythonObject(proxy(self))
+        self.actor.GetScene().AddItem(item)
+        plotter.renderer.AddViewProp(self.actor)
 
-    def reposition(self):
-        self.setGeometry(self.parentWidget().rect())
-        self.update()
+    def Initialize(self, item):
+        return True
 
     def set_selection(self, selection, temporary=None, corners=()):
         previous = self.corners
         self.corners = corners if selection else ()
         changed = self.selection.set_bounds((selection.lower, selection.upper) if selection else None)
         changed |= self.temporary.set_bounds((temporary.lower, temporary.upper) if temporary else None)
-        if changed:
-            self.plotter.render()
         if changed or previous != self.corners:
-            self.update()
+            self.plotter.render()
 
     def set_hover(self, position):
         bounds = (position, tuple(v + 1 for v in position)) if position is not None else None
@@ -74,10 +75,29 @@ class SceneOverlay(QWidget):
     def set_looking(self, looking):
         if self.looking != looking:
             self.looking = looking
-            self.update()
+            self.plotter.render()
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
+    def Paint(self, item, painter):
+        scale = self.plotter.render_window.GetDPI() / 72
+        self._draw_bounds(painter, scale)
+        self._draw_labels(painter, scale)
+        if self.looking:
+            width, height = self.plotter.render_window.GetSize()
+            x, y = width / 2, height / 2
+            pen = painter.GetPen()
+            pen.SetLineType(vtkPen.SOLID_LINE)
+            for color, width in (((0, 0, 0, 160), 3), ((245, 243, 230, 220), 1)):
+                pen.SetColor(*color)
+                pen.SetWidth(width * scale)
+                for sign in (-1, 1):
+                    painter.DrawLine(x + sign * 3 * scale, y, x + sign * 7 * scale, y)
+                    painter.DrawLine(x, y + sign * 3 * scale, x, y + sign * 7 * scale)
+        return True
+
+    def _draw_bounds(self, painter, scale):
+        pen = painter.GetPen()
+        pen.SetWidth(scale)
+        pen.SetLineType(vtkPen.DASH_LINE)
         for bounds, alpha in ((self.selection.bounds, 110), (self.temporary.bounds, 220)):
             if bounds is None:
                 continue
@@ -86,40 +106,39 @@ class SceneOverlay(QWidget):
                 point = self._project(tuple(bounds[c][axis] for axis, c in enumerate(corner)))
                 if point is not None:
                     points[corner] = point
-            color = QColor(ACCENT)
-            color.setAlpha(alpha)
-            painter.setPen(QPen(color, 1, Qt.PenStyle.DashLine))
+            pen.SetColor(*pv.Color(ACCENT).int_rgb, alpha)
             for corner, point in points.items():
                 for axis in range(3):
                     if corner[axis] == 0:
                         other = tuple(1 if i == axis else value for i, value in enumerate(corner))
                         if other in points:
-                            painter.drawLine(point, points[other])
+                            painter.DrawLine(*point, *points[other])
+
+    def _draw_labels(self, painter, scale):
         labels = list(zip("AB", self.corners))
         if self.corners and self.corners[0] == self.corners[1]:
             labels = [("A/B", self.corners[0])]
-        font = self.font()
-        font.setPixelSize(font.pixelSize() // 2)
-        painter.setFont(font)
+        text = painter.GetTextProp()
+        text.SetFontFamily(VTK_FONT_FILE)
+        text.SetFontFile(str(Path(__file__).parent / "data/fonts/Monocraft.ttf"))
+        text.SetFontSize(FONT_SIZE // 2)
+        text.SetColor(*pv.Color(TEXT).float_rgb)
+        text.SetJustificationToCentered()
+        text.SetVerticalJustificationToCentered()
+        pen = painter.GetPen()
+        pen.SetLineType(vtkPen.SOLID_LINE)
+        pen.SetWidth(scale)
+        pen.SetColor(*pv.Color(ACCENT).int_rgb)
+        painter.GetBrush().SetColor(*pv.Color(PANEL_BACKGROUND).int_rgb)
         for label, position in labels:
             point = self._project(tuple(p + 0.5 for p in position))
             if point is None:
                 continue
-            padding = GRID // 2
-            rect = painter.fontMetrics().boundingRect(label).adjusted(-padding, -padding, padding, padding)
-            rect.moveCenter(point.toPoint())
-            painter.fillRect(rect, QColor(PANEL_BACKGROUND))
-            painter.setPen(QPen(QColor(ACCENT), 1))
-            painter.drawRect(rect)
-            painter.setPen(QColor(TEXT))
-            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, label)
-        if self.looking:
-            center = QPointF(self.width() / 2, self.height() / 2)
-            for color, width in ((QColor(0, 0, 0, 160), 3), (QColor(245, 243, 230, 220), 1)):
-                painter.setPen(QPen(color, width))
-                for sign in (-1, 1):
-                    painter.drawLine(center + QPointF(sign * 3, 0), center + QPointF(sign * 7, 0))
-                    painter.drawLine(center + QPointF(0, sign * 3), center + QPointF(0, sign * 7))
+            bounds = [0.0] * 4
+            painter.ComputeStringBounds(label, bounds)
+            width, height = bounds[2] + GRID * scale, bounds[3] + GRID * scale
+            painter.DrawRect(point[0] - width / 2, point[1] - height / 2, width, height)
+            painter.DrawString(*point, label)
 
     def _project(self, position):
         renderer = self.plotter.renderer
@@ -127,6 +146,5 @@ class SceneOverlay(QWidget):
         renderer.WorldToDisplay()
         x, y, depth = renderer.GetDisplayPoint()
         if 0 <= depth <= 1:
-            width, height = self.plotter.render_window.GetSize()
-            return QPointF(x * self.width() / max(1, width), self.height() - y * self.height() / max(1, height))
+            return x, y
         return None

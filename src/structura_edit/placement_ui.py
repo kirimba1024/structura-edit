@@ -1,8 +1,13 @@
+from dataclasses import replace
+
 from PySide6.QtCore import QObject, Signal
 
 from .placement import Placement
 from .placement_bar import PlacementBar
 from .placement_view import PlacementView
+from .placement_drag import PlacementDrag
+from .source_dialog import source_version_options
+from .source_loading import SourceVersionRequired
 
 
 class PlacementController(QObject):
@@ -10,6 +15,7 @@ class PlacementController(QObject):
     message = Signal(str)
     committed = Signal(object, object, object, int)
     cancel_requested = Signal()
+    cancelled = Signal()
 
     def __init__(self, scene, navigation, submit):
         super().__init__(navigation)
@@ -24,10 +30,17 @@ class PlacementController(QObject):
         self.busy = False
         self.available = False
         self.visible = False
+        self.scene_ready = True
+        self.review = None
+        self.review_ready = False
         self.token = 0
+        self.drag = PlacementDrag(self)
         self.bar.position_changed.connect(self.set_position)
         self.bar.follow_changed.connect(self.set_following)
         self.bar.air_changed.connect(self.set_air)
+        self.bar.repeat_changed.connect(self.set_repeat)
+        self.bar.destination.changed.connect(self.set_destination)
+        self.bar.content.changed.connect(self.set_content)
         self.bar.cancel_requested.connect(self.cancel_requested)
         self.bar.transform_requested.connect(self.transform)
         navigation.nudge_requested.connect(self.nudge)
@@ -36,12 +49,16 @@ class PlacementController(QObject):
     def active(self):
         return self.model is not None or self.preparing
 
-    def set_context(self, session, selection, assets, *, busy, available, visible):
+    def set_context(self, session, selection, assets, *, busy, available, visible, scene_ready=True, review=None):
         self.session, self.selection, self.assets = session, selection, assets
         self.busy, self.available, self.visible = busy, available, visible
+        self.scene_ready, self.review = scene_ready, review
+        self.review_ready = scene_ready and review is not None
         self.navigation.placing = self.model is not None
-        self.bar.update_state(self.model, session, selection, busy=busy, visible=visible)
+        self.update_bar()
         self.bar.cancel.setEnabled(not self.committing)
+        self.drag.refresh()
+        self.view.set_visible(visible and scene_ready and review is None)
 
     def start(self, mode, *, path=None):
         if not self.available or self.active:
@@ -58,20 +75,31 @@ class PlacementController(QObject):
         initial = self.selection.lower if self.selection else (0, 0, 0)
         self.navigation.stop()
         self.scene.plotter.setFocus()
+        self._load(token, mode, initial, path=path)
+        self.changed.emit()
+
+    def _load(self, token, mode, initial, *, path=None, source_options=None):
         self.submit("clipboard", lambda result: self._loaded(token, mode, initial, result),
-                    session=self.session.fork(), selection=self.selection, assets=self.assets, path=path,
+                    session=self.session.fork(), selection=self.selection, assets=self.assets, path=path, source_options=source_options,
                     clipboard=self.clipboard if mode == "paste" else None,
                     render=mode != "copy", scene_bytes=sum(self.scene.section_bytes.values()))
-        self.changed.emit()
 
     def _loaded(self, token, mode, initial, result):
         if token != self.token:
+            return
+        if isinstance(result, SourceVersionRequired):
+            options = source_version_options(self.scene.plotter, result)
+            if options is None:
+                self.cancel()
+            else:
+                self._load(token, mode, initial, path=options.pop("path"), source_options=options)
             return
         clipboard, geometry = result
         self.clipboard = clipboard
         self.preparing = False
         if mode == "copy":
-            self.message.emit(f"Copied {'×'.join(map(str, clipboard.size))} · Paste is ready")
+            suffix = f" · {clipboard.excluded_players:,} players stay" if clipboard.excluded_players else ""
+            self.message.emit(f"Copied {clipboard.block_count:,} blocks · {len(clipboard.entities):,} entities · Paste is ready" + suffix)
         else:
             self.view.load(geometry)
             self.model = Placement(clipboard, initial, take=mode == "take")
@@ -81,29 +109,35 @@ class PlacementController(QObject):
         self.changed.emit()
 
     def refresh(self):
+        self.drag.refresh()
         if self.model is not None:
             self.view.show(self.model, self.model.reason(self.session))
-        self.bar.update_state(self.model, self.session, self.selection, busy=self.busy, visible=self.visible)
+        self.view.set_visible(self.visible and self.scene_ready and self.review is None)
+        self.update_bar()
+
+    def update_bar(self):
+        self.bar.update_state(self.model, self.session, self.selection, busy=self.busy, visible=self.visible,
+                              review=self.review, review_ready=self.review_ready)
 
     def hover(self, point):
-        if self.model is not None and not self.busy and point is not None and not self.navigation.looking:
+        if self.model is not None and self.review is None and not self.busy and point is not None and not self.navigation.looking:
             ray = self.scene.ray_at(point)
             if self.model.follow(*ray, self.scene.hit_at(self.session, point)):
                 self.refresh()
 
     def pin(self, point):
-        if self.model is None or self.busy:
+        if self.model is None or self.review is not None or self.busy:
             return
         self.hover(point)
         self.set_following(False)
 
     def set_position(self, position):
-        if self.model is not None and not self.busy:
+        if self.model is not None and self.review is None and not self.busy:
             self.model.set_position(position)
             self.refresh()
 
     def nudge(self, offset):
-        if self.model is not None and not self.busy:
+        if self.model is not None and self.review is None and not self.busy:
             self.model.nudge(offset)
             self.refresh()
 
@@ -115,6 +149,23 @@ class PlacementController(QObject):
     def set_air(self, include_air):
         if self.model is not None and not self.busy:
             self.model.include_air = include_air
+            self.refresh()
+
+    def set_repeat(self, enabled):
+        if self.model is not None and not self.busy:
+            self.model.keep_placing = enabled
+            self.refresh()
+
+    def set_destination(self, rule):
+        if self.model is not None and self.review is None and not self.busy:
+            self.model.destination = rule
+            self.refresh()
+
+    def set_content(self):
+        if self.model is not None and self.review is None and not self.busy:
+            values = self.bar.content.values()
+            self.model.include_blocks = values["include_blocks"]
+            self.model.include_entities = values["include_entities"]
             self.refresh()
 
     def transform(self, turns, flip):
@@ -147,23 +198,32 @@ class PlacementController(QObject):
         token = self.token
         self.submit("placement", lambda result: self._prepared(token, result), session=self.session,
                     placement=self.model, assets=self.assets, include_entities=include_entities,
-                    section_bytes=self.scene.section_bytes.copy())
+                    section_bytes=self.scene.section_bytes.copy(), height=self.scene.height,
+                    retained_bytes=self.view.geometry_bytes if self.model.keep_placing else 0)
 
     def _prepared(self, token, result):
         if token != self.token or self.model is None:
             return
         change, data = result
-        bounds = self.model.bounds
+        offset = change.resize.offset if change.resize is not None else (0, 0, 0)
+        bounds = tuple(tuple(v + d for v, d in zip(bound, offset)) for bound in self.model.bounds)
         self.committing = True
         self.submit("apply", lambda session: self._applied(session, data, bounds, len(change)),
                     session=self.session, change=change)
 
     def _applied(self, session, data, bounds, count):
         self.committing = False
-        self.model = None
-        self.view.clear()
-        self.navigation.placing = False
+        if self.model.keep_placing:
+            self.model = replace(self.model, position=bounds[0], take=False, following=True)
+        else:
+            self.model = None
+            self.view.clear()
+        self.session = session
+        self.navigation.placing = self.model is not None
         self.committed.emit(session, data, bounds, count)
+        self.refresh()
+        if self.model is not None:
+            self.message.emit("Placed · move to the next spot · Cancel finishes · Undo is available")
         self.changed.emit()
 
     def failed(self):
@@ -175,9 +235,12 @@ class PlacementController(QObject):
         active = self.active
         self.token += 1
         self.model = None
+        self.drag.finish()
+        self.drag.refresh()
         self.preparing = False
         self.navigation.placing = False
         self.view.clear()
+        self.cancelled.emit()
         if active:
             self.message.emit("Placement cancelled")
         self.changed.emit()

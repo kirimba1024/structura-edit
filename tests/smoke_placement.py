@@ -2,6 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
+import numpy as np
 from amulet_nbt import from_snbt
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtTest import QTest
@@ -48,11 +49,19 @@ def main():
         assert window.plotter.camera.position == camera and not window.navigation.keys
         assert tuple(placement.view.actors) == actors and not window.worker.busy
         placement.set_position((-1, 2, 5))
-        assert not placement.bar.apply.isEnabled() and "Outside" in placement.bar.hint.text()
+        camera_before = np.asarray(window.plotter.camera.position) + window.session.origin
+        assert placement.bar.apply.isEnabled() and "Outside" not in placement.bar.hint.text()
         QTest.keyClick(window.plotter, Qt.Key.Key_Return)
-        assert not window.worker.busy and not window.session.dirty
-        QTest.keyClick(window.plotter, Qt.Key.Key_Escape)
+        settle(window)
+        assert window.session.size == (13, 6, 12) and window.session.origin == (-1, 0, 0)
+        assert window.session.state_at((0, 2, 5)) == "minecraft:chest"
+        assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera_before)
+        window.undo()
+        settle(window)
+        assert window.session.size == source.size and window.session.origin == (0, 0, 0)
+        assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera_before)
         assert not placement.active and not window.session.dirty
+        window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         placement.start("take")
         settle(window)
         placement.set_position((6, 2, 5))
@@ -69,6 +78,38 @@ def main():
         settle(window)
         assert window.session.state_at((2, 0, 2)) == "minecraft:chest"
         assert not window.session.can_undo and not window.session.dirty
+        window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
+        window.show_operation("Move blocks")
+        window.operation.set_values({"offset": (-4, 0, 0)})
+        camera_before = np.asarray(window.plotter.camera.position) + window.session.origin
+        window.preview_operation()
+        settle(window)
+        assert window.pending is not None and window.pending.resize is not None
+        state = window.views.displayed.state
+        assert state.origin == (-2, 0, 0) and window.minimap.canvas.origin == state.origin
+        assert np.allclose(np.asarray(window.plotter.camera.position) + state.origin, camera_before)
+        window.discard_pending()
+        settle(window)
+        assert window.minimap.canvas.origin == (0, 0, 0)
+        assert np.allclose(window.plotter.camera.position, camera_before)
+        window.preview_operation()
+        settle(window)
+        window.cancel_task()
+        settle(window)
+        assert window.minimap.canvas.origin == (0, 0, 0)
+        assert np.allclose(window.plotter.camera.position, camera_before)
+        window.preview_operation()
+        settle(window)
+        window.apply_pending()
+        settle(window)
+        assert window.selection().lower == (0, 0, 2)
+        assert window.session.state_at((0, 0, 2)) == "minecraft:chest"
+        assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera_before)
+        window.undo()
+        settle(window)
+        assert window.session.size == source.size and not window.session.dirty
+        assert np.allclose(window.plotter.camera.position, camera_before)
+        window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         placement.start("copy")
         settle(window)
         copied = placement.clipboard

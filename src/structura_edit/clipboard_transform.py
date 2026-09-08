@@ -5,6 +5,8 @@ from numbers import Integral
 from amulet_nbt import CompoundTag, StringTag
 from structura_core import parse_state, state_key
 
+from .clipboard_entities import transform_entities
+
 
 COMPASS = ("north", "east", "south", "west")
 SPATIAL = {"facing", "axis", "rotation", "shape", "hinge", "type", "orientation", *COMPASS}
@@ -83,4 +85,5 @@ def transform_clipboard(clipboard, *, turns=0, flip=None):
             x, z, width, depth = depth - 1 - z, x, depth, width
         state = states[cell.state]
         cells.append(((x, y, z), cell if state == cell.state else replace(cell, state=state, variant=None)))
-    return replace(clipboard, size=(sz, sy, sx) if turns % 2 else clipboard.size, cells=tuple(cells))
+    return replace(clipboard, size=(sz, sy, sx) if turns % 2 else clipboard.size, cells=tuple(cells),
+                   entities=transform_entities(clipboard.entities, clipboard.size, turns, flip))
