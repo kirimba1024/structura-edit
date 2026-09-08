@@ -30,6 +30,7 @@
 | Движение, Qt-ввод, удержание клавиш, захват мыши | `camera.py`, `navigation.py`, `navigation_keys.py`, `mouse_look.py` |
 | Регион и попадание луча | `selection.py`, `picking.py` |
 | Виджеты и меню | `workbench.py`, `panels.py`, специализированные панели, `menus.py` |
+| Поиск загруженных материалов, ограниченный список последних | `materials.py` |
 | Общая сетка, шрифт и плоское оформление Qt | `appearance.py`, `theme.py`, `data/editor.qss` |
 | Сборка приложения и действия пользователя | `ui.py` |
 | Явное обновление мира и координаты | `world_ui.py`; пределы — `loading.py` |
@@ -127,6 +128,19 @@ busy/determinate progress и [PyVista](https://docs.pyvista.org/api/plotting/_au
 pinch масштабирует её через [Qt gestures](https://doc.qt.io/qt-6/qnativegestureevent.html).
 
 ## Правила следующей правки
+
+Пипетка использует существующий raycast и `state_at`, без чтения NBT, загрузки
+чанков или перестройки геометрии. `OperationPanel` хранит общий target между
+режимами; source и маски сохраняются для каждой команды. `MaterialsPanel`
+получает готовый Counter палитры, добавляет максимум 12 недавних состояний
+и фильтрует строки через Qt QSortFilterProxyModel. Скрытая таблица не строится
+при обновлении документа. Поиск зависит от числа состояний, а не числа блоков.
+При явном открытии фильтр очищается, фоновое обновление сохраняет запрос.
+Локальный замер на macOS: 5000 синтетических состояний — около 40 мс на построение
+таблицы, менее 1 мс на фильтр; это проверка палитры, не замер загрузки мира.
+Ориентиры: [Minecraft Pick Block](https://help.minecraft.net/hc/en-us/articles/360059148111-Minecraft-Java-Edition-Hotkeys)
+для средней кнопки и [Photoshop Eyedropper](https://helpx.adobe.com/photoshop/using/tool-techniques/eyedropper-tool.html)
+для клавиши I; клавиша действует только в viewport.
 
 Панели владеют виджетами и моделями Qt: значения на вход, signals на выход.
 Новый файл нужен для отдельной ответственности, а не ради лимита строк.

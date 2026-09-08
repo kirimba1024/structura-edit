@@ -9,8 +9,8 @@ MOVEMENT = {
     Qt.Key.Key_Q: (0, -1, 0), Qt.Key.Key_E: (0, 1, 0),
     Qt.Key.Key_Space: (0, 1, 0),
 }
-CYRILLIC = dict(zip("цфывйуаь", (Qt.Key.Key_W, Qt.Key.Key_A, Qt.Key.Key_S,
-                                    Qt.Key.Key_D, Qt.Key.Key_Q, Qt.Key.Key_E, Qt.Key.Key_F, Qt.Key.Key_M)))
+CYRILLIC = dict(zip("цфывйуаьш", (Qt.Key.Key_W, Qt.Key.Key_A, Qt.Key.Key_S,
+                                    Qt.Key.Key_D, Qt.Key.Key_Q, Qt.Key.Key_E, Qt.Key.Key_F, Qt.Key.Key_M, Qt.Key.Key_I)))
 COMMAND_MODIFIERS = (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.MetaModifier
                      | Qt.KeyboardModifier.AltModifier)
 SPEED_KEYS = {Qt.Key.Key_Minus: -1, Qt.Key.Key_Underscore: -1,

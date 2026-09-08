@@ -14,12 +14,14 @@ BOOST = 4
 CONTROLS = ("Hold WASD / arrows: fly · E / Space: up · Q: down · Shift: faster\n"
             "Hold RMB: look · Shift+`: toggle freelook · Escape / click: exit\n"
             "− / +: speed · Mouse wheel while looking: speed · Shift+click: region\n"
-            "F: frame scene · M: map · Enter: apply preview · Escape: cancel")
+            "I / middle click: pick material · F: frame scene · M: map\n"
+            "Enter: apply preview · Escape: cancel")
 
 
 class Navigation(QObject):
     selected = Signal(object, bool)
     hovered = Signal(object)
+    sampled = Signal(object)
     extend_changed = Signal(bool)
     fit_requested = Signal()
     apply_requested = Signal()
@@ -101,7 +103,7 @@ class Navigation(QObject):
                     offset = (0, -offset[2], 0)
                 self.nudge_requested.emit(offset)
             return True
-        handled = key in MOVEMENT or key in SPEED_KEYS or fly_shortcut(event) or key in (Qt.Key.Key_Shift, Qt.Key.Key_F, Qt.Key.Key_Escape,
+        handled = key in MOVEMENT or key in SPEED_KEYS or fly_shortcut(event) or key in (Qt.Key.Key_Shift, Qt.Key.Key_F, Qt.Key.Key_I, Qt.Key.Key_Escape,
                                             Qt.Key.Key_Return, Qt.Key.Key_Enter)
         if not handled:
             return False
@@ -124,6 +126,8 @@ class Navigation(QObject):
                 self.hover_dirty = True
         elif key == Qt.Key.Key_F:
             self.fit_requested.emit()
+        elif key == Qt.Key.Key_I:
+            self.sample()
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.apply_requested.emit()
         elif key == Qt.Key.Key_Escape:
@@ -132,6 +136,16 @@ class Navigation(QObject):
             if not looking:
                 self.cancel_requested.emit()
         return True
+
+    def sample(self, point=None):
+        if self.placing:
+            return
+        if self.looking:
+            point = self.view.rect().center()
+        elif point is None:
+            point = self.hover_position
+        if point is not None and self.view.rect().contains(point):
+            self.sampled.emit(point)
 
     def eventFilter(self, watched, event):
         kind = event.type()
@@ -165,6 +179,10 @@ class Navigation(QObject):
                 self.change_speed(1.2 ** (event.angleDelta().y() / 120))
             return True
         if kind in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick):
+            if event.button() == Qt.MouseButton.MiddleButton:
+                self.view.setFocus()
+                self.sample(event.position().toPoint())
+                return True
             if self.mouse_look.latched:
                 self.stop()
                 return True

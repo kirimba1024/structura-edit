@@ -9,6 +9,7 @@ from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS
 
 class OperationPanel(QWidget):
     changed = Signal()
+    material_requested = Signal(str)
     preview_requested = Signal()
     apply_requested = Signal()
     discard_requested = Signal()
@@ -55,7 +56,11 @@ class OperationPanel(QWidget):
             if isinstance(value, (bool, tuple)):
                 self.form.addRow(field)
             else:
-                self.form.addRow(parameter.label, field)
+                button = QPushButton(parameter.label + "…")
+                button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                button.setToolTip(f"Choose {parameter.label.lower()} from loaded and recent materials")
+                button.clicked.connect(lambda checked=False, name=key: self.material_requested.emit(name))
+                self.form.addRow(button, field)
         layout.addLayout(self.form)
         self.info = QLabel()
         self.info.setWordWrap(True)
@@ -103,6 +108,7 @@ class OperationPanel(QWidget):
                     field.setChecked(value)
                 elif isinstance(field, QLineEdit):
                     field.setText(value)
+                    field.setCursorPosition(0)
                 else:
                     for axis, number in zip(field.inputs, value):
                         axis.setValue(number)
@@ -114,13 +120,17 @@ class OperationPanel(QWidget):
         self.set_values(COMMANDS[self.current].defaults())
 
     def _mode_changed(self, name):
+        target = self.fields["target"].text()
         self.saved[self.current] = self.values()
+        self.saved[self.current].pop("target", None)
         self.current = name
         for key, field in self.fields.items():
             self.form.setRowVisible(field, key in COMMANDS[name].parameters)
         field = self.fields[COMMANDS[name].parameters[0]]
         self.setFocusProxy(field.inputs[0] if hasattr(field, "inputs") else field)
-        self.set_values(self.saved.get(name, COMMANDS[name].defaults()))
+        values = self.saved.get(name, COMMANDS[name].defaults()).copy()
+        values["target"] = target
+        self.set_values(values)
         self.info.setText(COMMANDS[name].description)
 
 

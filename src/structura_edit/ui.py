@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMainWindow, QMessageBox, QSizePolicy, QToolButton
 
 from .camera import FreeCamera
+from .commands import PARAMETERS
 from .theme import apply_theme
 from .jobs import PROTECTED_JOBS, Worker
 from .menus import EditorMenus
@@ -53,7 +54,7 @@ class EditorWindow(QMainWindow):
             "export": self.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
             "apply": self.apply_pending, "discard": self.discard_pending, "recipe": self.show_recipe,
             "all": self.select_all, "clear": self.clear_selection,
-            "coordinates": lambda: self.panels.show("selection"), "materials": self.show_materials,
+            "coordinates": lambda: self.panels.show("selection"), "materials": lambda: self.show_materials(),
             "fit": self.fit_scene, "map": self.minimap.toggle_large, "goto": self.camera_dialog, "refresh": self.world.refresh,
             "fly": self.fly_camera,
             "history": lambda: self.panels.show("history"),
@@ -101,6 +102,7 @@ class EditorWindow(QMainWindow):
         self.workbench.demo_requested.connect(self.open_demo)
         self.navigation.selected.connect(self.scene_click)
         self.navigation.hovered.connect(self.scene_hover)
+        self.navigation.sampled.connect(self.sample_material)
         self.navigation.extend_changed.connect(self.extend_selection)
         self.navigation.fit_requested.connect(self.fit_scene)
         self.navigation.apply_requested.connect(self.apply_pending)
@@ -112,7 +114,9 @@ class EditorWindow(QMainWindow):
         self.panels.selection.bounds_requested.connect(self.set_selection_bounds)
         self.panels.selection.all_requested.connect(self.select_all)
         self.panels.selection.clear_requested.connect(self.clear_selection)
-        self.panels.materials.chosen.connect(self.fill_material)
+        self.panels.materials.chosen.connect(self.choose_material)
+        self.panels.materials.dismissed.connect(self.dismiss_materials)
+        self.operation.material_requested.connect(self.show_materials)
         self.panels.history.requested.connect(self.seek_history)
         self.panels.recipe.preview_requested.connect(self.preview_recipe)
         self.panels.recipe.apply_requested.connect(self.apply_pending)
@@ -141,6 +145,7 @@ class EditorWindow(QMainWindow):
                                     visible=self.session is not None and not self.minimap.large and self.pending is None)
         self.overlay.set_selection(None if placing else self.selected.region, None if placing else self.selected.preview)
         self.panels.selection.setEnabled(self.session is not None and not placing)
+        self.panels.materials.setEnabled(ready and not placing)
         self.operation.setEnabled(self.session is not None and not self.session.readonly and not placing)
         self.operation.preview.setEnabled(editable and selected)
         self.operation.apply.setEnabled(editable and preview_ready)
@@ -366,18 +371,58 @@ class EditorWindow(QMainWindow):
         self.panels.show("operation")
         self._sync()
 
-    def show_materials(self):
-        if self.session:
-            self.panels.materials.set_counts(self.session.palette_counts(self.selected.region))
-            self.panels.show("materials")
+    def sample_material(self, point):
+        if (not self.session or self.worker.busy or self.pending is not None or self.placement.active
+                or self.scene.display_revision != self.session.revision):
+            return
+        hit = self.scene.hit_at(self.session, point)
+        if hit is not None:
+            state = self.session.state_at(hit.position)
+            self.operation.fields["target"].setText(state)
+            self.operation.fields["target"].setCursorPosition(0)
+            self.remember_material(state)
+            self.status.setText(f"Material · {state.removeprefix('minecraft:')}")
+            self.status.setToolTip(state)
 
-    def fill_material(self, state):
+    def show_materials(self, field=None):
+        if not self.session or self.worker.busy or self.placement.active:
+            return
+        self._material_field = field or "target"
+        self._material_mode = self.operation.current if field else "Fill"
+        self._material_return = self.panels.docks["operation"].isVisible()
+        self.navigation.stop()
+        self.panels.materials.search.clear()
+        self.panels.materials.reload()
+        self.panels.materials.use.setText(f"Use for {PARAMETERS[self._material_field].label}")
+        self.panels.show("materials")
+
+    def dismiss_materials(self):
         self.panels.docks["materials"].hide()
-        self.show_operation("Fill")
-        self.operation.fields["target"].setText(state)
+        if self._material_return:
+            self.panels.show("operation")
+            self.operation.fields[self._material_field].setFocus()
+        else:
+            self.plotter.setFocus()
+
+    def choose_material(self, state):
+        if self.worker.busy or self.placement.active:
+            return
+        self.dismiss_materials()
+        self.show_operation(self._material_mode)
+        field = self.operation.fields[self._material_field]
+        field.setText(state)
+        field.setCursorPosition(0)
+        if field.isVisible() and field.isEnabled():
+            field.setFocus()
+        self.remember_material(state)
+
+    def remember_material(self, state):
+        self.panels.materials.remember(state)
+        self.operation.set_materials(self.panels.materials.states)
 
     def _refresh_palette(self):
-        self.operation.set_materials(self.session.palette_counts())
+        self.panels.materials.set_counts(self.session.palette_counts())
+        self.operation.set_materials(self.panels.materials.states)
 
     def _invalidate(self):
         if self._job and self._job[0] == "apply":
@@ -415,6 +460,10 @@ class EditorWindow(QMainWindow):
                 self.panels.recipe.output.setPlainText(output)
             else:
                 change = result
+                if args["values"].get("target"):
+                    from structura_core.nbt import parse_state, state_key
+
+                    self.remember_material(state_key(parse_state(args["values"]["target"])))
             self.session._check_change(change)
             self.pending = change
             self.operation.info.setText(f"Preview · {len(change):,} changed cells")

@@ -75,6 +75,7 @@ class EditorMenus:
         self.actions["world"].setEnabled(not busy)
         self.actions["resources"].setEnabled(not busy and not placing)
         self.actions["entities"].setEnabled(not placing)
+        self.actions["materials"].setEnabled(ready and not placing and not preview)
         self.actions["map"].setEnabled(session is not None)
         self.actions["fly"].setEnabled(session is not None)
         self.actions["refresh"].setEnabled(world_active and not placing and not preview)

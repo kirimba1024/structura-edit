@@ -89,7 +89,7 @@ class EditorPanels:
         self.history = HistoryPanel()
         self.docks = {}
         for name, title in (("operation", "Selection action"), ("selection", "Selection coordinates"),
-                            ("materials", "Selection materials"), ("recipe", "Python recipe"), ("history", "History")):
+                            ("materials", "Materials"), ("recipe", "Python recipe"), ("history", "History")):
             dock = QDockWidget(title, window)
             dock.setWidget(getattr(self, name))
             title_bar = QWidget(dock)
@@ -103,7 +103,7 @@ class EditorPanels:
             close.setAccessibleName("Close panel")
             close.setFixedSize(CONTROL_HEIGHT, CONTROL_HEIGHT)
             close.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            close.clicked.connect(dock.hide)
+            close.clicked.connect(self.materials.dismissed if name == "materials" else dock.hide)
             row.addWidget(close)
             dock.setTitleBarWidget(title_bar)
             dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)

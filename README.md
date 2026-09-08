@@ -75,11 +75,26 @@ updates its result without opening a panel or moving keyboard focus.
 | Release Shift before clicking | Cancel the temporary cuboid and retain the committed selection |
 | − / + (also = without Shift) | Halve / double flight speed |
 | Mouse wheel while looking | Adjust flight speed; trackpad scrolling does not change it |
+| I / middle click in the viewport | Pick the exact block state under the pointer; in freelook, use the crosshair |
 | F | Frame the scene |
 | M in the viewport | Expand or close the map; Escape also closes it |
 | Enter in the viewport | Apply the ready preview |
 | Escape | Release mouse look, otherwise discard a preview or clear the selection |
 | F5 | Refresh the current world around the camera |
+
+Pick material sets the shared **To** value for Fill/Replace and other material
+operations without changing blocks, the selection or flight. The status line
+shows the sampled state; block-entity contents are not copied. Picking is disabled
+during preview, placement and background work. `I` also works on the Russian
+keyboard layout; it remains normal text input inside fields.
+
+**Selection → Materials** opens a searchable list of loaded block states, with
+the last 12 picked or used materials first. Counts describe the loaded area.
+The **From…**, **To…** and **Only material…** field labels open the same picker
+for that field. Type to filter, use arrows and Enter, or double-click a row;
+Escape returns to the field unchanged. Other block IDs can be typed directly
+into the operation fields. Recent materials last for the application session,
+including document switches; no world loading or asset scanning is involved.
 
 Movement starts with a key press and continues on every frame until release;
 it does not depend on keyboard repeat. Opposite directions cancel, aliases do

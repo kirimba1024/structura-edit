@@ -136,6 +136,41 @@ def check_map_proportions(canvas):
         assert np.isclose(target.width() / image.width(), target.height() / image.height()), view
 
 
+def check_materials(window, point):
+    state = window.session.state_at(point)
+    selection, revision = window.selection(), window.session.revision
+    actors, camera = tuple(window.scene.actors), window.plotter.camera.position
+    target = window.operation.fields["target"]
+    target.setText("minecraft:gold_block")
+    mouse_move(window.plotter, screen(window, point))
+    QTest.keyClick(window.plotter, Qt.Key.Key_I)
+    assert target.text() == state and window.selection() == selection
+    assert window.session.revision == revision and not window.worker.busy
+    assert tuple(window.scene.actors) == actors and window.plotter.camera.position == camera
+    window.show_operation("Replace")
+    window.operation.fields["source"].setText("minecraft:glass")
+    window.show_materials("source")
+    window.panels.materials.search.setText(state)
+    QTest.keyClick(window.panels.materials.search, Qt.Key.Key_Return)
+    assert window.operation.values()["source"] == state and target.text() == state
+    window.show_materials("target")
+    window.panels.materials.search.setText("no_such_block")
+    QTest.keyClick(window.panels.materials.search, Qt.Key.Key_Escape)
+    assert window.focusWidget() is target and target.text() == state
+    window.show_operation("Fill")
+    target.setText("minecraft:glass")
+    window.preview_operation()
+    settle(window)
+    assert window.pending is not None, window.status.text()
+    pending = window.pending
+    QTest.mouseClick(window.plotter, Qt.MouseButton.MiddleButton, pos=screen(window, point))
+    assert window.pending is pending and target.text() == "minecraft:glass"
+    assert "minecraft:glass" in window.panels.materials.recent
+    window.discard_pending()
+    settle(window)
+    window.panels.dismiss()
+
+
 def check_minimap(window):
     from structura_edit.map_projection import VIEWS, project, unproject
 
@@ -288,7 +323,7 @@ def check_edits(window, point, output):
     assert window.session.state_at(point) == "minecraft:glass" and not window.session.dirty
     assert window.panels.docks["history"].isVisible()
     window.show_materials()
-    assert window.panels.materials.table.topLevelItemCount() > 0
+    assert window.panels.materials.filtered.rowCount() > 0
     window.panels.dismiss()
     return saved
 
@@ -317,6 +352,7 @@ def main():
         check_navigation(window)
         check_panel_focus(window)
         point = check_selection(window)
+        check_materials(window, point)
         saved = check_edits(window, point, output)
         QApplication.processEvents()
         window.fit_scene()
@@ -327,6 +363,7 @@ def main():
                       camera="timer-driven held keys, release, focus loss, RMB look",
                       focus="preview preserves active inspector and text; coordinates commit on Enter",
                       selection="single block, live Shift region, click to commit, release to cancel",
+                      materials="pick without edits, exact state search, From/To routing, Escape focus, preview isolation",
                       editing="fill, move, preview, apply, undo, redo, discard, recipe isolation, save and reload",
                       minimap="six projections, navigation without click-through, edge coverage, resize, collapse and expand")
         (output / "result.json").write_text(json.dumps(report, indent=2))

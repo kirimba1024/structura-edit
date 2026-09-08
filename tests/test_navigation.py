@@ -196,6 +196,27 @@ def test_shortcut_override_does_not_change_input(navigation):
     assert not navigation.keys
 
 
+def test_pick_uses_pointer_or_crosshair_without_exiting_flight_or_typing(navigation):
+    view, samples = navigation.view, []
+    navigation.sampled.connect(samples.append)
+    navigation.hover_position = QPoint(40, 60)
+    QTest.keyClick(view, Qt.Key.Key_I)
+    assert samples == [QPoint(40, 60)]
+    key(view, QEvent.Type.KeyPress, Qt.Key.Key_I, repeat=True)
+    field = QLineEdit(view)
+    QTest.keyClicks(field, "ii")
+    assert field.text() == "ii" and len(samples) == 1
+    navigation.start_fly()
+    QTest.keyPress(view, Qt.Key.Key_W)
+    QTest.mouseClick(view, Qt.MouseButton.MiddleButton, pos=QPoint(20, 20))
+    key(view, QEvent.Type.KeyPress, ord("Ш"), text="ш")
+    assert samples[-2:] == [view.rect().center()] * 2
+    assert navigation.looking and Qt.Key.Key_W in navigation.keys
+    navigation.placing = True
+    QTest.keyClick(view, Qt.Key.Key_I)
+    assert len(samples) == 3
+
+
 def test_captured_mouse_does_not_repeat_rotation_and_restores_cursor(navigation, monkeypatch):
     from structura_edit import mouse_look
 
