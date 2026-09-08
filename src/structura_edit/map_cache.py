@@ -11,6 +11,7 @@ from PIL import Image
 
 from .appearance import MAP_BACKGROUND
 from .map_projection import VIEWS, depth_axis, plane_size, project
+from .map_images import MAP_RENDER_VERSION
 from .file_state import fingerprint, resource_stamp
 from .loading import MAP_TILE_SIZE as TILE_SIZE, MAX_MAP_VISIBLE_TILES as MAX_VISIBLE_TILES
 
@@ -23,7 +24,7 @@ def map_spec(session, assets, path):
     if path is None or not hasattr(session, "map_identity"):
         return None
     resource = (str(Path(assets).resolve()), resource_stamp(assets)) if assets else None
-    identity = json.dumps((session.map_identity, resource, MAP_BACKGROUND), sort_keys=True)
+    identity = json.dumps((session.map_identity, resource, MAP_BACKGROUND, MAP_RENDER_VERSION), sort_keys=True)
     space = hashlib.sha256(identity.encode()).hexdigest()
     slabs = {}
     for view in VIEWS:

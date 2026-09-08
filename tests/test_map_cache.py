@@ -52,12 +52,15 @@ def test_unsaved_pixels_are_visible_without_overwriting_the_disk_atlas(tmp_path)
     assert atlas == pending and pixel(spec, 0, 0) == (80, 90, 100, 255)
 
 
-def test_cache_separates_world_dimension_and_depth_and_marks_unknown_chunks(tmp_path):
+def test_cache_separates_world_dimension_depth_and_rendering_and_marks_unknown_chunks(tmp_path, monkeypatch):
     original = snapshot(tmp_path)
     store_maps(original, images(original, (80, 90, 100)))
     assert pixel(snapshot(tmp_path), 1, 1) == (80, 90, 100, 255)
     assert pixel(snapshot(tmp_path, dimension="nether"), 1, 1)[3] == 0
     assert pixel(snapshot(tmp_path, (0, 16, 0)), 1, 1)[3] == 0
+    with monkeypatch.context() as changed_renderer:
+        changed_renderer.setattr("structura_edit.map_cache.MAP_RENDER_VERSION", 0)
+        assert pixel(snapshot(tmp_path), 1, 1)[3] == 0
     missing = snapshot(tmp_path, loaded=set())
     store_maps(missing, images(missing, (200, 200, 200)))
     assert pixel(original, 1, 1)[3] == 0
