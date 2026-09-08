@@ -30,7 +30,7 @@ Issues = "https://github.com/kirimba1024/structura-edit/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-structura_edit = ["py.typed"]
+structura_edit = ["py.typed", "data/*.qss", "data/*.svg", "data/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

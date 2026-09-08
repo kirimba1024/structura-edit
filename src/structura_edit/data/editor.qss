@@ -1,0 +1,56 @@
+QWidget { color: $TEXT; font-family: Monocraft; font-size: ${FONT_SIZE}px; }
+QLabel#appTitle { font-size: ${TITLE_FONT_SIZE}px; }
+QMainWindow, QDialog, QDockWidget, QStatusBar, QMenuBar, QMenu { background: $PANEL_BACKGROUND; }
+QWidget#panelTitle { background: $PANEL_PRESSED; border-bottom: 1px solid $BORDER; }
+QStatusBar { border-top: 1px solid $BORDER; }
+QStatusBar::item { border: 0; }
+QWidget#placementBar { background: $PANEL_BACKGROUND; border-top: 1px solid $BORDER; }
+QPushButton, QToolButton {
+    background: $PANEL_BACKGROUND; border: 1px solid $BORDER; border-radius: 0;
+    padding: 1px 4px; min-height: ${CONTROL_CONTENT}px;
+}
+QPushButton:hover, QToolButton:hover { background: $PANEL_HOVER; }
+QPushButton:pressed, QToolButton:pressed, QToolButton:checked { background: $PANEL_PRESSED; }
+QPushButton:focus, QToolButton:focus, QPushButton:default { border-color: $ACCENT; }
+QWidget:disabled { color: $BORDER; }
+QLineEdit, QPlainTextEdit, QSpinBox, QComboBox, QAbstractItemView {
+    background: #fffdf0; border: 1px solid $BORDER; border-radius: 0;
+    selection-background-color: $ACCENT; selection-color: white;
+}
+QLineEdit, QSpinBox, QComboBox { min-height: ${CONTROL_CONTENT}px; padding: 1px 4px; }
+QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus { border-color: $ACCENT; }
+QSpinBox { padding-right: 16px; }
+QSpinBox::up-button, QSpinBox::down-button {
+    width: 16px; background: $PANEL_BACKGROUND; border: 1px solid $BORDER;
+    subcontrol-origin: border;
+}
+QSpinBox::up-button { subcontrol-position: top right; border-bottom: 1px solid $BORDER; }
+QSpinBox::down-button { subcontrol-position: bottom right; }
+QSpinBox::up-button:hover, QSpinBox::down-button:hover, QComboBox::drop-down:hover { background: $PANEL_HOVER; }
+QSpinBox::up-arrow { image: url("$ASSETS/up.svg"); width: 7px; height: 4px; }
+QSpinBox::down-arrow, QComboBox::down-arrow { image: url("$ASSETS/down.svg"); width: 7px; height: 4px; }
+QComboBox { padding-right: 20px; }
+QComboBox::drop-down { width: 20px; border-left: 1px solid $BORDER; }
+QComboBox QAbstractItemView { outline: 0; }
+QCheckBox { spacing: 4px; min-height: ${CONTROL_HEIGHT}px; }
+QCheckBox::indicator { width: 12px; height: 12px; border: 1px solid $BORDER; background: #fffdf0; }
+QCheckBox::indicator:checked { image: url("$ASSETS/check.svg"); }
+QCheckBox::indicator:focus { border-color: $ACCENT; }
+QMenuBar::item { padding: 2px 8px; background: transparent; }
+QMenuBar::item:selected, QMenu::item:selected { background: $ACCENT; color: white; }
+QMenu { border: 1px solid $BORDER; padding: 0; }
+QMenu::item { padding: 2px 24px; }
+QMenu::separator { height: 1px; background: $BORDER; margin: 4px 0; }
+QMenu::indicator:checked { image: url("$ASSETS/check.svg"); }
+QHeaderView::section { background: $PANEL_PRESSED; border: 0; border-right: 1px solid $BORDER; padding: 2px 4px; }
+QAbstractItemView { outline: 0; }
+QAbstractItemView::item { padding: 2px 4px; }
+QScrollBar { background: $PANEL_PRESSED; border: 0; }
+QScrollBar:vertical { width: 12px; margin: 0; }
+QScrollBar:horizontal { height: 12px; margin: 0; }
+QScrollBar::handle { background: $BORDER; min-height: 24px; min-width: 24px; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+QToolTip { color: $TEXT; background: $PANEL_BACKGROUND; border: 1px solid $BORDER; padding: 4px; }
+QWidget#minimap QToolButton { min-height: 0; padding: 0 4px; border-top: 0; border-bottom: 0; border-right: 0; }
+QWidget#minimap QToolButton#mapExpand { border-right: 1px solid $BORDER; }

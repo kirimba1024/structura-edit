@@ -1,8 +1,8 @@
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFontDatabase, QKeySequence, QShortcut
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QToolButton, QVBoxLayout, QWidget
 
-from .appearance import BORDER, MAP_BACKGROUND, MAP_HEADER_HEIGHT, PANEL_BACKGROUND, PANEL_HOVER, PANEL_PRESSED, TEXT
+from .appearance import MAP_HEADER_HEIGHT
 from .map_canvas import MapCanvas
 from .map_cache_ui import MapCacheView
 from .navigation_keys import control_key
@@ -18,21 +18,16 @@ class MiniMap(QWidget):
         self._collapsed = False
         self.setObjectName("minimap")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_LayoutOnEntireRect)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
-        self.setStyleSheet(
-            f"QWidget#minimap {{ background: {MAP_BACKGROUND}; }}"
-            f"QToolButton {{ border: 1px solid {BORDER}; border-top-color: #fffdf0; padding: 0 4px; "
-            f"margin: 0; border-radius: 0; background: {PANEL_BACKGROUND}; color: {TEXT}; font-size: 11px; }}"
-            f"QToolButton:hover {{ background: {PANEL_HOVER}; }}"
-            f"QToolButton:pressed {{ background: {PANEL_PRESSED}; }}")
         self.canvas = MapCanvas()
         self.cache = MapCacheView(self.canvas, cache_dir)
         self.canvas.navigate.connect(self._navigate)
         self.header = self._button("", "Map projections", self._header_clicked)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.center = self._button("F · Center", "Center the map on the camera (F)", self.recenter)
-        self.expand = self._button("M ⤢", "Expand map (M)", self.toggle_large)
+        self.expand = self._button("M +", "Expand map (M)", self.toggle_large)
+        self.expand.setObjectName("mapExpand")
         row = QHBoxLayout()
         row.setSpacing(0)
         row.addWidget(self.header, 1)
@@ -98,9 +93,8 @@ class MiniMap(QWidget):
 
     def _update_layout(self):
         self.canvas.setVisible(not self.collapsed)
-        self.header.setText("▦ Six views" if self.large else
-                            ("▸" if self.collapsed else "▾") + " MAP")
-        self.expand.setText("M ×" if self.large else "M ⤢")
+        self.header.setText("Six views" if self.large else "MAP +" if self.collapsed else "MAP −")
+        self.expand.setText("M ×" if self.large else "M +")
         self.expand.setToolTip("Close map (M / Escape)" if self.large else "Expand map (M)")
         self.center.setVisible(self.large)
         self.reposition()
@@ -108,7 +102,7 @@ class MiniMap(QWidget):
 
     def reposition(self):
         parent = self.parentWidget()
-        width = parent.width() if self.large else min(parent.width(), min(360, max(240, parent.width() // 4)))
+        width = parent.width() if self.large else min(parent.width(), 288)
         height = parent.height() if self.large else MAP_HEADER_HEIGHT + (0 if self.collapsed else 2 * width // 3)
         self.setFixedSize(width, height)
         self.move(parent.width() - width, 0)

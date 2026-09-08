@@ -5,10 +5,11 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMainWindow, QMessageBox, QSizePolicy, QToolButton
 
 from .camera import FreeCamera
-from .appearance import apply_theme
+from .theme import apply_theme
 from .jobs import PROTECTED_JOBS, Worker
 from .menus import EditorMenus
 from .navigation import CONTROLS, Navigation
+from .placement_ui import PlacementController
 from .scene import Scene
 from .selection import RegionSelection
 from .task_progress import TaskProgress
@@ -24,7 +25,7 @@ class EditorWindow(QMainWindow):
         self.setWindowTitle("Structura Edit")
         apply_theme(self)
         self.resize(1380, 880)
-        self.setMinimumSize(850, 600)
+        self.setMinimumSize(1104, 600)
         self.session = None
         self.pending = None
         self.assets = assets
@@ -45,6 +46,8 @@ class EditorWindow(QMainWindow):
         self.panels = EditorPanels(self)
         self.operation = self.panels.operation
         self.world = WorldController(self)
+        self.placement = PlacementController(self.scene, self.navigation, self._run)
+        self.workbench.scene_layout.addWidget(self.placement.bar)
         self.menus = EditorMenus(self, {
             "open": self.open_dialog, "world": self.world.open_dialog, "save": self.save_dialog,
             "export": self.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
@@ -56,7 +59,11 @@ class EditorWindow(QMainWindow):
             "history": lambda: self.panels.show("history"),
             "world_settings": self.world.settings, "entities": self._entities_changed,
             "resources": self.choose_assets, "operation": self.show_operation,
+            "copy": lambda: self.placement.start("copy"), "take": lambda: self.placement.start("take"),
+            "paste": lambda: self.placement.start("paste"), "duplicate": lambda: self.placement.start("duplicate"),
+            "import": self.import_dialog,
         })
+        self.placement.bar.bind_actions(self.menus.actions)
         self.entities_action = self.menus.actions["entities"]
         self.status = QLabel("Open a schematic or world")
         self.status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
@@ -64,11 +71,15 @@ class EditorWindow(QMainWindow):
         self.statusBar().setSizeGripEnabled(False)
         self.refresh_button = QToolButton()
         self.refresh_button.setDefaultAction(self.menus.actions["refresh"])
-        self.refresh_button.setText("↻ Refresh · F5")
+        self.refresh_button.setText("Refresh · F5")
         self.refresh_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.refresh_button.setAutoRaise(True)
         self.statusBar().addPermanentWidget(self.refresh_button)
-        self.controls = QLabel("WASD fly · RMB / Shift+` look · −/+ speed · M map")
+        self.save_button = QToolButton()
+        self.save_button.setDefaultAction(self.menus.actions["save"])
+        self.save_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.statusBar().addPermanentWidget(self.save_button)
+        self.controls = QLabel("WASD · RMB look · M map")
         self.controls.setToolTip(CONTROLS)
         self.statusBar().addPermanentWidget(self.controls)
         self.progress = TaskProgress()
@@ -110,31 +121,45 @@ class EditorWindow(QMainWindow):
         self.operation.preview_requested.connect(self.preview_operation)
         self.operation.apply_requested.connect(self.apply_pending)
         self.operation.discard_requested.connect(self.discard_pending)
+        self.placement.changed.connect(self._sync)
+        self.placement.message.connect(self.status.setText)
+        self.placement.committed.connect(self._placement_applied)
+        self.placement.cancel_requested.connect(self.escape)
+        self.placement.bar.apply_requested.connect(self.apply_pending)
 
     def _sync(self):
         ready = self.session is not None and not self.worker.busy
         editable = ready and not self.session.readonly
         selected = self.selected.region is not None
         preview_ready = bool(self.pending) and self.views.ready
+        placing = self.placement.active
         self.menus.sync(self.session, busy=self.worker.busy, selected=selected,
-                        preview=self.pending is not None, preview_ready=preview_ready, world_active=self.world.active)
-        self.panels.selection.setEnabled(self.session is not None)
-        self.operation.setEnabled(self.session is not None and not self.session.readonly)
+                        preview=self.pending is not None, preview_ready=preview_ready, world_active=self.world.active,
+                        placing=placing, clipboard=self.placement.clipboard is not None)
+        self.placement.set_context(self.session, self.selected.region, self.assets, busy=self.worker.busy,
+                                    available=ready and self.pending is None and self.views.ready,
+                                    visible=self.session is not None and not self.minimap.large and self.pending is None)
+        self.overlay.set_selection(None if placing else self.selected.region, None if placing else self.selected.preview)
+        self.panels.selection.setEnabled(self.session is not None and not placing)
+        self.operation.setEnabled(self.session is not None and not self.session.readonly and not placing)
         self.operation.preview.setEnabled(editable and selected)
         self.operation.apply.setEnabled(editable and preview_ready)
         self.operation.discard.setEnabled(self.pending is not None)
-        self.panels.recipe.preview.setEnabled(editable and selected)
+        self.panels.recipe.preview.setEnabled(editable and selected and not placing)
         self.panels.recipe.apply.setEnabled(editable and preview_ready)
         self.panels.recipe.discard.setEnabled(self.pending is not None)
         self.refresh_button.setVisible(self.world.active)
-        self.panels.history.set_session(self.session, busy=self.worker.busy)
+        self.save_button.setVisible(self.world.active)
+        self.save_button.setText("Save world")
+        self.panels.history.set_session(self.session, busy=self.worker.busy or placing)
         if self.session:
             name = self.session.path.name if self.session.path else "Untitled"
-            self.setWindowTitle(f"{'● ' if self.session.dirty else ''}{name} — Structura Edit")
+            self.setWindowTitle(f"{'* ' if self.session.dirty else ''}{name} — Structura Edit")
 
     def _map_changed(self, large):
         self.navigation.stop()
         self.navigation.enabled = self.session is not None and not large
+        self._sync()
 
     def fly_camera(self):
         self.minimap.set_large(False)
@@ -150,6 +175,7 @@ class EditorWindow(QMainWindow):
             messages = {"open": "Opening…", "world": "Loading world…", "render": "Building preview…",
                         "save": "Saving…", "recipe": "Running recipe…", "operation": "Preparing change…", "export": "Exporting…",
                         "apply": "Applying…", "history": "Restoring history…"}
+            messages.update(clipboard="Preparing clipboard…", placement="Preparing placement…")
             self.status.setText(messages[kind])
         self._sync()
         return True
@@ -182,7 +208,9 @@ class EditorWindow(QMainWindow):
         self._last_tick = now
 
     def _error(self, message):
+        self.placement.failed()
         self.status.setText(message.splitlines()[0] if message else "Operation failed")
+        self.status.setToolTip(self.status.text())
         self.panels.recipe.output.setPlainText(message)
         self._sync()
 
@@ -194,6 +222,7 @@ class EditorWindow(QMainWindow):
         self.world.queued = None
         self.views.reset()
         self.pending = None
+        self.placement.cancel()
         self._input_revision += 1
         if self.session:
             self.render_scene()
@@ -228,6 +257,7 @@ class EditorWindow(QMainWindow):
             self._run("open", self._opened, path=str(path), region=region)
 
     def _opened(self, session, *, rendered=None, fit=True, preserve_focus=False):
+        self.placement.cancel()
         if not session.readonly:
             session.history.prepare()
         self.session = session
@@ -285,6 +315,9 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def scene_click(self, point, extend=False):
+        if self.placement.active:
+            self.placement.pin(point)
+            return
         if not self.session or self.pending is not None or self.scene.display_revision != self.session.revision:
             return
         hit = self.scene.hit_at(self.session, point)
@@ -293,10 +326,16 @@ class EditorWindow(QMainWindow):
             self._selection_changed()
 
     def extend_selection(self, enabled):
+        if self.placement.active:
+            return
         self.selected.set_extending(enabled)
         self._show_selection(self.selected.region)
 
     def scene_hover(self, point):
+        if self.placement.active:
+            self.overlay.set_hover(None)
+            self.placement.hover(point)
+            return
         if point is None or not self.session or self.pending is not None or self.scene.display_revision != self.session.revision:
             self.overlay.set_hover(None)
             if self.selected.preview is not None:
@@ -360,7 +399,7 @@ class EditorWindow(QMainWindow):
         self._prepare_change("recipe", code=self.panels.recipe.code.toPlainText())
 
     def _prepare_change(self, kind, **args):
-        if not self.session or self.session.readonly or self.worker.busy:
+        if not self.session or self.session.readonly or self.worker.busy or self.placement.active:
             return
         try:
             selection = self.selection()
@@ -416,6 +455,9 @@ class EditorWindow(QMainWindow):
             self.camera.frame(self.session.size)
 
     def apply_pending(self):
+        if self.placement.active:
+            self.placement.apply(include_entities=self.entities_action.isChecked())
+            return
         if not self.pending or self.worker.busy or not self.views.ready:
             return
         destination = None
@@ -445,6 +487,9 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def discard_pending(self):
+        if self.placement.active:
+            self.escape()
+            return
         if self._job and self._job[0] == "apply":
             return
         self._invalidate()
@@ -453,6 +498,15 @@ class EditorWindow(QMainWindow):
     def escape(self):
         if self.minimap.large:
             self.minimap.set_large(False)
+            return
+        if self.placement.active:
+            if self.placement.committing:
+                return
+            if self._job and self._job[0] in ("clipboard", "placement"):
+                self.cancel_task()
+            else:
+                self.placement.cancel()
+            self.plotter.setFocus()
             return
         if self.pending is not None:
             self.discard_pending()
@@ -470,13 +524,16 @@ class EditorWindow(QMainWindow):
     def _history(self, direction):
         if self.worker.busy or not self.session:
             return
+        if self.placement.active:
+            self.placement.cancel()
+            return
         if self.pending is not None:
             self.discard_pending()
             return
         self.seek_history(self.session.history.cursor + (-1 if direction == "undo" else 1))
 
     def seek_history(self, index):
-        if self.worker.busy or not self.session or self.pending is not None:
+        if self.worker.busy or not self.session or self.pending is not None or self.placement.active:
             return
         if not 0 <= index <= len(self.session.history.entries) or index == self.session.history.cursor:
             return
@@ -496,6 +553,24 @@ class EditorWindow(QMainWindow):
             self.assets = path
             self.render_scene()
 
+    def import_dialog(self):
+        if not self.session or self.session.readonly or self.worker.busy or self.placement.active:
+            return
+        path, _ = QFileDialog.getOpenFileName(self, "Import as placement", "",
+                                             "Minecraft (*.nbt *.snbt *.schem *.litematic *.mcstructure)")
+        if path:
+            self.placement.start("import", path=path)
+
+    def _placement_applied(self, session, data, bounds, count):
+        self.session = session
+        self.selected.set_bounds(*bounds)
+        self.panels.selection.set_selection(self.selected.region)
+        self._refresh_palette()
+        self.views.request(session, None, self.assets, self.entities_action.isChecked(), data=data)
+        self._show_selection(self.selected.region)
+        self.status.setText(f"Placed {count:,} changed cells · Undo is available")
+        self._sync()
+
     def export_dialog(self):
         if not self.session or self.worker.busy or self.pending is not None or self.selected.region is None:
             return
@@ -508,6 +583,9 @@ class EditorWindow(QMainWindow):
     def save_dialog(self):
         if not self.session or self.worker.busy or self.pending is not None:
             return
+        if self.world.active:
+            self.world.save()
+            return
         current = self.session.path or Path("structure.nbt")
         proposal = str(current.with_name(f"{current.stem}-edited{current.suffix}"))
         filters = "Sponge (*.schem)" if current.suffix == ".schem" else "Structure NBT (*.nbt);;Text NBT (*.snbt)"
@@ -516,12 +594,16 @@ class EditorWindow(QMainWindow):
             self.save_path(path)
 
     def save_path(self, path):
-        if self.session and not self.session.readonly and self.pending is None:
+        if self.session and not self.session.readonly and self.pending is None and not self.placement.active:
             self._run("save", self._saved, session=self.session, path=str(path))
 
     def _saved(self, session):
         self.session = session
         self.status.setText(f"Saved {session.path.name}")
+        if self.world.active:
+            backup = getattr(session, "last_backup", None)
+            self.status.setToolTip(f"Backup: {backup}" if backup else "No pending changes")
+            self.views.rebase(session)
         self._sync()
 
     def closeEvent(self, event):

@@ -1,8 +1,7 @@
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDockWidget, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
-    QStackedWidget, QVBoxLayout, QWidget,
+    QStackedWidget, QToolButton, QVBoxLayout, QWidget,
 )
 
 from .materials import MaterialsPanel
@@ -12,6 +11,7 @@ from .panels import OperationPanel
 from .selection_panel import SelectionPanel
 from .scene_overlay import SceneOverlay
 from .viewport import SceneView
+from .appearance import CONTROL_HEIGHT, GRID, PANEL_WIDTH
 
 
 class Workbench(QStackedWidget):
@@ -25,7 +25,7 @@ class Workbench(QStackedWidget):
         layout = QVBoxLayout(welcome)
         layout.addStretch()
         title = QLabel("Structura Edit")
-        title.setFont(QFont(title.font().family(), 24))
+        title.setObjectName("appTitle")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
         buttons = QHBoxLayout()
         buttons.addStretch()
@@ -41,7 +41,12 @@ class Workbench(QStackedWidget):
         self.plotter = SceneView(self)
         self.overlay = SceneOverlay(self.plotter)
         self.minimap = MiniMap(self.plotter, cache_dir=cache_dir)
-        self.addWidget(self.plotter)
+        scene_page = QWidget()
+        self.scene_layout = QVBoxLayout(scene_page)
+        self.scene_layout.setContentsMargins(0, 0, 0, 0)
+        self.scene_layout.setSpacing(0)
+        self.scene_layout.addWidget(self.plotter, 1)
+        self.addWidget(scene_page)
         self.plotter.resized.connect(self.minimap.reposition)
 
 
@@ -57,7 +62,6 @@ class RecipePanel(QWidget):
         hint.setWordWrap(True)
         layout.addWidget(hint)
         self.code = QPlainTextEdit('edit.apply(edit.fill(selection, "minecraft:stone"))')
-        self.code.setFont(QFont("Menlo", 12))
         self.setFocusProxy(self.code)
         layout.addWidget(self.code)
         self.preview = QPushButton("Preview recipe")
@@ -88,10 +92,24 @@ class EditorPanels:
                             ("materials", "Selection materials"), ("recipe", "Python recipe"), ("history", "History")):
             dock = QDockWidget(title, window)
             dock.setWidget(getattr(self, name))
-            dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea)
+            title_bar = QWidget(dock)
+            title_bar.setAttribute(Qt.WidgetAttribute.WA_LayoutOnEntireRect)
+            title_bar.setObjectName("panelTitle")
+            row = QHBoxLayout(title_bar)
+            row.setContentsMargins(GRID, 0, 0, 0)
+            row.addWidget(QLabel(title), 1)
+            close = QToolButton()
+            close.setText("×")
+            close.setAccessibleName("Close panel")
+            close.setFixedSize(CONTROL_HEIGHT, CONTROL_HEIGHT)
+            close.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            close.clicked.connect(dock.hide)
+            row.addWidget(close)
+            dock.setTitleBarWidget(title_bar)
+            dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
             dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
             window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-            dock.setMinimumWidth(280)
+            dock.setFixedWidth(PANEL_WIDTH)
             dock.hide()
             self.docks[name] = dock
 

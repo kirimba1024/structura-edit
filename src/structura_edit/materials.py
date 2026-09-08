@@ -15,7 +15,9 @@ class MaterialsPanel(QWidget):
         self.table.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.itemDoubleClicked.connect(self._choose)
         layout.addWidget(self.table)
-        layout.addWidget(QLabel("Double-click a material to fill the selected region."))
+        hint = QLabel("Double-click a material to fill the selected region.")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
 
     def set_counts(self, counts):
         self.table.clear()

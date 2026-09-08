@@ -14,7 +14,7 @@ def snapshot(tmp_path, origin=(0, 0, 0), *, loaded=None, dimension="overworld"):
         region.write_bytes(b"region revision one")
     session = SimpleNamespace(map_identity=("world", dimension, 123), origin=origin, size=(16, 16, 16),
                               loaded_chunks={(origin[0] // 16, origin[2] // 16)} if loaded is None else loaded,
-                              map_stamps={str(region): fingerprint(region)})
+                              map_stamps={str(region): fingerprint(region)}, dirty=False)
     return map_spec(session, None, tmp_path / "cache.sqlite")
 
 
@@ -41,6 +41,15 @@ def test_refresh_stitches_negative_coordinates_and_overwrites_only_its_area(tmp_
     assert pixel(second, -1, -1) == (0, 0, 100, 255)
     assert pixel(second, 0, -1) == (0, 100, 0, 255)
     assert pixel(second, 16, -1)[3] == 0
+
+
+def test_unsaved_pixels_are_visible_without_overwriting_the_disk_atlas(tmp_path):
+    spec = snapshot(tmp_path)
+    store_maps(spec, images(spec, (80, 90, 100)))
+    pending = dict(spec, volatile=True)
+    visible, atlas = store_maps(pending, images(pending, (200, 100, 20)))
+    assert tuple(visible["top"][0, 0]) == (200, 100, 20, 255)
+    assert atlas == pending and pixel(spec, 0, 0) == (80, 90, 100, 255)
 
 
 def test_cache_separates_world_dimension_and_depth_and_marks_unknown_chunks(tmp_path):
@@ -108,7 +117,7 @@ def test_external_chunk_and_resource_changes_invalidate_their_cache(tmp_path):
     texture.parent.mkdir(parents=True)
     texture.write_bytes(b"old texture")
     session = SimpleNamespace(map_identity=("world", "overworld", 123), origin=(0, 0, 0), size=(16, 16, 16),
-                              loaded_chunks={(0, 0)}, map_stamps={})
+                              loaded_chunks={(0, 0)}, map_stamps={}, dirty=False)
     before = map_spec(session, assets, first["path"])
     texture.write_bytes(b"changed nested texture")
     assert map_spec(session, assets, first["path"])["space"] != before["space"]

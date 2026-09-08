@@ -20,16 +20,22 @@ class _Output(io.StringIO):
 
 
 def execute(kind, args, progress=None):
-    if kind in ("world", "render", "map"):
+    if kind in ("world", "render", "map", "clipboard", "placement"):
         from .resources import refresh_resources
 
         refresh_resources(args.get("assets"))
+    if kind in ("clipboard", "placement"):
+        from .placement_jobs import prepare_clipboard, prepare_placement
+
+        prepare = prepare_clipboard if kind == "clipboard" else prepare_placement
+        return prepare(**args, progress=progress)
     if kind == "world":
         from .preview import build_sections
         from .sections import prepare_sections
 
         session = open_source(**{key: args[key] for key in
-                                ("path", "center", "dimension", "radius", "vertical_radius", "include_entities")})
+                                ("path", "center", "dimension", "radius", "vertical_radius", "include_entities")},
+                              world_changes=args.get("world_changes"))
         return session, build_sections(**prepare_sections(session), assets=args["assets"], progress=progress)
     if kind == "open":
         return open_source(**args)

@@ -31,17 +31,17 @@ class WorldController:
         if self.window.worker.busy or not self.window._confirm_discard():
             return
         self.path, self.dimension, self.center = str(path), None, None
-        self.request()
+        self.request(preserve_edits=False)
 
     def camera_position(self):
         return tuple(p + o for p, o in zip(self.window.plotter.camera.position, self.window.session.origin))
 
     def refresh(self):
-        if self.active:
+        if self.active and not self.window.placement.active and self.window.pending is None:
             self.center = self.camera_position()
             self.request()
 
-    def request(self, *, recenter=False):
+    def request(self, *, recenter=False, preserve_edits=True):
         if not self.path:
             return
         if self.center is not None:
@@ -53,7 +53,8 @@ class WorldController:
         self.generation += 1
         args = dict(path=self.path, center=self.center, dimension=self.dimension, radius=self.radius,
                     vertical_radius=self.vertical_radius, assets=self.window.assets,
-                    include_entities=self.window.entities_action.isChecked(), recenter=recenter, generation=self.generation)
+                    include_entities=self.window.entities_action.isChecked(), recenter=recenter, generation=self.generation,
+                    preserve_edits=preserve_edits)
         if self.window.worker.busy:
             self.queued = args
             self.window.status.setText("World refresh queued")
@@ -62,11 +63,19 @@ class WorldController:
         self._submit(args)
 
     def _submit(self, args):
+        session = self.window.session
+        if args["preserve_edits"] and self.active and str(session.path) == args["path"]:
+            args = dict(args, world_changes=session.world_changes)
         def received(result):
             if (self.generation == args["generation"] and self.path == args["path"]
                     and self.window.entities_action.isChecked() == args["include_entities"]):
                 self.received(result, recenter=args["recenter"])
         self.window._run("world", received, **args)
+
+    def save(self):
+        window = self.window
+        if self.active and not window.worker.busy and window.pending is None and not window.placement.active:
+            window._run("save", window._saved, session=window.session, path=str(window.session.path))
 
     def received(self, result, *, recenter=False):
         plotter = self.window.plotter

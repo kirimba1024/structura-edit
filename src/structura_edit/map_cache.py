@@ -30,7 +30,7 @@ def map_spec(session, assets, path):
         axis = depth_axis(view)
         slabs[view] = f"{view}:{session.origin[axis]}:{session.origin[axis] + session.size[axis]}"
     return dict(path=str(path), space=space, slabs=slabs, origin=session.origin, size=session.size,
-                loaded=session.loaded_chunks, stamps=session.map_stamps)
+                loaded=session.loaded_chunks, stamps=session.map_stamps, volatile=session.dirty)
 
 
 @contextmanager
@@ -91,6 +91,8 @@ def store_maps(spec, images):
         result[view] = np.dstack((pixels, alpha))
     if any(fingerprint(path) != stamp for path, stamp in spec["stamps"].items()):
         return result, None
+    if spec.get("volatile"):
+        return result, spec
     with connect(spec["path"]) as db:
         invalidate(db, spec["space"])
         for view, pixels in result.items():

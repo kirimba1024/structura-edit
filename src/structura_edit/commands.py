@@ -60,4 +60,4 @@ COMMANDS = {
     )
 }
 
-REGION_COMMANDS = tuple(name for name, command in COMMANDS.items() if command.group == "Region")
+REGION_COMMANDS = tuple(name for name, command in COMMANDS.items() if command.group == "Region" and name != "Duplicate")

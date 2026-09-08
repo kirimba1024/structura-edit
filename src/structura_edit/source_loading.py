@@ -19,7 +19,7 @@ def source_stamps(directory, center, radius):
 
 def open_source(path, *, region=None, palette_index=0, center=None, dimension=None,
                 radius=DEFAULT_RADIUS, vertical_radius=DEFAULT_VERTICAL_RADIUS, include_entities=True,
-                source_data_version=None, target_version=None, strict=False):
+                source_data_version=None, target_version=None, strict=False, world_changes=None):
     path = Path(path).expanduser().resolve()
     if path.name == "level.dat":
         path = path.parent
@@ -42,7 +42,9 @@ def open_source(path, *, region=None, palette_index=0, center=None, dimension=No
     area = world.read_region(center, dimension=dimension, radius=radius,
                              vertical_radius=vertical_radius, include_entities=include_entities,
                              max_blocks=MAX_WORLD_BLOCKS)
-    session = WorldView(world, area)
+    if world_changes is not None:
+        world_changes.revision += 1
+    session = WorldView(world, area, world_changes)
     session.map_stamps = stamps
     session.map_identity = str(world.path), dimension, str(world.data.get("WorldGenSettings", {}).get("seed", world.data.get("RandomSeed", "")))
     return session

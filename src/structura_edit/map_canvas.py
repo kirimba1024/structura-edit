@@ -1,7 +1,7 @@
 from time import monotonic
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, QSizeF, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontDatabase, QImage, QPainter, QPen, QPolygonF
+from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QWidget
 
 from .map_layout import MapLayout, projection_rect
@@ -29,11 +29,6 @@ class MapCanvas(QWidget):
         self.selection = None
         self.entities = []
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
-        font.setPixelSize(10)
-        font.setBold(True)
-        font.setStyleStrategy(QFont.StyleStrategy.NoAntialias)
-        self.setFont(font)
         self.setToolTip("M: expand · Click: enlarge view · Drag / trackpad scroll: pan · Wheel / pinch: zoom · F: camera · Double-click: go here")
 
     def set_images(self, images):
@@ -106,8 +101,10 @@ class MapCanvas(QWidget):
                     painter.drawRect(QRectF(round(point.x()) - 2, round(point.y()) - 2, 4, 4))
             painter.setPen(QPen(QColor(ACCENT if self.layout.large and self.layout.focused == view else BORDER), 1))
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawRect(rect.adjusted(0, 0, -1, -1))
+            painter.drawRect(rect)
             label = label.upper()
+            if rect.width() < 96:
+                label = label[:1]
             if self.layout.large and self.dimension and rect.width() > 200:
                 axis = depth_axis(view)
                 label += f" · {'XYZ'[axis]} {self.origin[axis]}…{self.origin[axis] + self.size_blocks[axis]}"
@@ -118,7 +115,7 @@ class MapCanvas(QWidget):
             painter.restore()
         painter.setPen(QPen(QColor(BORDER), 1))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRect(self.rect().adjusted(1, 0, -2, -2))
+        painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
 
     def mouseDoubleClickEvent(self, event):
         self.press = None

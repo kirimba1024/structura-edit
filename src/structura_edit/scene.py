@@ -2,8 +2,9 @@ import numpy as np
 import pyvista as pv
 
 from .picking import pick_block
-from .loading import MAX_GEOMETRY_BYTES
+from .loading import replacement_sizes
 from .appearance import GHOST_OPACITY, REMOVAL, REMOVAL_OPACITY
+from .scene_geometry import add_geometry
 
 
 class Scene:
@@ -27,10 +28,7 @@ class Scene:
         self.display_revision = None
 
     def replace(self, data, revision):
-        sizes = {} if data["reset"] else self.section_bytes.copy()
-        sizes.update((key, section["geometry_bytes"]) for key, section in data["sections"].items())
-        if sum(sizes.values()) > MAX_GEOMETRY_BYTES:
-            raise ValueError("Scene geometry exceeds 192 MiB; reduce the loaded area or schematic size")
+        sizes = replacement_sizes(data, self.section_bytes)
         replacements = {}
         try:
             for key, section in data["sections"].items():
@@ -57,17 +55,8 @@ class Scene:
             self.plotter.remove_actor(actor, reset_camera=False, render=False)
 
     def _add_section(self, data):
-        actors = []
+        actors = add_geometry(self.plotter, data)
         try:
-            for geometry in data["meshes"]:
-                if len(geometry.quads):
-                    self._add_textured(geometry, actors)
-            for points, faces, rgba in data["flat"]:
-                if len(points):
-                    actor = self.plotter.add_mesh(
-                        pv.PolyData(points, faces), color=tuple(v / 255 for v in rgba[:3]),
-                        opacity=rgba[3] / 255, ambient=0.35, reset_camera=False, render=False)
-                    actors.append(actor)
             for name, layer in data.get("layers", {}).items():
                 additions = self._add_section(layer)
                 actors.extend(additions)
@@ -88,21 +77,6 @@ class Scene:
             raise
         return actors
 
-    def _add_textured(self, geometry, actors):
-        from structura_render.mesh import material_groups
-
-        texture = pv.Texture(geometry.image)
-        texture.SetInterpolate(False)
-        texture.mipmap = False
-        for mode, points, quads, uv in material_groups(geometry):
-            faces = np.column_stack((np.full(len(quads), 4), quads)).ravel()
-            mesh = pv.PolyData(points, faces)
-            mesh.active_texture_coordinates = uv
-            actor = self.plotter.add_mesh(mesh, texture=texture, smooth_shading=False,
-                                          ambient=0.35, reset_camera=False, render=False)
-            actors.append(actor)
-            actor.SetForceOpaque(mode == "OPAQUE")
-
     def accept_preview(self):
         removed = set()
         for actor, (kind, opacity, opaque) in self.ghost_actors.items():
@@ -120,6 +94,9 @@ class Scene:
         self.plotter.render()
 
     def hit_at(self, session, point):
+        return pick_block(session, *self.ray_at(point))
+
+    def ray_at(self, point):
         renderer = self.plotter.renderer
         width, height = self.plotter.render_window.GetSize()
         x = point.x() * width / max(1, self.plotter.width())
@@ -130,4 +107,4 @@ class Scene:
             renderer.DisplayToWorld()
             value = renderer.GetWorldPoint()
             ray.append(np.asarray(value[:3]) / value[3])
-        return pick_block(session, ray[0], ray[1] - ray[0])
+        return ray[0], ray[1] - ray[0]

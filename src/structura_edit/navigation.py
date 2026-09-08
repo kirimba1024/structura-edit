@@ -25,12 +25,14 @@ class Navigation(QObject):
     apply_requested = Signal()
     cancel_requested = Signal()
     speed_changed = Signal(float)
+    nudge_requested = Signal(object)
 
     def __init__(self, view, camera, *, capture_mouse=True):
         super().__init__(view)
         self.view = view
         self.camera = camera
         self.enabled = False
+        self.placing = False
         self.held = HeldKeys()
         self.mouse_look = MouseLook(view, capture=capture_mouse)
         self.press_position = None
@@ -89,6 +91,16 @@ class Navigation(QObject):
             if kind == QEvent.Type.KeyPress:
                 self.stop()
             return False
+        arrows = {Qt.Key.Key_Left: (-1, 0, 0), Qt.Key.Key_Right: (1, 0, 0),
+                  Qt.Key.Key_Up: (0, 0, -1), Qt.Key.Key_Down: (0, 0, 1)}
+        if self.placing and key in arrows:
+            event.accept()
+            if kind == QEvent.Type.KeyPress:
+                offset = arrows[key]
+                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier and offset[2]:
+                    offset = (0, -offset[2], 0)
+                self.nudge_requested.emit(offset)
+            return True
         handled = key in MOVEMENT or key in SPEED_KEYS or fly_shortcut(event) or key in (Qt.Key.Key_Shift, Qt.Key.Key_F, Qt.Key.Key_Escape,
                                             Qt.Key.Key_Return, Qt.Key.Key_Enter)
         if not handled:
@@ -107,7 +119,7 @@ class Navigation(QObject):
             extending = Qt.Key.Key_Shift in self.keys
             self.held.press(event)
             if key == Qt.Key.Key_Shift and not extending:
-                self.extend_changed.emit(not self.looking)
+                self.extend_changed.emit(not self.looking and not self.placing)
                 self.hover_position = self.view.mapFromGlobal(QCursor.pos())
                 self.hover_dirty = True
         elif key == Qt.Key.Key_F:

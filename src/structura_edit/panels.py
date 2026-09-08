@@ -27,7 +27,7 @@ class OperationPanel(QWidget):
         for key, parameter in PARAMETERS.items():
             value = parameter.default
             if isinstance(value, bool):
-                field = QCheckBox()
+                field = QCheckBox(parameter.label)
                 field.toggled.connect(self.changed)
             elif isinstance(value, tuple):
                 field = QWidget()
@@ -39,6 +39,7 @@ class OperationPanel(QWidget):
                     number.setRange(-30_000_000, 30_000_000)
                     number.setKeyboardTracking(False)
                     number.setPrefix(axis + " ")
+                    number.setAccessibleName(f"Offset {axis}")
                     number.valueChanged.connect(self.changed)
                     field.inputs.append(number)
                     axes.addWidget(number)
@@ -51,7 +52,10 @@ class OperationPanel(QWidget):
                 field.textChanged.connect(self.changed)
             field.setToolTip(parameter.description)
             self.fields[key] = field
-            self.form.addRow(parameter.label, field)
+            if isinstance(value, (bool, tuple)):
+                self.form.addRow(field)
+            else:
+                self.form.addRow(parameter.label, field)
         layout.addLayout(self.form)
         self.info = QLabel()
         self.info.setWordWrap(True)
@@ -70,6 +74,7 @@ class OperationPanel(QWidget):
         self.reset = QPushButton("Reset settings")
         self.reset.clicked.connect(self.reset_settings)
         layout.addWidget(self.reset)
+        layout.addStretch()
         self.mode.currentTextChanged.connect(self._mode_changed)
         self.reset_settings()
         self._mode_changed(self.current)

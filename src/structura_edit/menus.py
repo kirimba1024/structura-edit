@@ -10,7 +10,7 @@ class EditorMenus:
         self.window = window
         self.actions = {}
         bar = window.menuBar()
-        bar.setNativeMenuBar(True)
+        bar.setNativeMenuBar(False)
         file = bar.addMenu("&File")
         edit = bar.addMenu("&Edit")
         selection = bar.addMenu("&Selection")
@@ -21,10 +21,15 @@ class EditorMenus:
             (file, "world", "Open world…", None),
             (file, "save", "Save as…", QKeySequence.StandardKey.Save),
             (file, "export", "Export selection…", None),
+            (file, "import", "Import schematic…", "Ctrl+Shift+I"),
             (file, "close", "Close", QKeySequence.StandardKey.Close),
             (edit, "undo", "Undo", QKeySequence.StandardKey.Undo),
             (edit, "redo", "Redo", QKeySequence.StandardKey.Redo),
             (edit, "history", "History…", None),
+            (edit, "copy", "Copy", QKeySequence.StandardKey.Copy),
+            (edit, "take", "Take", QKeySequence.StandardKey.Cut),
+            (edit, "paste", "Paste", QKeySequence.StandardKey.Paste),
+            (edit, "duplicate", "Duplicate", "Ctrl+D"),
             (edit, "apply", "Apply preview", None),
             (edit, "discard", "Discard preview", None),
             (edit, "recipe", "Python recipe…", None),
@@ -60,29 +65,40 @@ class EditorMenus:
         search = edit.addAction("Find command…", self.find_command)
         search.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
-    def sync(self, session, *, busy, selected, preview, preview_ready, world_active):
+    def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, clipboard=False):
         ready = session is not None and not busy
         editable = ready and not session.readonly
         self.selection_menu.setEnabled(session is not None)
         for name in (*REGION_COMMANDS, "recipe"):
-            self.actions[name].setEnabled(editable and selected)
+            self.actions[name].setEnabled(editable and selected and not placing)
         self.actions["open"].setEnabled(not busy)
         self.actions["world"].setEnabled(not busy)
-        self.actions["resources"].setEnabled(not busy)
+        self.actions["resources"].setEnabled(not busy and not placing)
+        self.actions["entities"].setEnabled(not placing)
         self.actions["map"].setEnabled(session is not None)
         self.actions["fly"].setEnabled(session is not None)
-        self.actions["refresh"].setEnabled(world_active)
-        self.actions["world_settings"].setEnabled(world_active)
-        self.actions["save"].setEnabled(editable and not preview)
-        self.actions["export"].setEnabled(ready and selected and not preview)
+        self.actions["refresh"].setEnabled(world_active and not placing and not preview)
+        self.actions["world_settings"].setEnabled(world_active and not placing and not preview)
+        self.actions["save"].setEnabled(editable and not preview and not placing)
+        self.actions["save"].setText("Save world" if world_active else "Save as…")
+        if world_active:
+            self.actions["save"].setEnabled(editable and session.dirty and not preview and not placing)
+        self.actions["export"].setEnabled(ready and selected and not preview and not placing)
+        self.actions["copy"].setEnabled(ready and selected and not preview and not placing)
+        for name in ("take", "duplicate"):
+            self.actions[name].setEnabled(editable and selected and not preview and not placing)
+        self.actions["paste"].setEnabled(editable and clipboard and not preview and not placing)
+        self.actions["import"].setEnabled(editable and not preview and not placing)
+        for name in ("all", "clear", "coordinates"):
+            self.actions[name].setEnabled(session is not None and not placing)
         self.actions["undo"].setEnabled(editable and session.can_undo)
         self.actions["redo"].setEnabled(editable and session.can_redo)
         self.actions["history"].setEnabled(session is not None)
         for name in ("undo", "redo"):
             label = getattr(session.history, name + "_label") if session else ""
             self.actions[name].setText(name.title() + (" " + label if label else ""))
-        self.actions["apply"].setEnabled(editable and preview_ready)
-        self.actions["discard"].setEnabled(preview)
+        self.actions["apply"].setEnabled(editable and (preview_ready or placing))
+        self.actions["discard"].setEnabled(preview or placing)
 
     def find_command(self):
         entries = [(action.text().replace("&", ""), action) for action in self.actions.values()]

@@ -14,7 +14,9 @@ class SelectionPanel(QWidget):
         layout.addWidget(self.info)
         grid = QGridLayout()
         grid.addWidget(QLabel("From"), 1, 0)
-        grid.addWidget(QLabel("To (exclusive)"), 2, 0)
+        end = QLabel("To")
+        end.setToolTip("Upper bound, exclusive")
+        grid.addWidget(end, 2, 0)
         self.fields = [[], []]
         for axis, name in enumerate("XYZ"):
             grid.addWidget(QLabel(name), 0, axis + 1)
@@ -32,6 +34,7 @@ class SelectionPanel(QWidget):
         clear = QPushButton("Clear selection")
         clear.clicked.connect(self.clear_requested)
         layout.addWidget(clear)
+        layout.addStretch()
 
     def set_document(self, size):
         for row, values in zip(self.fields, ((0, 0, 0), size)):

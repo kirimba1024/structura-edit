@@ -29,7 +29,7 @@ class ViewRequest:
 
         assets = resolve_assets(self.assets)
         return dict(source=self.state._render_source(include_nbt=False, include_entities=False), assets=assets,
-                    atlas=map_spec(self.session, assets, cache_path))
+                    atlas=map_spec(self.state, assets, cache_path))
 
 
 class ViewPipeline:
@@ -68,6 +68,10 @@ class ViewPipeline:
         if self.ready and self.displayed is not None:
             self.scene.accept_preview()
             self.displayed = replace(self.displayed, session=session.fork(), change=None)
+
+    def rebase(self, session):
+        self.current = self.displayed = replace(self.current, session=session.fork(), change=None, fit=False)
+        self.map_queued = True
 
     def flush(self):
         request = self.current

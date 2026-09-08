@@ -2,12 +2,13 @@
 
 Edit Minecraft schematics from Python or a compact desktop workbench. The same
 API prepares changes, previews them, applies them and keeps undo/redo history.
-The current foundation also views saved Java worlds, refreshes around the camera
-and displays entities through Structura Render.
+The workbench also edits bounded snapshots of Java worlds, refreshes around the
+camera and displays entities through Structura Render.
 
 This is a development release. NBT/SNBT and Sponge v2/v3 are editable. Litematic,
-Bedrock `.mcstructure`, Sponge v1 and worlds support viewing, selection and export. Writing changes
-back to a world is a later stage.
+Bedrock `.mcstructure` and Sponge v1 support viewing, selection and export.
+Java 1.18+ worlds support local block edits and explicit Save world; older Java
+worlds remain available for viewing and export.
 
 For the small prototype, start with **Explore demo** on the welcome screen:
 fly, select a block, preview Fill, apply, undo and save. The
@@ -28,12 +29,12 @@ structura-edit
 ```
 
 This repository is the workspace's `libs/structura-edit` submodule. Development
-uses the core/render commits pinned by that workspace; the editor's preview API
-needs the current render checkout, including changes after render 0.8.1.
+uses the core/render commits pinned by that workspace: world writes need the
+current core checkout, and previews need render changes after 0.8.1.
 
 On Windows activate with `.venv-edit\Scripts\activate`. Omit `world` for schematic
 editing and `gui` for headless use. The base import loads neither Qt nor VTK.
-The desktop uses native Qt Widgets, PyVistaQt and VTK, with no server. Their
+The desktop uses Qt Widgets, PyVistaQt and VTK, with no server. Their
 installation is substantially larger than this library's own code. Current GUI
 verification is on macOS; Windows/Linux still need platform checks.
 
@@ -56,8 +57,8 @@ entities use untextured models. Player skins are not fetched from the network.
 The editor has one interaction model: a free perspective camera with permanent
 noclip, and region selection. There is no toolbar, active tool, orbit mode or
 projection switch for the main camera. Operations open from the Selection menu;
-parameter panels stay hidden until requested. One native inspector opens beside
-the scene at a time, inside the main window. Finishing a background preview
+parameter panels stay hidden until requested. One fixed inspector opens on the
+right; it cannot float, move sides or change width. Finishing a background preview
 updates its result without opening a panel or moving keyboard focus.
 
 | Input | Action |
@@ -105,6 +106,12 @@ projection to move the camera in that plane and return to the scene.
 The map uses sharp pixels, square frames, small labels and a light palette.
 Images preserve their proportions in every size, including compact icons.
 The scene has a flat sky background; visual values live in `appearance.py`.
+Controls use a shared four-pixel layout grid, flat one-pixel frames and square
+buttons. The bundled [Monocraft](https://github.com/IdreesInc/Monocraft) font has
+Cyrillic support and uses an integer pixel size without antialiasing. Its OFL
+license and pinned source are included under `data/fonts`. `theme.py` installs
+Qt Fusion; `data/editor.qss` owns the common skin, including menus, checkboxes
+and file dialogs. Native window decorations remain managed by the OS.
 The minimap header
 collapses it to one row; its M button expands it. Enlarging and switching views
 reuse the current images. Large views preserve block proportions. Map gestures
@@ -124,21 +131,36 @@ Enter applies, Escape discards. A four-pixel progress bar appears in the status
 bar after 300 ms for longer tasks: real section/projection counts when available,
 otherwise busy mode. Cancel stays beside it and never moves keyboard focus.
 
-Fill, Replace, Erase, Move blocks and Duplicate use the same region commands as
-the Python API. Move and Duplicate take integer X/Y/Z offsets and use the regular
-Preview → Apply workflow. A successful Move also moves the selection to its
+Fill, Replace, Erase and Move blocks use the same region commands as the Python
+API. Move takes integer X/Y/Z offsets and uses the regular Preview → Apply workflow.
+Duplicate uses the shared clipboard placement strip. A successful Move also moves the selection to its
 destination. Coordinate entry and material counts are available in Selection;
 Python recipes are in Edit. Other shape operations remain available from Python.
 Coordinates and move offsets commit when Enter is pressed or the field loses
 focus, so typing a multi-digit value does not apply intermediate digits.
+
+## Clipboard placement
+
+The fixed strip below the scene offers **Copy, Take, Duplicate, Paste and Export**.
+File → Import schematic places an external file through the same clipboard path.
+The ghost follows the cursor against block faces; over empty space it uses a
+horizontal placement plane. Click to pin it, then use XYZ or arrows to adjust:
+left/right change X, up/down change Z, Shift+up/down change Y. WASD still flies.
+**Enter / Apply** commits one undo step; **Escape / Cancel** preserves the source.
+Take removes its source only together with the final placement on Apply.
+The Air checkbox explicitly includes omitted/air cells. Invalid bounds disable
+Apply. Clipboard geometry is built once and repositioned through actor transforms.
+The clipboard survives opening another document. Entities and biomes stay in place;
+rotation, mirroring and growing schematic bounds are still pending.
 
 ## Worlds
 
 Choose File → Open world once, or use `--world`. The first view is near the saved
 player position, falling back to spawn. **F5 / View → Refresh world** rereads the same world around the camera.
 View → World radius and location contains dimensions, vertical range and
-Restore Defaults. Refresh preserves the world-space camera and any
-selection that still fits the loaded region.
+Restore Defaults. Refresh preserves the world-space camera, pending edits and session history,
+including edits outside the new window. Selection survives when it still fits.
+Refresh is unavailable during a placement or operation preview.
 
 The default window spans 3 × 3 chunks and a section-aligned vertical radius of
 32 blocks. Use the compact **Refresh · F5** button or F5 to reload that radius
@@ -169,8 +191,29 @@ cells before reading and 750,000 stored blocks while reading. Schematic previews
 are limited to 8 million cells before allocating dense voxel arrays. Geometry
 over 192 MiB is rejected after building, before transfer to the GUI; this is
 not a total process-memory limit. The GUI also checks the combined geometry budget
-of retained and replacement sections before creating actors. No world file is
-opened for writing by this stage.
+of retained and replacement sections before creating actors.
+
+**Apply only changes the local session. Save world writes accumulated edits.**
+Editing requires existing chunks and sections in Java 1.18+; absent terrain is
+not generated. Save keeps the undo history. Undo after Save creates a reverse
+local patch, sent to disk by the next Save. New operations allow up to 500,000
+pending changed cells; history navigation can exceed that limit to retain Undo.
+
+The core writer compares each touched block and block-entity NBT with its original
+value in freshly read chunks. Matching edits are merged; already-saved values are
+accepted; conflicts stop Save without overwriting them. Region packing uses Amulet,
+and unrelated NBT, biomes and entities are retained. Height/light caches and affected
+POI validity are invalidated for Minecraft to rebuild. Region copies are prepared
+and verified before installation. Originals and a file manifest remain in
+`<world>/.structura/backups/<save-id>`; backups are not automatically deleted.
+Save does not rebuild unchanged 3D geometry.
+
+Structura serializes its own saves and rechecks file hashes before replacement.
+This is best-effort disk editing: it does not lock Minecraft, exclude the final
+race with another writer, or provide atomicity across multiple files. On a partial
+I/O error the pending patch and backup remain available. Conflict resolution and
+backup restoration currently require Undo/reopening or manual recovery; there is
+no Force button or recovery browser yet.
 
 The large map accumulates images from explicit world loads/F5, including when
 the minimap is collapsed. Cached terrain is dimmer; a dashed box marks the
@@ -193,6 +236,8 @@ On an explicit refresh, changed `.mca`/`.mcc` signatures invalidate dependent
 tiles conservatively. A source change during reading prevents caching that
 snapshot. Damaged tiles are discarded; unavailable cache storage still allows
 the current map to work. Cached areas reflect their last explicit refresh.
+Unsaved edits and operation previews appear in the current images but never
+overwrite the persistent atlas.
 
 Measurements and current design are recorded in the
 [section rendering audit](docs/archive/structura-edit/structura-edit-sections-2026-09-08.md).

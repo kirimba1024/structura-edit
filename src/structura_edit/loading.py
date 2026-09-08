@@ -6,6 +6,7 @@ DEFAULT_RADIUS = 1
 DEFAULT_VERTICAL_RADIUS = 32
 MAX_WORLD_CELLS = 2_000_000
 MAX_WORLD_BLOCKS = 750_000
+MAX_PENDING_BLOCKS = 500_000
 MAX_PREVIEW_CELLS = 8_000_000
 MAX_GEOMETRY_BYTES = 192 * 1024**2
 MAP_TILE_SIZE = 128
@@ -40,3 +41,11 @@ def geometry_bytes(data):
               (geometry.points, geometry.quads, geometry.uv, geometry.alpha_modes, geometry.image)}
     arrays.update((id(array), array.nbytes) for points, faces, color in data["flat"] for array in (points, faces))
     return sum(arrays.values())
+
+
+def replacement_sizes(data, retained):
+    sizes = {} if data["reset"] else retained.copy()
+    sizes.update((key, section["geometry_bytes"]) for key, section in data["sections"].items())
+    if sum(sizes.values()) > MAX_GEOMETRY_BYTES:
+        raise ValueError("Scene geometry exceeds 192 MiB; reduce the loaded area or schematic size")
+    return sizes
