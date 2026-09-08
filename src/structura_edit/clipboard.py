@@ -15,6 +15,7 @@ class Clipboard:
     document_id: str
     revision: int
     selection: object
+    data_version: int
 
     @classmethod
     def capture(cls, edit, selection):
@@ -28,7 +29,12 @@ class Clipboard:
                 local = tuple(p - lo for p, lo in zip(position, selection.lower))
                 cells.append((local, detached_cell(edit._document.source, cell, position)))
         return cls(tuple(hi - lo for lo, hi in zip(selection.lower, selection.upper)), tuple(cells),
-                   edit._id, edit.revision, selection)
+                   edit._id, edit.revision, selection, edit._document.source.data_version)
+
+    def transformed(self, *, turns=0, flip=None):
+        from .clipboard_transform import transform_clipboard
+
+        return transform_clipboard(self, turns=turns, flip=flip)
 
     def render_source(self):
         states = {}
@@ -54,8 +60,8 @@ def place(edit, clipboard, position, *, take=False, include_air=False):
         raise StaleChangeError("The source changed; take a fresh selection")
     targets = {}
     if take:
-        targets.update((tuple(p + lo for p, lo in zip(local, clipboard.selection.lower)), _Cell("minecraft:air"))
-                       for local, cell in clipboard.cells if cell.state.split("[", 1)[0] not in EMPTY)
+        targets.update((p, _Cell("minecraft:air")) for p in clipboard.selection.positions()
+                       if (cell := edit._cell(p)) is not None and cell.state.split("[", 1)[0] not in EMPTY)
     if include_air:
         targets.update((p, _Cell("minecraft:air")) for p in destination.positions())
     for local, cell in clipboard.cells:

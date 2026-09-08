@@ -5,12 +5,14 @@ from .source_loading import open_source
 
 
 def prepare_clipboard(session, *, selection=None, clipboard=None, path=None, assets=None,
-                      render=True, scene_bytes=0, progress=None):
+                      render=True, scene_bytes=0, transform=None, progress=None):
     if path is not None:
         source = open_source(path)
         clipboard = source.copy(source.select())
     elif clipboard is None:
         clipboard = session.copy(selection)
+    if transform is not None:
+        clipboard = clipboard.transformed(**transform)
     if progress:
         progress("Clipboard", 1, 2 if render else 1)
     geometry = build_geometry(clipboard.render_source(), assets) if render else None

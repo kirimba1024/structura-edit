@@ -29,6 +29,7 @@ class PlacementController(QObject):
         self.bar.follow_changed.connect(self.set_following)
         self.bar.air_changed.connect(self.set_air)
         self.bar.cancel_requested.connect(self.cancel_requested)
+        self.bar.transform_requested.connect(self.transform)
         navigation.nudge_requested.connect(self.nudge)
 
     @property
@@ -115,6 +116,25 @@ class PlacementController(QObject):
         if self.model is not None and not self.busy:
             self.model.include_air = include_air
             self.refresh()
+
+    def transform(self, turns, flip):
+        if self.model is None or self.busy:
+            return
+        token = self.token
+        if self.submit("clipboard", lambda result: self._transformed(token, result), session=None,
+                       clipboard=self.model.clipboard, transform=dict(turns=turns, flip=flip), assets=self.assets,
+                       scene_bytes=sum(self.scene.section_bytes.values())):
+            self.message.emit("Rotating preview…" if turns else "Mirroring preview…")
+
+    def _transformed(self, token, result):
+        if token != self.token or self.model is None:
+            return
+        clipboard, geometry = result
+        self.view.load(geometry)
+        self.clipboard = clipboard
+        self.model.set_clipboard(clipboard)
+        self.refresh()
+        self.changed.emit()
 
     def apply(self, *, include_entities):
         if self.model is None or self.busy:

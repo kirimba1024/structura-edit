@@ -11,6 +11,7 @@ class PlacementBar(QWidget):
     air_changed = Signal(bool)
     apply_requested = Signal()
     cancel_requested = Signal()
+    transform_requested = Signal(int, object)
 
     def __init__(self, plotter):
         super().__init__(plotter)
@@ -41,7 +42,7 @@ class PlacementBar(QWidget):
         self.air.toggled.connect(self.air_changed)
         row.addWidget(self.follow)
         row.addWidget(self.air)
-        self.apply = self._button("Apply", self._apply)
+        self.apply = self._button("Apply", lambda: self._submit(self.apply_requested))
         self.apply.setToolTip("Apply locally (Enter)")
         self.cancel = self._button("Cancel", self.cancel_requested)
         self.cancel.setToolTip("Cancel placement (Escape)")
@@ -68,7 +69,15 @@ class PlacementBar(QWidget):
         layout.addLayout(row)
         self.hint = QLabel()
         self.hint.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        layout.addWidget(self.hint)
+        row = QHBoxLayout()
+        self.transforms = []
+        for text, turns, flip in (("−90°", -1, None), ("+90°", 1, None), ("Flip X", 0, "x"), ("Flip Z", 0, "z")):
+            button = self._button(text, lambda checked=False, t=turns, f=flip: self._submit(self.transform_requested, t, f))
+            button.setToolTip(f"Mirror on {flip.upper()}" if flip else f"Rotate {turns * 90:+}° around Y · + is clockwise from above")
+            self.transforms.append(button)
+            row.addWidget(button)
+        row.addWidget(self.hint, 1)
+        layout.addLayout(row)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(GRID, GRID, GRID, GRID)
         layout.setSpacing(0)
@@ -97,10 +106,10 @@ class PlacementBar(QWidget):
     def _coordinates_changed(self):
         self.position_changed.emit(tuple(field.value() for field in self.coordinates))
 
-    def _apply(self):
+    def _submit(self, signal, *args):
         for field in self.coordinates:
             field.interpretText()
-        self.apply_requested.emit()
+        signal.emit(*args)
 
     def update_state(self, model, session, selection, *, busy, visible):
         self.setVisible(visible and (model is not None or selection is not None))
@@ -126,7 +135,8 @@ class PlacementBar(QWidget):
                 field.blockSignals(False)
                 field.setEnabled(not busy)
             self.apply.setEnabled(not busy and not reason)
-            self.hint.setText(reason or ("Click to pin · Enter applies locally" if model.following
-                                        else "Pinned · XYZ / arrows adjust · Enter applies"))
+            for button in self.transforms:
+                button.setEnabled(not busy)
+            self.hint.setText(reason or ("Click to pin · Enter" if model.following else "Pinned · Enter applies"))
             self.hint.setToolTip(self.hint.text())
         self.updateGeometry()

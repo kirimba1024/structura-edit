@@ -23,12 +23,12 @@ class Placement:
 
     def reason(self, session):
         if session.readonly:
-            return "This document is view-only"
+            return "View-only document"
         if self.take and (session._id != self.clipboard.document_id or session.revision != self.clipboard.revision):
-            return "The source changed; take a fresh selection"
+            return "Source changed · take again"
         lower, upper = self.bounds
         if any(lo < 0 or hi > size for lo, hi, size in zip(lower, upper, session.size)):
-            return "Outside document bounds · adjust XYZ"
+            return "Outside bounds · edit XYZ"
         return ""
 
     def set_position(self, position):
@@ -37,6 +37,11 @@ class Placement:
 
     def nudge(self, offset):
         self.set_position(tuple(p + d for p, d in zip(self.position, _position(offset))))
+
+    def set_clipboard(self, clipboard):
+        anchor = self.anchor
+        self.clipboard = clipboard
+        self.position = tuple(p + old - new for p, old, new in zip(self.position, anchor, self.anchor))
 
     def follow(self, origin, direction, hit=None):
         if not self.following:

@@ -8,7 +8,7 @@ version = "0.1.0a1"
 description = "Transactional Minecraft schematic editing with an optional desktop workbench"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["structura-core>=0.6,<0.7"]
+dependencies = ["structura-core>=0.6,<0.7", "PyMCTranslate>=1.2.38,<2"]
 
 [project.optional-dependencies]
 world = ["structura-core[world]>=0.6,<0.7"]
