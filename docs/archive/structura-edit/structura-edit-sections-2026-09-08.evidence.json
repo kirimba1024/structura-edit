@@ -1,0 +1,205 @@
+{
+  "date": "2026-09-08",
+  "hardware": {
+    "cpu": "Apple M4 Pro",
+    "physical_cores": 12,
+    "memory_gib": 24
+  },
+  "environment": {
+    "python": "3.9",
+    "qt": "6.8",
+    "vtk": "9.5",
+    "platform": "macOS ARM64"
+  },
+  "notes": [
+    "Single local samples without profiling; no p95 or long-session memory claim",
+    "Local edit times cover preparation and mesh building, excluding IPC, GUI commit and maps",
+    "Full section timing includes preparation; ordinary mesh timing starts with loaded session",
+    "World data is copied to an editable in-memory schematic for benchmark only; no world writes",
+    "RSS is cumulative benchmark-process high-water before the additional section comparison; excludes GUI/GPU",
+    "Core/render working tree also contains independent ongoing changes"
+  ],
+  "verification": {
+    "edit_passed": 84,
+    "render_passed": 351,
+    "render_skipped": 2,
+    "ruff": "passed",
+    "unhandled_worker_thread_warnings": 0
+  },
+  "world": [
+    {
+      "size": [
+        48,
+        80,
+        48
+      ],
+      "blocks": 76526,
+      "read_seconds": 0.46497783299999995,
+      "mesh_seconds": 0.22610983400000007,
+      "map_seconds": 0.030874332999999976,
+      "serialize_seconds": 0.004568125000000034,
+      "deserialize_seconds": 0.006410457999999952,
+      "payload_mib": 6.201171875,
+      "geometry_mib": 5.450034141540527,
+      "maps_mib": 0.9140625,
+      "peak_rss_mib": 154.0625,
+      "sectioned_full_seconds": 0.30131158299999994,
+      "section_count": 32,
+      "sectioned_geometry_mib": 5.967368125915527,
+      "full_edit_seconds": 0.17791620900000016,
+      "edit_prepare_seconds": 0.0026202079999999572,
+      "edit_mesh_seconds": 0.003161458000000117,
+      "edit_sections": 1,
+      "edit_request_kib": 57.0009765625,
+      "edit_geometry_kib": 99.916015625,
+      "radius": 1,
+      "vertical_radius": 32
+    },
+    {
+      "size": [
+        80,
+        80,
+        80
+      ],
+      "blocks": 210077,
+      "read_seconds": 0.9381416249999999,
+      "mesh_seconds": 0.660294291,
+      "map_seconds": 0.0732103340000001,
+      "serialize_seconds": 0.015850458000000067,
+      "deserialize_seconds": 0.020654541999999942,
+      "payload_mib": 16.42001724243164,
+      "geometry_mib": 14.377853393554688,
+      "maps_mib": 1.7578125,
+      "peak_rss_mib": 248.34375,
+      "sectioned_full_seconds": 0.78236325,
+      "section_count": 88,
+      "sectioned_geometry_mib": 15.979965209960938,
+      "full_edit_seconds": 0.6262772500000002,
+      "edit_prepare_seconds": 0.002776124999999574,
+      "edit_mesh_seconds": 0.0031735830000005905,
+      "edit_sections": 1,
+      "edit_request_kib": 63.3134765625,
+      "edit_geometry_kib": 101.681640625,
+      "radius": 2,
+      "vertical_radius": 32
+    },
+    {
+      "size": [
+        112,
+        80,
+        112
+      ],
+      "blocks": 387514,
+      "read_seconds": 1.6870370829999999,
+      "mesh_seconds": 1.3055078750000009,
+      "map_seconds": 0.12055108299999873,
+      "serialize_seconds": 0.02993987500000017,
+      "deserialize_seconds": 0.03327933400000127,
+      "payload_mib": 28.42076015472412,
+      "geometry_mib": 24.668630599975586,
+      "maps_mib": 2.7890625,
+      "peak_rss_mib": 423.359375,
+      "sectioned_full_seconds": 1.461034625,
+      "section_count": 167,
+      "sectioned_geometry_mib": 27.718576431274414,
+      "full_edit_seconds": 1.270818125,
+      "edit_prepare_seconds": 0.0028778330000012176,
+      "edit_mesh_seconds": 0.0026817079999990057,
+      "edit_sections": 1,
+      "edit_request_kib": 64.6640625,
+      "edit_geometry_kib": 94.787109375,
+      "radius": 3,
+      "vertical_radius": 32
+    }
+  ],
+  "schematic_spawn": [
+    {
+      "size": [
+        63,
+        24,
+        63
+      ],
+      "blocks": 9418,
+      "read_seconds": 0.17858674999999996,
+      "mesh_seconds": 0.08407700000000001,
+      "map_seconds": 0.008441250000000011,
+      "serialize_seconds": 0.02281525000000001,
+      "deserialize_seconds": 0.01752733299999998,
+      "payload_mib": 4.104579925537109,
+      "geometry_mib": 3.3274002075195312,
+      "maps_mib": 0.640228271484375,
+      "peak_rss_mib": 90.96875,
+      "sectioned_full_seconds": 0.18021662499999996,
+      "section_count": 29,
+      "sectioned_geometry_mib": 3.6249465942382812,
+      "full_edit_seconds": 0.046975625000000076,
+      "edit_prepare_seconds": 0.0010562920000000142,
+      "edit_mesh_seconds": 0.0069147499999999695,
+      "edit_sections": 1,
+      "edit_request_kib": 7.7333984375,
+      "edit_geometry_kib": 170.099609375
+    }
+  ],
+  "world_smoke": {
+    "open_seconds": 3.946914291,
+    "blocks": 76526,
+    "entities": [
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:player"
+    ],
+    "latest_location_request": "passed",
+    "largest_ui_gap_seconds": 0.16637524999999975,
+    "heartbeat_count": 1240,
+    "refresh_and_camera": "passed",
+    "entity_toggle": "passed",
+    "flight_without_background_work": "passed",
+    "manual_refresh_at_camera": "passed",
+    "refresh_preserves_open_schematic": "passed"
+  },
+  "section_smoke": {
+    "preview_with_maps_seconds": 0.04215329099999998,
+    "unchanged_actors": "reused",
+    "apply": "reuses preview",
+    "undo_redo": "passed",
+    "discard_inflight": "passed",
+    "section_count": 4,
+    "actor_count": 5
+  },
+  "gui_smoke": {
+    "open_seconds": 1.1470084159999998,
+    "size": [
+      15,
+      10,
+      13
+    ],
+    "saved": "/private/tmp/structura-prototype-gui-final/edited.nbt",
+    "camera": "timer-driven held keys, chords, release, focus loss, Cyrillic, RMB look",
+    "focus": "preview preserves active inspector and text; coordinates commit on Enter",
+    "selection": "single block, live Shift region, click to commit, release to cancel",
+    "editing": "fill, move, preview, apply, undo, redo, discard, recipe isolation, save and reload",
+    "minimap": "six projections, navigation without click-through, edge coverage, resize, collapse and expand"
+  },
+  "large_overlay_prepare": {
+    "prior_fill_cells": 147456,
+    "before_seconds": 0.097045,
+    "after_seconds": 0.0167775,
+    "excludes_mesh": true
+  },
+  "loading_mode": "Manual Refresh button / F5; flight schedules no background work",
+  "gui_smoke_exit_codes": {
+    "schematic": 0,
+    "sections": 0,
+    "world": 0
+  },
+  "prototype_cleanup": {
+    "scope": "Schematic open, fly, select, preview, apply/discard, undo/redo, save; worlds remain view/export only",
+    "material_completion": "Single standard Qt model owned by the operation panel; text and suggestions checked through 101 updates",
+    "previous_completer_leak": "Not reproduced; Qt already released replaced completers",
+    "refresh_preserves_open_schematic": "passed",
+    "shared_smoke_wait": "Waits for worker, queued world request, queued render and visible map",
+    "compileall": "passed",
+    "diff_check": "passed"
+  }
+}

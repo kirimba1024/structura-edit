@@ -1,0 +1,160 @@
+from PySide6.QtCore import Qt, Signal, QStringListModel
+from PySide6.QtWidgets import (
+    QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
+    QLabel, QLineEdit, QListWidget, QPushButton, QSpinBox, QVBoxLayout, QWidget,
+)
+
+from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS
+
+
+class OperationPanel(QWidget):
+    changed = Signal()
+    preview_requested = Signal()
+    apply_requested = Signal()
+    discard_requested = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self.saved = {}
+        self.current = REGION_COMMANDS[0]
+        self.fields = {}
+        self.materials = QStringListModel(self)
+        layout = QVBoxLayout(self)
+        self.form = QFormLayout()
+        self.mode = QComboBox()
+        self.mode.addItems(REGION_COMMANDS)
+        self.form.addRow("Action", self.mode)
+        for key, parameter in PARAMETERS.items():
+            value = parameter.default
+            if isinstance(value, bool):
+                field = QCheckBox()
+                field.toggled.connect(self.changed)
+            elif isinstance(value, tuple):
+                field = QWidget()
+                axes = QHBoxLayout(field)
+                axes.setContentsMargins(0, 0, 0, 0)
+                field.inputs = []
+                for axis in "XYZ":
+                    number = QSpinBox()
+                    number.setRange(-30_000_000, 30_000_000)
+                    number.setKeyboardTracking(False)
+                    number.setPrefix(axis + " ")
+                    number.valueChanged.connect(self.changed)
+                    field.inputs.append(number)
+                    axes.addWidget(number)
+            else:
+                field = QLineEdit()
+                completer = QCompleter(self.materials, field)
+                completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+                completer.setFilterMode(Qt.MatchFlag.MatchContains)
+                field.setCompleter(completer)
+                field.textChanged.connect(self.changed)
+            field.setToolTip(parameter.description)
+            self.fields[key] = field
+            self.form.addRow(parameter.label, field)
+        layout.addLayout(self.form)
+        self.info = QLabel()
+        self.info.setWordWrap(True)
+        layout.addWidget(self.info)
+        self.preview = QPushButton("Preview")
+        self.preview.clicked.connect(self.preview_requested)
+        layout.addWidget(self.preview)
+        self.apply = QPushButton("Apply")
+        self.discard = QPushButton("Discard")
+        self.apply.clicked.connect(self.apply_requested)
+        self.discard.clicked.connect(self.discard_requested)
+        row = QHBoxLayout()
+        row.addWidget(self.apply)
+        row.addWidget(self.discard)
+        layout.addLayout(row)
+        self.reset = QPushButton("Reset settings")
+        self.reset.clicked.connect(self.reset_settings)
+        layout.addWidget(self.reset)
+        self.mode.currentTextChanged.connect(self._mode_changed)
+        self.reset_settings()
+        self._mode_changed(self.current)
+
+    def set_materials(self, states):
+        self.materials.setStringList(list(states))
+
+    def values(self):
+        result = {}
+        for key in COMMANDS[self.current].parameters:
+            field = self.fields[key]
+            if isinstance(field, QCheckBox):
+                result[key] = field.isChecked()
+            elif isinstance(field, QLineEdit):
+                result[key] = field.text().strip()
+            else:
+                result[key] = tuple(f.value() for f in field.inputs)
+        return result
+
+    def set_values(self, values):
+        self.blockSignals(True)
+        try:
+            for key, value in values.items():
+                field = self.fields[key]
+                if isinstance(field, QCheckBox):
+                    field.setChecked(value)
+                elif isinstance(field, QLineEdit):
+                    field.setText(value)
+                else:
+                    for axis, number in zip(field.inputs, value):
+                        axis.setValue(number)
+        finally:
+            self.blockSignals(False)
+        self.changed.emit()
+
+    def reset_settings(self):
+        self.set_values(COMMANDS[self.current].defaults())
+
+    def _mode_changed(self, name):
+        self.saved[self.current] = self.values()
+        self.current = name
+        for key, field in self.fields.items():
+            self.form.setRowVisible(field, key in COMMANDS[name].parameters)
+        field = self.fields[COMMANDS[name].parameters[0]]
+        self.setFocusProxy(field.inputs[0] if hasattr(field, "inputs") else field)
+        self.set_values(self.saved.get(name, COMMANDS[name].defaults()))
+        self.info.setText(COMMANDS[name].description)
+
+
+class CommandSearch(QDialog):
+    def __init__(self, parent, entries):
+        super().__init__(parent)
+        self.setWindowTitle("Find command")
+        self.resize(460, 330)
+        self.entries = entries
+        layout = QVBoxLayout(self)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Command name…")
+        self.results = QListWidget()
+        self.help = QLabel()
+        self.help.setWordWrap(True)
+        layout.addWidget(self.search)
+        layout.addWidget(self.results)
+        layout.addWidget(self.help)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Cancel)
+        layout.addWidget(buttons)
+        buttons.accepted.connect(self.run)
+        buttons.rejected.connect(self.reject)
+        self.results.itemActivated.connect(self.run)
+        self.results.currentRowChanged.connect(self.describe)
+        self.search.textChanged.connect(self.filter)
+        self.filter("")
+
+    def filter(self, query):
+        self.matches = [(name, action) for name, action in self.entries if query.casefold() in name.casefold()]
+        self.results.clear()
+        self.results.addItems([name + ("" if action.isEnabled() else " · unavailable") for name, action in self.matches])
+        self.results.setCurrentRow(0)
+
+    def describe(self, row):
+        self.help.setText(self.matches[row][1].toolTip() if 0 <= row < len(self.matches) else "No matching commands")
+
+    def run(self, *args):
+        row = self.results.currentRow()
+        if 0 <= row < len(self.matches) and self.matches[row][1].isEnabled():
+            action = self.matches[row][1]
+            self.accept()
+            action.trigger()

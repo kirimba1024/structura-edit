@@ -1,0 +1,43 @@
+{
+  "date": "2026-09-08",
+  "tests": {
+    "edit_passed": 58,
+    "ruff": "passed"
+  },
+  "schematic": {
+    "open_seconds": 1.182016834,
+    "size": [
+      15,
+      10,
+      13
+    ],
+    "saved": "/private/tmp/structura-edit-smoke/edited.nbt",
+    "camera": "continuous keys, chords, release, focus loss, Cyrillic, RMB look",
+    "selection": "single block, live Shift region, click to commit, release to cancel",
+    "editing": "fill, move, preview, apply, undo, redo, discard, recipe isolation, save and reload",
+    "minimap": "six projections, edge coverage, resize, collapse and expand"
+  },
+  "world": {
+    "open_seconds": 4.1765296670000005,
+    "blocks": 76526,
+    "entities": [
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:player"
+    ],
+    "latest_location_request": "passed",
+    "largest_ui_gap_seconds": 0.071507875,
+    "heartbeat_count": 1203,
+    "refresh_and_camera": "passed",
+    "entity_toggle": "passed",
+    "automatic_loading": "passed"
+  },
+  "core_render_changed": false,
+  "world_writes": false,
+  "new_code_comments": 0,
+  "ui_lines_before": 1272,
+  "ui_lines_after": 480,
+  "gui_platform": "macOS",
+  "gui_events": "synthetic Qt events in hidden windows"
+}

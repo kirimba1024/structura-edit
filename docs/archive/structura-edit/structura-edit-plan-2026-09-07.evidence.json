@@ -1,0 +1,493 @@
+{
+  "kind": "native_cpu_baseline_not_browser_benchmark",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.9.6",
+  "runtime_versions": {
+    "core": "0.5.0",
+    "render": "0.7.0",
+    "numpy": "1.26.4"
+  },
+  "module_paths": {
+    "core": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-core/src/structura_core/__init__.py",
+    "render": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-render/src/structura_render/__init__.py"
+  },
+  "source_hashes": {
+    "libs/structura-core/src/structura_core/nbt.py": "a55d61f5ef99a9dd09cd9fe2c18af667183ad4ebf76dd48d72c63daaca5d5b44",
+    "libs/structura-render/src/structura_render/mesh.py": "a24cd100e8d8975d18bdce1d41fc16273735e83fbaf0f2c3843c0340dcb04df1",
+    "libs/structura-render/src/structura_render/geometry.py": "fca1ba8252d658cd67ca9fd2d0815ecc53ae2f8bf7ca3cc596193d6c2f483287"
+  },
+  "resources": "existing extracted Minecraft Java 1.21.1 assets, read only",
+  "method": "Each case has a fresh process and AssetContext. Three calls, with context reused after the first. Cold means library caches, not OS filesystem caches. Peak RSS includes interpreter, imports, source and intermediate arrays; macOS reports bytes. No GPU, browser, IO/export or JAR extraction timing. Synthetic source construction is outside timed sections. Warm median has only two samples.",
+  "results": [
+    {
+      "case": "demo",
+      "size": [
+        15,
+        10,
+        13
+      ],
+      "volume": 1950,
+      "present_cells": 427,
+      "palette_entries": 17,
+      "entities": 0,
+      "block_entities": 1,
+      "source_path": "libs/structura-render/src/structura_render/data/examples/demo.nbt",
+      "source_sha256": "487718fa0e2223c2ea510ba3c80538a55b66c0718cf328389c52a7bc18a06380",
+      "quads": 1483,
+      "mesh_array_bytes": 233099,
+      "state_bytes": 7800,
+      "atlas_shapes": [
+        [
+          140,
+          117,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 0.11087500000001027,
+          "geometry_ms": 40.14758399999999,
+          "total_ms": 40.258458999999995
+        },
+        {
+          "state_ms": 0.21675000000001554,
+          "geometry_ms": 12.183791999999999,
+          "total_ms": 12.400542000000014
+        },
+        {
+          "state_ms": 0.08533400000002023,
+          "geometry_ms": 15.679457999999979,
+          "total_ms": 15.764792
+        }
+      ],
+      "warm_median_ms": 14.082667000000008,
+      "process_peak_rss_bytes": 48349184
+    },
+    {
+      "case": "solid",
+      "size": [
+        64,
+        64,
+        64
+      ],
+      "volume": 262144,
+      "present_cells": 262144,
+      "palette_entries": 1,
+      "entities": 0,
+      "block_entities": 0,
+      "quads": 24576,
+      "mesh_array_bytes": 2778688,
+      "state_bytes": 1048576,
+      "atlas_shapes": [
+        [
+          20,
+          20,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 18.914207999999988,
+          "geometry_ms": 9.056209000000038,
+          "total_ms": 27.970417000000026
+        },
+        {
+          "state_ms": 19.463000000000008,
+          "geometry_ms": 3.96983399999995,
+          "total_ms": 23.432833999999957
+        },
+        {
+          "state_ms": 19.64600000000005,
+          "geometry_ms": 3.8474579999999703,
+          "total_ms": 23.49345800000002
+        }
+      ],
+      "warm_median_ms": 23.463145999999988,
+      "process_peak_rss_bytes": 90767360
+    },
+    {
+      "case": "hollow",
+      "size": [
+        64,
+        64,
+        64
+      ],
+      "volume": 262144,
+      "present_cells": 23816,
+      "palette_entries": 1,
+      "entities": 0,
+      "block_entities": 0,
+      "quads": 47640,
+      "mesh_array_bytes": 5384920,
+      "state_bytes": 1048576,
+      "atlas_shapes": [
+        [
+          20,
+          20,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 2.2066669999999955,
+          "geometry_ms": 11.263582999999965,
+          "total_ms": 13.470249999999961
+        },
+        {
+          "state_ms": 2.1946669999999835,
+          "geometry_ms": 10.125875000000006,
+          "total_ms": 12.320541999999989
+        },
+        {
+          "state_ms": 2.0760000000000223,
+          "geometry_ms": 5.030040999999985,
+          "total_ms": 7.106041000000007
+        }
+      ],
+      "warm_median_ms": 9.713291499999999,
+      "process_peak_rss_bytes": 77758464
+    },
+    {
+      "case": "varied",
+      "size": [
+        64,
+        64,
+        64
+      ],
+      "volume": 262144,
+      "present_cells": 262144,
+      "palette_entries": 6,
+      "entities": 0,
+      "block_entities": 0,
+      "quads": 282615,
+      "mesh_array_bytes": 31945095,
+      "state_bytes": 1048576,
+      "atlas_shapes": [
+        [
+          60,
+          40,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 20.911334000000004,
+          "geometry_ms": 34.30879100000006,
+          "total_ms": 55.22012500000007
+        },
+        {
+          "state_ms": 20.612167000000014,
+          "geometry_ms": 24.95724999999993,
+          "total_ms": 45.569416999999945
+        },
+        {
+          "state_ms": 21.295375000000007,
+          "geometry_ms": 24.892332999999933,
+          "total_ms": 46.18770799999994
+        }
+      ],
+      "warm_median_ms": 45.878562499999944,
+      "process_peak_rss_bytes": 165429248
+    },
+    {
+      "case": "sparse_far",
+      "size": [
+        512,
+        16,
+        512
+      ],
+      "volume": 4194304,
+      "present_cells": 2,
+      "palette_entries": 1,
+      "entities": 0,
+      "block_entities": 0,
+      "quads": 12,
+      "mesh_array_bytes": 2956,
+      "state_bytes": 16777216,
+      "atlas_shapes": [
+        [
+          20,
+          20,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 2.7987919999999944,
+          "geometry_ms": 62.614000000000004,
+          "total_ms": 65.412792
+        },
+        {
+          "state_ms": 0.7275829999999761,
+          "geometry_ms": 50.82466700000002,
+          "total_ms": 51.552249999999994
+        },
+        {
+          "state_ms": 4.500957999999999,
+          "geometry_ms": 50.812625,
+          "total_ms": 55.313583
+        }
+      ],
+      "warm_median_ms": 53.4329165,
+      "process_peak_rss_bytes": 123895808
+    },
+    {
+      "case": "beyond_guard",
+      "size": [
+        1024,
+        16,
+        1024
+      ],
+      "volume": 16777216,
+      "present_cells": 2,
+      "palette_entries": 1,
+      "entities": 0,
+      "block_entities": 0,
+      "error": "structure volume exceeds max_voxels=16,000,000; choose a region or raise the limit",
+      "runs": [],
+      "process_peak_rss_bytes": 43253760
+    },
+    {
+      "case": "fantasy_medieval",
+      "size": [
+        27,
+        32,
+        34
+      ],
+      "volume": 29376,
+      "present_cells": 4385,
+      "palette_entries": 89,
+      "entities": 0,
+      "block_entities": 0,
+      "source_path": "canonical/schematics-structpro/Village/MedivalTown/Stone/[DaveGR]FantasyMedieval.nbt",
+      "source_sha256": "3f88f62f9ed880d5db85909d3b593d86a20cd9aa9fe6c888af3767da6828150b",
+      "quads": 10352,
+      "mesh_array_bytes": 1217776,
+      "state_bytes": 117504,
+      "atlas_shapes": [
+        [
+          120,
+          100,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 0.4761249999999939,
+          "geometry_ms": 168.179166,
+          "total_ms": 168.655291
+        },
+        {
+          "state_ms": 0.42716700000000607,
+          "geometry_ms": 102.93904199999999,
+          "total_ms": 103.36620899999998
+        },
+        {
+          "state_ms": 0.4250000000000087,
+          "geometry_ms": 102.02254199999999,
+          "total_ms": 102.447542
+        }
+      ],
+      "warm_median_ms": 102.90687549999998,
+      "process_peak_rss_bytes": 54476800
+    },
+    {
+      "case": "mountain_castle",
+      "size": [
+        84,
+        51,
+        47
+      ],
+      "volume": 201348,
+      "present_cells": 87575,
+      "palette_entries": 166,
+      "entities": 0,
+      "block_entities": 27,
+      "source_path": "canonical/schematics-structpro/Common/Castle/Normal/[Arolas]MountianCastle.nbt",
+      "source_sha256": "4869194bedad282f1464ae003e53bed91fdd07c6a8f72092f39bd84c777904f0",
+      "quads": 44288,
+      "mesh_array_bytes": 5196736,
+      "state_bytes": 805392,
+      "atlas_shapes": [
+        [
+          231,
+          208,
+          4
+        ]
+      ],
+      "warnings": [],
+      "runs": [
+        {
+          "state_ms": 6.63025000000006,
+          "geometry_ms": 614.0205830000001,
+          "total_ms": 620.6508330000001
+        },
+        {
+          "state_ms": 7.1132080000000375,
+          "geometry_ms": 556.32975,
+          "total_ms": 563.442958
+        },
+        {
+          "state_ms": 6.686957999999965,
+          "geometry_ms": 551.3785830000002,
+          "total_ms": 558.0655410000002
+        }
+      ],
+      "warm_median_ms": 560.7542495,
+      "process_peak_rss_bytes": 161185792
+    }
+  ],
+  "review_date": "2026-09-07",
+  "review_scope": "Read-only analysis of core/render, native CPU geometry probes, architecture plan. No browser/WASM build, Qt UI run, GPU benchmark or deployment performed.",
+  "git_revisions": {
+    "structura-core": "5eac3d0be7921dd319d0c0a58e8f8ba6abea8287",
+    "structura-render": "d58c5d1e11c6d5bb0a833a86d48e0273124078d2"
+  },
+  "declared_source_packages": {
+    "structura-core": "0.5.0",
+    "structura-render": "0.7.0"
+  },
+  "installed_metadata_note": "Editable environment distribution metadata is older than imported source. The probe explicitly prepends current source paths and records runtime versions and source hashes.",
+  "native_dependencies": {
+    "amulet-nbt": {
+      "version": "2.1.8",
+      "requires": [
+        "numpy~=1.17",
+        "amulet-mutf8~=1.0",
+        "Sphinx>=1.7.4; extra == \"docs\"",
+        "sphinx-autodoc-typehints>=1.3.0; extra == \"docs\"",
+        "sphinx_rtd_theme>=0.3.1; extra == \"docs\"",
+        "black>=22.3; extra == \"dev\"",
+        "pre_commit>=1.11.1; extra == \"dev\"",
+        "cython>=3.0.0a9; extra == \"dev\""
+      ]
+    },
+    "amulet-mutf8": {
+      "version": "1.0.7",
+      "requires": [
+        "pytest; extra == \"test\"",
+        "pytest-benchmark; extra == \"test\""
+      ]
+    },
+    "numpy": {
+      "version": "1.26.4",
+      "requires": null
+    },
+    "scipy": {
+      "version": "1.13.1",
+      "requires": [
+        "numpy<2.3,>=1.22.4",
+        "pytest; extra == \"test\"",
+        "pytest-cov; extra == \"test\"",
+        "pytest-timeout; extra == \"test\"",
+        "pytest-xdist; extra == \"test\"",
+        "asv; extra == \"test\"",
+        "mpmath; extra == \"test\"",
+        "gmpy2; extra == \"test\"",
+        "threadpoolctl; extra == \"test\"",
+        "scikit-umfpack; extra == \"test\"",
+        "pooch; extra == \"test\"",
+        "hypothesis>=6.30; extra == \"test\"",
+        "array-api-strict; extra == \"test\"",
+        "sphinx>=5.0.0; extra == \"doc\"",
+        "pydata-sphinx-theme>=0.15.2; extra == \"doc\"",
+        "sphinx-design>=0.4.0; extra == \"doc\"",
+        "matplotlib>=3.5; extra == \"doc\"",
+        "numpydoc; extra == \"doc\"",
+        "jupytext; extra == \"doc\"",
+        "myst-nb; extra == \"doc\"",
+        "pooch; extra == \"doc\"",
+        "jupyterlite-sphinx>=0.12.0; extra == \"doc\"",
+        "jupyterlite-pyodide-kernel; extra == \"doc\"",
+        "mypy; extra == \"dev\"",
+        "typing_extensions; extra == \"dev\"",
+        "types-psutil; extra == \"dev\"",
+        "pycodestyle; extra == \"dev\"",
+        "ruff; extra == \"dev\"",
+        "cython-lint>=0.12.2; extra == \"dev\"",
+        "rich-click; extra == \"dev\"",
+        "doit>=0.36.0; extra == \"dev\"",
+        "pydevtool; extra == \"dev\""
+      ]
+    },
+    "Pillow": {
+      "version": "11.3.0",
+      "requires": [
+        "furo; extra == \"docs\"",
+        "olefile; extra == \"docs\"",
+        "sphinx>=8.2; extra == \"docs\"",
+        "sphinx-autobuild; extra == \"docs\"",
+        "sphinx-copybutton; extra == \"docs\"",
+        "sphinx-inline-tabs; extra == \"docs\"",
+        "sphinxext-opengraph; extra == \"docs\"",
+        "olefile; extra == \"fpx\"",
+        "olefile; extra == \"mic\"",
+        "pyarrow; extra == \"test-arrow\"",
+        "check-manifest; extra == \"tests\"",
+        "coverage>=7.4.2; extra == \"tests\"",
+        "defusedxml; extra == \"tests\"",
+        "markdown2; extra == \"tests\"",
+        "olefile; extra == \"tests\"",
+        "packaging; extra == \"tests\"",
+        "pyroma; extra == \"tests\"",
+        "pytest; extra == \"tests\"",
+        "pytest-cov; extra == \"tests\"",
+        "pytest-timeout; extra == \"tests\"",
+        "pytest-xdist; extra == \"tests\"",
+        "trove-classifiers>=2024.10.12; extra == \"tests\"",
+        "typing-extensions; python_version < \"3.10\" and extra == \"typing\"",
+        "defusedxml; extra == \"xmp\""
+      ]
+    }
+  },
+  "wasm_observations": {
+    "amulet_nbt_numpy_requirement": "numpy~=1.17 means >=1.17,<2; intersects core >=1.26,<3 as >=1.26,<2",
+    "pyodide_0_26_4": {
+      "numpy": "1.26.4",
+      "pillow": "10.2.0",
+      "scipy": "1.12.0",
+      "conflict": "Pillow and SciPy are below current package requirements"
+    },
+    "pyodide_0_28_2": {
+      "numpy": "2.2.5",
+      "pillow": "11.3.0",
+      "scipy": "1.14.1",
+      "conflict": "NumPy is outside amulet-nbt 2.1.8 declared requirements"
+    },
+    "pyodide_stable_checked": "314.0.6 package table lists NumPy 2.4.6 and Pillow 12.2.0; Amulet packages not listed",
+    "conclusion": "A matching supported wheel set was not established. These are package metadata constraints, not proof that the source cannot be ported."
+  },
+  "client_jar_inspection": {
+    "version": "1.21.1",
+    "jar_bytes": 26836906,
+    "jar_sha256": "499f6897d1837516680f3114072d8106e11c9adcd933fe5cf051b551089b0c99",
+    "selected_entries": 8497,
+    "selected_uncompressed_bytes": 4807431,
+    "reports_blocks_json_present": false,
+    "method": "Read ZIP central directory and version.json. No extraction or distribution."
+  },
+  "sources": [
+    "https://pyodide.org/en/stable/usage/loading-packages.html",
+    "https://pyodide.org/en/0.26.4/usage/packages-in-pyodide.html",
+    "https://pyodide.org/en/0.28.2/usage/packages-in-pyodide.html",
+    "https://pyodide.org/en/stable/usage/packages-in-pyodide.html",
+    "https://pypi.org/project/amulet-nbt/",
+    "https://pyodide.org/en/stable/usage/keyboard-interrupts.html",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate",
+    "https://qt.pyvista.org/usage.html",
+    "https://doc.qt.io/qtforpython-6/deployment/index.html",
+    "https://worldedit.enginehub.org/en/latest/usage/general/masks/",
+    "https://worldedit.enginehub.org/en/latest/usage/general/patterns/",
+    "https://github.com/PrismarineJS/minecraft-data",
+    "https://github.com/PrismarineJS/prismarine-viewer",
+    "https://amulet-core.readthedocs.io/en/stable/api_reference/api/level/base_level/index.html",
+    "https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages"
+  ]
+}

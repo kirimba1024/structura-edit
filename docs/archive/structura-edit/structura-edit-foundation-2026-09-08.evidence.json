@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-08",
+  "dependencies": {
+    "structura-core": "0.6.0",
+    "structura-render": "0.8.0",
+    "structura-edit": "0.1.0a1",
+    "PySide6-Essentials": "6.8.3",
+    "pyvista": "0.46.5",
+    "vtk": "9.5.2",
+    "pyvistaqt": "0.11.3",
+    "amulet-core": "1.9.35"
+  },
+  "tests": {
+    "edit_passed": 40,
+    "core_world_passed": 9,
+    "render_passed": 311,
+    "render_skipped": 2,
+    "ruff": "passed",
+    "pip_check": "passed"
+  },
+  "world": {
+    "open_seconds": 3.872840042,
+    "blocks": 76526,
+    "entities": [
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:player"
+    ],
+    "latest_location_request": "passed",
+    "largest_ui_gap_seconds": 0.08825041599999928,
+    "heartbeat_count": 1064,
+    "refresh_and_camera": "passed",
+    "entity_toggle": "passed",
+    "automatic_loading": "passed"
+  },
+  "schematic": {
+    "open_seconds": 1.3868726249999999,
+    "preview_seconds": 0.17836945899999979,
+    "spatial_tools": "two 3D clicks, endpoint highlights, erase/place undo, material histogram",
+    "changed_cells": 122,
+    "size": [
+      15,
+      10,
+      13
+    ],
+    "source_states": 17,
+    "status": "Orbit \u00b7 drag to rotate \u00b7 hold right mouse to fly \u00b7 0\u20139 tools"
+  },
+  "previous_largest_ui_gap_seconds": 0.385921667,
+  "world_writes": false,
+  "screenshots": false
+}

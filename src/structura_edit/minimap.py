@@ -1,0 +1,165 @@
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFontDatabase, QKeySequence, QShortcut
+from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QToolButton, QVBoxLayout, QWidget
+
+from .appearance import BORDER, MAP_BACKGROUND, MAP_HEADER_HEIGHT, PANEL_BACKGROUND, PANEL_HOVER, PANEL_PRESSED, TEXT
+from .map_canvas import MapCanvas
+from .map_cache_ui import MapCacheView
+from .navigation_keys import control_key
+
+
+class MiniMap(QWidget):
+    navigate = Signal(object)
+    expanded_changed = Signal(bool)
+    large_changed = Signal(bool)
+
+    def __init__(self, parent, *, cache_dir=None):
+        super().__init__(parent)
+        self._collapsed = False
+        self.setObjectName("minimap")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        self.setStyleSheet(
+            f"QWidget#minimap {{ background: {MAP_BACKGROUND}; }}"
+            f"QToolButton {{ border: 1px solid {BORDER}; border-top-color: #fffdf0; padding: 0 4px; "
+            f"margin: 0; border-radius: 0; background: {PANEL_BACKGROUND}; color: {TEXT}; font-size: 11px; }}"
+            f"QToolButton:hover {{ background: {PANEL_HOVER}; }}"
+            f"QToolButton:pressed {{ background: {PANEL_PRESSED}; }}")
+        self.canvas = MapCanvas()
+        self.cache = MapCacheView(self.canvas, cache_dir)
+        self.canvas.navigate.connect(self._navigate)
+        self.header = self._button("", "Map projections", self._header_clicked)
+        self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.center = self._button("F · Center", "Center the map on the camera (F)", self.recenter)
+        self.expand = self._button("M ⤢", "Expand map (M)", self.toggle_large)
+        row = QHBoxLayout()
+        row.setSpacing(0)
+        row.addWidget(self.header, 1)
+        row.addWidget(self.center)
+        row.addWidget(self.expand)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addLayout(row)
+        layout.addWidget(self.canvas)
+        self.shortcut = QShortcut(QKeySequence("M"), parent)
+        self.shortcut.setKeys([QKeySequence("M"), QKeySequence("Ь")])
+        self.shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut.setAutoRepeat(False)
+        self.shortcut.activated.connect(self.toggle_large)
+        self._update_layout()
+        self.hide()
+
+    def _button(self, text, tip, callback):
+        button = QToolButton()
+        button.setText(text)
+        button.setToolTip(tip)
+        button.setAccessibleName(tip)
+        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button.setFixedHeight(MAP_HEADER_HEIGHT)
+        button.clicked.connect(callback)
+        return button
+
+    @property
+    def large(self):
+        return self.canvas.layout.large
+
+    @property
+    def collapsed(self):
+        return self._collapsed and not self.large
+
+    def set_collapsed(self, collapsed):
+        self._collapsed = collapsed
+        self._update_layout()
+
+    def _header_clicked(self):
+        if self.large:
+            self.canvas.layout.focused = None
+            self.canvas.view_changed.emit()
+            self.canvas.update()
+        else:
+            self.set_collapsed(not self.collapsed)
+
+    def toggle_large(self):
+        if self.isVisible():
+            self.set_large(not self.large)
+
+    def set_large(self, large):
+        if large == self.large:
+            return
+        self.canvas.layout.large = large
+        self.canvas.press = None
+        self.canvas.unsetCursor()
+        self._update_layout()
+        self.large_changed.emit(large)
+        (self if large else self.parentWidget()).setFocus(Qt.FocusReason.OtherFocusReason)
+        self.canvas.view_changed.emit()
+
+    def _update_layout(self):
+        self.canvas.setVisible(not self.collapsed)
+        self.header.setText("▦ Six views" if self.large else
+                            ("▸" if self.collapsed else "▾") + " MAP")
+        self.expand.setText("M ×" if self.large else "M ⤢")
+        self.expand.setToolTip("Close map (M / Escape)" if self.large else "Expand map (M)")
+        self.center.setVisible(self.large)
+        self.reposition()
+        self.expanded_changed.emit(not self.collapsed)
+
+    def reposition(self):
+        parent = self.parentWidget()
+        width = parent.width() if self.large else min(parent.width(), min(360, max(240, parent.width() // 4)))
+        height = parent.height() if self.large else MAP_HEADER_HEIGHT + (0 if self.collapsed else 2 * width // 3)
+        self.setFixedSize(width, height)
+        self.move(parent.width() - width, 0)
+        self.raise_()
+        self.canvas.view_changed.emit()
+
+    def set_document(self, session):
+        self.cache.set_source(None)
+        same_source = getattr(self, "source", None) == (session.path, getattr(session, "dimension", None))
+        self.source = session.path, getattr(session, "dimension", None)
+        self.canvas.size_blocks = session.size
+        self.canvas.origin = session.origin
+        self.canvas.dimension = getattr(session, "dimension", None)
+        self.canvas.images.clear()
+        self.canvas.tiles.clear()
+        self.canvas.selection = None
+        if not same_source:
+            self.canvas.layout.reset()
+        self.canvas.entities = [(tuple(float(v) for v in entity["pos"]), str(entity["nbt"].get("id", "")) == "minecraft:player")
+                                for entity in session._document.source.entities]
+        self._update_layout()
+        self.show()
+
+    def set_camera(self, position, direction):
+        self.canvas.position, self.canvas.direction = tuple(position), tuple(direction)
+        self.canvas.update()
+
+    def set_selection(self, bounds):
+        self.canvas.selection = bounds
+        self.canvas.update()
+
+    def set_images(self, result):
+        images, atlas, notice = result
+        self.canvas.set_images(images)
+        self.cache.set_source(atlas)
+        if notice:
+            self.header.setToolTip(notice)
+
+    def recenter(self):
+        self.canvas.layout.recenter()
+        self.canvas.view_changed.emit()
+        self.canvas.update()
+
+    def _navigate(self, position):
+        self.set_large(False)
+        self.navigate.emit(position)
+
+    def keyPressEvent(self, event):
+        if not event.isAutoRepeat():
+            if control_key(event) in (Qt.Key.Key_M, Qt.Key.Key_Escape):
+                self.set_large(False)
+            elif control_key(event) == Qt.Key.Key_F:
+                self.recenter()
+        event.accept()

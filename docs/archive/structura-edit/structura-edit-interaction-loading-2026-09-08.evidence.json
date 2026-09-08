@@ -1,0 +1,212 @@
+{
+  "date": "2026-09-08",
+  "hardware": {
+    "cpu": "Apple M4 Pro",
+    "physical_cores": 12,
+    "memory_gib": 24
+  },
+  "environment": {
+    "python": "3.9",
+    "qt": "6.8",
+    "vtk": "9.5",
+    "platform": "macOS ARM64"
+  },
+  "notes": [
+    "Single local sample, timings without profiling",
+    "RSS is cumulative benchmark-process high-water mark; excludes GUI/GPU",
+    "Core/render working tree is under separate development"
+  ],
+  "verification": {
+    "edit_tests_passed": 74,
+    "ruff": "passed",
+    "unhandled_worker_thread_warnings": 0
+  },
+  "world_before": [
+    {
+      "size": [
+        48,
+        80,
+        48
+      ],
+      "blocks": 76526,
+      "read_seconds": 0.540193625,
+      "mesh_seconds": 0.42645458299999994,
+      "map_seconds": 0.243896208,
+      "serialize_seconds": 0.004749250000000149,
+      "deserialize_seconds": 0.006429499999999866,
+      "payload_mib": 6.201136589050293,
+      "geometry_mib": 5.450034141540527,
+      "maps_mib": 0.9140625,
+      "peak_rss_mib": 153.328125,
+      "radius": 1,
+      "vertical_radius": 32
+    },
+    {
+      "size": [
+        80,
+        80,
+        80
+      ],
+      "blocks": 210077,
+      "read_seconds": 1.125819834,
+      "mesh_seconds": 1.2276263749999998,
+      "map_seconds": 0.6650008330000001,
+      "serialize_seconds": 0.015545957999999693,
+      "deserialize_seconds": 0.01810820900000021,
+      "payload_mib": 16.419981956481934,
+      "geometry_mib": 14.377853393554688,
+      "maps_mib": 1.7578125,
+      "peak_rss_mib": 253.875,
+      "radius": 2,
+      "vertical_radius": 32
+    },
+    {
+      "size": [
+        112,
+        80,
+        112
+      ],
+      "blocks": 387514,
+      "read_seconds": 2.041554208,
+      "mesh_seconds": 2.351505167,
+      "map_seconds": 1.2171964170000003,
+      "serialize_seconds": 0.030351458000000164,
+      "deserialize_seconds": 0.03580804199999932,
+      "payload_mib": 28.420724868774414,
+      "geometry_mib": 24.668630599975586,
+      "maps_mib": 2.7890625,
+      "peak_rss_mib": 379.5625,
+      "radius": 3,
+      "vertical_radius": 32
+    }
+  ],
+  "world_after": [
+    {
+      "size": [
+        48,
+        80,
+        48
+      ],
+      "blocks": 76526,
+      "read_seconds": 0.465147375,
+      "mesh_seconds": 0.20478191600000006,
+      "map_seconds": 0.02014395899999999,
+      "serialize_seconds": 0.004371416000000017,
+      "deserialize_seconds": 0.006601624999999944,
+      "payload_mib": 6.201157569885254,
+      "geometry_mib": 5.450034141540527,
+      "maps_mib": 0.9140625,
+      "peak_rss_mib": 152.8125,
+      "radius": 1,
+      "vertical_radius": 32
+    },
+    {
+      "size": [
+        80,
+        80,
+        80
+      ],
+      "blocks": 210077,
+      "read_seconds": 0.9014449590000001,
+      "mesh_seconds": 0.5850351249999999,
+      "map_seconds": 0.0351982500000001,
+      "serialize_seconds": 0.015327082999999853,
+      "deserialize_seconds": 0.018082082999999916,
+      "payload_mib": 16.420002937316895,
+      "geometry_mib": 14.377853393554688,
+      "maps_mib": 1.7578125,
+      "peak_rss_mib": 244.046875,
+      "radius": 2,
+      "vertical_radius": 32
+    },
+    {
+      "size": [
+        112,
+        80,
+        112
+      ],
+      "blocks": 387514,
+      "read_seconds": 1.671245791,
+      "mesh_seconds": 1.2017886669999998,
+      "map_seconds": 0.053788332999999966,
+      "serialize_seconds": 0.02975520900000017,
+      "deserialize_seconds": 0.034805958000000636,
+      "payload_mib": 28.420745849609375,
+      "geometry_mib": 24.668630599975586,
+      "maps_mib": 2.7890625,
+      "peak_rss_mib": 380.078125,
+      "radius": 3,
+      "vertical_radius": 32
+    }
+  ],
+  "schematic_demo": [
+    {
+      "size": [
+        15,
+        10,
+        13
+      ],
+      "blocks": 427,
+      "read_seconds": 0.008436542000000005,
+      "mesh_seconds": 0.051464541,
+      "map_seconds": 0.004238125000000009,
+      "serialize_seconds": 0.0009557919999999831,
+      "deserialize_seconds": 0.0006612079999999965,
+      "payload_mib": 0.2601356506347656,
+      "geometry_mib": 0.22079181671142578,
+      "maps_mib": 0.043487548828125,
+      "peak_rss_mib": 44.09375
+    }
+  ],
+  "schematic_spawn": [
+    {
+      "size": [
+        63,
+        24,
+        63
+      ],
+      "blocks": 9418,
+      "read_seconds": 0.17130387499999997,
+      "mesh_seconds": 0.07898233400000004,
+      "map_seconds": 0.008992957999999995,
+      "serialize_seconds": 0.02742574999999997,
+      "deserialize_seconds": 0.02356504199999998,
+      "payload_mib": 4.104565620422363,
+      "geometry_mib": 3.3274002075195312,
+      "maps_mib": 0.640228271484375,
+      "peak_rss_mib": 89.03125
+    }
+  ],
+  "world_smoke": {
+    "open_seconds": 3.7509635830000003,
+    "blocks": 76526,
+    "entities": [
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:chicken",
+      "minecraft:player"
+    ],
+    "latest_location_request": "passed",
+    "largest_ui_gap_seconds": 0.0724794159999993,
+    "heartbeat_count": 1116,
+    "refresh_and_camera": "passed",
+    "entity_toggle": "passed",
+    "flight_without_background_work": "passed",
+    "manual_refresh_at_camera": "passed"
+  },
+  "schematic_smoke": {
+    "open_seconds": 1.144078625,
+    "size": [
+      15,
+      10,
+      13
+    ],
+    "saved": "/private/tmp/structura-input-map-final/edited.nbt",
+    "camera": "continuous keys, chords, release, focus loss, Cyrillic, RMB look",
+    "selection": "single block, live Shift region, click to commit, release to cancel",
+    "editing": "fill, move, preview, apply, undo, redo, discard, recipe isolation, save and reload",
+    "minimap": "six projections, edge coverage, resize, collapse and expand"
+  },
+  "world_smoke_exit_code": 0,
+  "loading_mode": "Manual Refresh button / F5; flight schedules no background work"
+}
