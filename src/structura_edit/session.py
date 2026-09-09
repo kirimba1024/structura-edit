@@ -10,6 +10,7 @@ from structura_core.nbt import parse_state, state_key
 from .document import Document
 from .history import History
 from .entity_data import initial_entities, check_entities, write_entities
+from .cell_set import CellSet
 from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
 from .cell_data import material_data
 
@@ -74,7 +75,13 @@ class EditSession:
         return selection
 
     def _check_selection(self, selection):
-        if not isinstance(selection, Selection) or any(v > s for v, s in zip(selection.upper, self.size)):
+        if isinstance(selection, Selection):
+            if any(v > s for v, s in zip(selection.upper, self.size)):
+                raise ValueError("Selection is outside the document")
+        elif isinstance(selection, CellSet):
+            if selection and (any(v < 0 for v in selection.lower) or any(v > s for v, s in zip(selection.upper, self.size))):
+                raise ValueError("Selection is outside the document")
+        else:
             raise ValueError("Selection is outside the document")
 
     def _check_readable(self, selection):
@@ -122,7 +129,8 @@ class EditSession:
     def palette_counts(self, selection=None, *, by_state=True):
         if selection is not None:
             self._check_selection(selection)
-        if selection is None or (selection.lower == (0, 0, 0) and selection.upper == self.size):
+        if selection is None or (isinstance(selection, Selection) and selection.lower == (0, 0, 0)
+                                 and selection.upper == self.size):
             counts = Counter()
             for index, count in self._base_counts.items():
                 counts[self._states[index]] += count

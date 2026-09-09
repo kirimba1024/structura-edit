@@ -79,13 +79,20 @@ def take_targets(clipboard, cells, position, accepted):
     return targets, skipped
 
 
+def _air_targets(clipboard, position):
+    if clipboard.footprint is not None:
+        return (tuple(p + d for p, d in zip(local, position)) for local in clipboard.footprint.positions())
+    return product(*(range(lo, lo + size) for lo, size in zip(position, clipboard.size)))
+
+
 def plan_placement(edit, clipboard, positions, *, take=False, include_air=False, include_blocks=True, include_entities=True,
                    destination=DestinationRule(), label="Paste"):
     if edit.readonly:
         raise ValueError("This source is view-only in this release")
     if not include_blocks and not include_entities:
         raise ValueError("Choose Blocks or Entities to place")
-    work = (prod(clipboard.size) if include_blocks else 0) + (len(clipboard.entities) if include_entities else 0)
+    work = (clipboard.footprint.volume if clipboard.footprint is not None else prod(clipboard.size)) if include_blocks else 0
+    work += len(clipboard.entities) if include_entities else 0
     if not positions or len(positions) * work > edit.operation_limit:
         raise ValueError("Placement exceeds the object budget")
     if take and len(positions) != 1:
@@ -100,8 +107,7 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
     targets = {}
     for position in positions:
         if include_blocks and include_air:
-            targets.update((p, _Cell("minecraft:air")) for p in product(
-                *(range(lo, lo + size) for lo, size in zip(position, clipboard.size))))
+            targets.update((p, _Cell("minecraft:air")) for p in _air_targets(clipboard, position))
         targets.update((tuple(p + d for p, d in zip(local, position)), cell) for local, cell in cells)
     accepted, skipped = filter_destinations(edit, targets, destination)
     targets = accepted

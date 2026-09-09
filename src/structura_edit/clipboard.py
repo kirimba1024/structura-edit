@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from structura_core import parse_state
 
 from .cell_data import cell_payload, detached_cell
+from .cell_set import CellSet
 from .picking import EMPTY
 
 
@@ -20,6 +21,7 @@ class Clipboard:
     entities: tuple = ()
     excluded_players: int = 0
     dimension: object = None
+    footprint: object = None
     block_count: int = field(init=False)
 
     def __post_init__(self):
@@ -43,9 +45,11 @@ class Clipboard:
         entities, players = capture_entities(edit, selection) if include_entities else ((), 0)
         if len(cells) + len(entities) > edit.operation_limit:
             raise ValueError("Clipboard exceeds the object budget; select a smaller region")
+        footprint = selection.shifted(tuple(-v for v in selection.lower)) if isinstance(selection, CellSet) else None
         return cls(tuple(hi - lo for lo, hi in zip(selection.lower, selection.upper)), tuple(cells),
                    edit._id, edit.revision, selection, edit._document.source.data_version, edit.origin,
-                   entities=entities, excluded_players=players, dimension=getattr(edit, "dimension", None))
+                   entities=entities, excluded_players=players, dimension=getattr(edit, "dimension", None),
+                   footprint=footprint)
 
     def can_take_from(self, edit):
         return (self.document_id, self.revision, self.origin, self.dimension) == (

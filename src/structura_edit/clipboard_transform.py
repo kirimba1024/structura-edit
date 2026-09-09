@@ -5,6 +5,7 @@ from numbers import Integral
 from amulet_nbt import CompoundTag, StringTag
 from structura_core import parse_state, state_key
 
+from .cell_set import CellSet
 from .clipboard_entities import transform_entities
 
 
@@ -65,6 +66,16 @@ def _state(state, version, directions, turns, flip):
     return state_key(raw)
 
 
+def _mapped_position(position, size, turns, flip):
+    x, y, z = position
+    sx, sz = size[0], size[2]
+    width, depth = sx, sz
+    x, z = (sx - 1 - x if flip == "x" else x), (sz - 1 - z if flip == "z" else z)
+    for _ in range(turns):
+        x, z, width, depth = depth - 1 - z, x, depth, width
+    return x, y, z
+
+
 def transform_clipboard(clipboard, *, turns=0, flip=None):
     if isinstance(turns, bool) or not isinstance(turns, Integral) or flip not in (None, "x", "z"):
         raise ValueError("Use integer quarter turns and flip X or Z")
@@ -78,12 +89,13 @@ def transform_clipboard(clipboard, *, turns=0, flip=None):
     states = {state: _state(state, version, directions, turns, flip) for state in states}
     sx, sy, sz = clipboard.size
     cells = []
-    for (x, y, z), cell in clipboard.cells:
-        width, depth = sx, sz
-        x, z = (sx - 1 - x if flip == "x" else x), (sz - 1 - z if flip == "z" else z)
-        for _ in range(turns):
-            x, z, width, depth = depth - 1 - z, x, depth, width
+    for position, cell in clipboard.cells:
+        x, y, z = _mapped_position(position, clipboard.size, turns, flip)
         state = states[cell.state]
         cells.append(((x, y, z), cell if state == cell.state else replace(cell, state=state, variant=None)))
+    footprint = None
+    if clipboard.footprint is not None:
+        footprint = CellSet.from_positions(
+            _mapped_position(position, clipboard.size, turns, flip) for position in clipboard.footprint.positions())
     return replace(clipboard, size=(sz, sy, sx) if turns % 2 else clipboard.size, cells=tuple(cells),
-                   entities=transform_entities(clipboard.entities, clipboard.size, turns, flip))
+                   entities=transform_entities(clipboard.entities, clipboard.size, turns, flip), footprint=footprint)

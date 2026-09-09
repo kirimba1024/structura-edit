@@ -1,6 +1,26 @@
 from structura_core.nbt import parse_state, state_key
 
+from .changes import Selection
 from .picking import EMPTY
+
+
+def _boundary(selection):
+    if isinstance(selection, Selection):
+        lower, upper = selection.lower, selection.upper
+        return lambda position: tuple(v in (lo, hi - 1) for v, lo, hi in zip(position, lower, upper))
+
+    def edges(position):
+        result = []
+        for axis in range(3):
+            outside = False
+            for step in (-1, 1):
+                neighbour = tuple(v + (step if i == axis else 0) for i, v in enumerate(position))
+                if neighbour not in selection:
+                    outside = True
+                    break
+            result.append(outside)
+        return tuple(result)
+    return edges
 
 
 def shape_positions(session, selection, form, mask, surface):
@@ -22,6 +42,7 @@ def shape_positions(session, selection, form, mask, surface):
         for x, y, z in session.positions():
             if (x, y, z) in selection and not empty((x, y, z)):
                 top[x, z] = max(y, top.get((x, z), y))
+    edges = _boundary(selection)
     for position in selection.positions():
         if mask:
             state = session.state_at(position)
@@ -29,7 +50,7 @@ def shape_positions(session, selection, form, mask, surface):
                 continue
         if surface and (empty(position) or not any(empty(tuple(v + (d if i == axis else 0) for i, v in enumerate(position))) for axis in range(3) for d in (-1, 1))):
             continue
-        edge = tuple(v in (lo, hi - 1) for lo, v, hi in zip(lower, position, upper))
+        edge = edges(position)
         if form == "Walls" and not (edge[0] or edge[2]):
             continue
         if form == "Shell" and not any(edge):
