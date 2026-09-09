@@ -157,6 +157,12 @@ def _connected(args, context):
     return connected_selection(args["session"], args["start"], criterion=args["criterion"], progress=context.progress)
 
 
+def _item_icons(args, context):
+    from .item_icons import render_icons
+
+    return render_icons(args["ids"], args["assets"])
+
+
 TASKS = {
     "open": Task(_open, "Opening…"),
     "world": Task(_world, "Loading world…", resources=True),
@@ -170,6 +176,7 @@ TASKS = {
     "object_search": Task(_object_search, "Finding objects…"),
     "operation": Task(_operation, "Preparing change…"),
     "connected": Task(_connected, "Selecting connected blocks…"),
+    "item_icons": Task(_item_icons, "", resources=True),
     "clipboard": Task(_clipboard, "Preparing clipboard…", resources=True),
     "placement": Task(_placement, "Preparing placement…", resources=True),
     "placement_plan": Task(_placement_plan, "Checking placement rule…"),

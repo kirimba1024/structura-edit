@@ -72,7 +72,8 @@ class EditorWindow(QMainWindow):
         self.placement.bar.destination.materials = self.operation.materials
         self.repeat.bar.destination.materials = self.operation.materials
         self.objects = ObjectController(self.document, self.tasks, self.edits, self.scene, self.navigation,
-                                        self.selection_actions, available=self._objects_available)
+                                        self.selection_actions, available=self._objects_available,
+                                        assets=lambda: self.assets)
         self.slicing = HeightSliceController(self.document, self.views, self.navigation)
         self.world = WorldController(self.document, self.tasks, self.camera, self.selection_actions,
                                       options=lambda: dict(assets=self.assets, height=self.slicing.value,

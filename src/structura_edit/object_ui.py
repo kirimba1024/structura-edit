@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QDoubleSp
 import pyvista as pv
 
 from .appearance import ACCENT
+from .item_icons import ItemIcons
 from .object_inspector import ObjectInspector
 from .object_search_ui import ObjectFinder
 from .scene_lines import box_outlines
@@ -15,11 +16,12 @@ class ObjectController(QObject):
     applied = Signal()
     reveal_requested = Signal(object)
 
-    def __init__(self, document, tasks, edits, scene, navigation, selection, *, available):
+    def __init__(self, document, tasks, edits, scene, navigation, selection, *, available, assets=lambda: None):
         super().__init__(navigation)
         self.document, self.tasks, self.edits = document, tasks, edits
         self.scene, self.navigation, self.selection = scene, navigation, selection
         self.available = available
+        self.icons = ItemIcons(tasks.submit, assets)
         self.keys = set()
         self.marker = None
         self.marked = None
@@ -101,7 +103,8 @@ class ObjectController(QObject):
             return
         if self.dialog is not None:
             self.dialog.close()
-        self.dialog = ObjectInspector(self.scene.plotter.window(), records, readonly=self.document.session.readonly)
+        self.dialog = ObjectInspector(self.scene.plotter.window(), records, readonly=self.document.session.readonly,
+                                      icons=self.icons)
         dialog = self.dialog
         token = self.document.session_token
         self.dialog.requested.connect(lambda edits: self._edit(token, edits))

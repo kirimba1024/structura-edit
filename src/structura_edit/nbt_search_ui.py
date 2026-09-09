@@ -65,6 +65,7 @@ class NbtResults(QWidget):
     page_requested = Signal(int)
     activated = Signal(object)
     selection_changed = Signal()
+    shown = Signal(object)
 
     def __init__(self, *, items=False):
         super().__init__()
@@ -118,6 +119,7 @@ class NbtResults(QWidget):
                              if page.limited else text)
         self.previous.setEnabled(page.offset > 0)
         self.next.setEnabled(end < page.total)
+        self.shown.emit(page)
 
     def selected(self):
         item = self.table.currentItem()

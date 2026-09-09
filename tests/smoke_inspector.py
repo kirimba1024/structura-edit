@@ -8,6 +8,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QLineEdit
 from structura_core import Structure
 
+from structura_edit.item_icons import ItemIcons, render_icons
 from structura_edit.nbt_value_dialog import NbtValueDialog
 from structura_edit.object_edits import edit_objects, inspect_objects
 from structura_edit.object_inspector import ObjectInspector
@@ -61,11 +62,13 @@ def main():
     app = QApplication([])
     source = Structure.from_root(from_snbt('''{DataVersion:3955,size:[4,4,4],palette:[{Name:"mod:crate"}],
       blocks:[{pos:[1,1,1],state:0,nbt:{id:"mod:crate",storage:{slots:[{id:"mod:rare_gem",Count:3b,
-        components:{keep:9007199254740993L}}]},energy:9007199254740993L}}],
+        components:{keep:9007199254740993L}},{id:"minecraft:diamond",Count:2b}]},energy:9007199254740993L}}],
       entities:[{pos:[2d,1d,2d],blockPos:[2,1,2],nbt:{id:"mod:mob",Inventory:[{id:"mod:gem",Count:2b}]}}]}'''))
     session = EditSession.from_structure(source)
     records = inspect_objects(session, position=(1, 1, 1)) + inspect_objects(session, keys=tuple(session._entities))
-    dialog = ObjectInspector(None, records)
+    icons = ItemIcons(lambda kind, callback, **args: callback(render_icons(args["ids"], args["assets"])) or True,
+                      lambda: None)
+    dialog = ObjectInspector(None, records, icons=icons)
     apply_theme(dialog)
     dialog.resize(800, 580)
     dialog.show()
@@ -83,6 +86,12 @@ def main():
         dialog.search.clear()
         dialog.tabs.setCurrentIndex(1)
         wait_search(dialog)
+        QTest.qWait(50)
+        diamond = next(item for item in (dialog.inventory.topLevelItem(row)
+                                         for row in range(dialog.inventory.topLevelItemCount()))
+                       if item.text(1) == "minecraft:diamond")
+        assert not diamond.icon(1).isNull()
+        assert "minecraft:diamond" in icons.icons
         query(dialog, "rare gem")
         assert dialog.items.page.total == 1
         dialog.inventory.setCurrentItem(dialog.inventory.topLevelItem(0))

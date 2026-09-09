@@ -1,5 +1,6 @@
 from amulet_nbt import from_snbt
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QDialog, QHBoxLayout, QLineEdit, QPlainTextEdit,
     QPushButton, QStackedWidget, QTabWidget, QVBoxLayout,
@@ -16,12 +17,13 @@ from .nbt_values import path_text, replace_value
 class ObjectInspector(QDialog):
     requested = Signal(object)
 
-    def __init__(self, parent, records, *, readonly=False):
+    def __init__(self, parent, records, *, readonly=False, icons=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle("Object inspector")
         self.resize(960, 660)
         self.records, self.readonly = records, readonly
+        self.icons = icons
         self.index, self.tab_index = -1, 0
         self.drafts = {}
         self.originals = {}
@@ -100,6 +102,24 @@ class ObjectInspector(QDialog):
             results.page_requested.connect(lambda offset: self.refresh_search(offset=offset, immediate=True))
             results.selection_changed.connect(self.sync_actions)
             results.activated.connect(lambda match: self.open_selected())
+        if self.icons is not None:
+            self.icons.updated.connect(self.apply_icons)
+            self.items.shown.connect(self.request_icons)
+
+    def request_icons(self, page):
+        self.icons.request(match.columns[1] for match in page.rows if match.columns)
+        self.apply_icons()
+
+    def apply_icons(self):
+        if self.icons is None:
+            return
+        for row in range(self.items.table.topLevelItemCount()):
+            item = self.items.table.topLevelItem(row)
+            match = item.data(0, Qt.ItemDataRole.UserRole)
+            if match is not None and match.columns:
+                pixmap = self.icons.pixmap(match.columns[1])
+                if pixmap is not None:
+                    item.setIcon(1, QIcon(pixmap))
 
     def remember(self):
         if self.index >= 0:
