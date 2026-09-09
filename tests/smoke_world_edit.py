@@ -48,52 +48,52 @@ def main():
         window.world.radius = 0
         window.show()
         try:
-            window.open_path(path)
+            window.sources.open_path(path)
             settle(window)
             window.placement.start("import", path=str(donor))
             settle(window)
-            position = tuple(v - o for v, o in zip((5, 1, 5), window.session.origin))
+            position = tuple(v - o for v, o in zip((5, 1, 5), window.document.session.origin))
             window.placement.set_position(position)
             QTest.keyClick(window.plotter, Qt.Key.Key_Return)
             settle(window)
-            assert window.session.state_at(position) == "minecraft:chest", window.status.text()
-            assert len(window.session.history.entries) == 1 and window.session.dirty
+            assert window.document.session.state_at(position) == "minecraft:chest", window.status.text()
+            assert len(window.document.session.history.entries) == 1 and window.document.session.dirty
             assert (path / "region/r.0.0.mca").read_bytes() == original
             window.world.center = (40, 8, 8)
             window.world.request(recenter=True)
             settle(window)
-            assert window.session.origin[0] == 32 and window.session.dirty
+            assert window.document.session.origin[0] == 32 and window.document.session.dirty
             window.undo()
             settle(window)
-            assert not window.session.dirty
+            assert not window.document.session.dirty
             window.redo()
             settle(window)
             actors = tuple(window.scene.actors)
             QTest.mouseClick(window.save_button, Qt.MouseButton.LeftButton)
             settle(window)
-            assert not window.session.dirty and window.session.can_undo, window.status.text()
+            assert not window.document.session.dirty and window.document.session.can_undo, window.status.text()
             assert tuple(window.scene.actors) == actors
-            assert (window.session.last_backup / "region/r.0.0.mca").read_bytes() == original
+            assert (window.document.session.last_backup / "region/r.0.0.mca").read_bytes() == original
             saved = open_source(path, center=(8, 8, 8), radius=0)
             position = tuple(v - o for v, o in zip((5, 1, 5), saved.origin))
             assert saved.state_at(position) == "minecraft:chest"
             assert saved.snapshot().block_nbt[position]["Items"] == source.block_nbt[(0, 0, 0)]["Items"]
             window.undo()
             settle(window)
-            assert window.session.dirty
-            window.save_dialog()
+            assert window.document.session.dirty
+            window.sources.save_dialog()
             settle(window)
             restored = open_source(path, center=(8, 8, 8), radius=0)
             assert restored.state_at(position) in (None, "minecraft:air"), (restored.state_at(position), window.status.text())
-            window.session.apply(window.session.set_block((0, -window.session.origin[1], 0), "minecraft:gold_block"))
-            window._confirm_discard = lambda: True
-            window.world.open(path)
+            window.document.session.apply(window.document.session.set_block((0, -window.document.session.origin[1], 0), "minecraft:gold_block"))
+            window.sources.confirm_discard = lambda: True
+            window.sources.open_path(path)
             settle(window)
-            assert not window.session.dirty and not window.session.can_undo
+            assert not window.document.session.dirty and not window.document.session.can_undo
             print(json.dumps(dict(import_ghost="one local Apply", refresh="pending blocks and history survive",
                                   save="explicit button; backup and NBT verified", undo_after_save="inverse edit saved")), flush=True)
         finally:
-            window.session = None
+            window.document.load(None)
             window.close()
             window.deleteLater()
             QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

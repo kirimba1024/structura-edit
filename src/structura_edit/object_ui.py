@@ -1,4 +1,4 @@
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout, QLabel, QToolButton
 
 import pyvista as pv
@@ -10,19 +10,26 @@ from .scene_lines import box_outlines
 
 
 class ObjectController(QObject):
-    def __init__(self, window):
-        super().__init__(window)
-        self.window = window
+    changed = Signal()
+    message = Signal(str)
+    applied = Signal()
+    reveal_requested = Signal(object)
+
+    def __init__(self, document, tasks, edits, scene, navigation, selection, *, available):
+        super().__init__(navigation)
+        self.document, self.tasks, self.edits = document, tasks, edits
+        self.scene, self.navigation, self.selection = scene, navigation, selection
+        self.available = available
         self.keys = set()
         self.marker = None
         self.marked = None
         self.dialog = None
-        self.finder = ObjectFinder(window)
+        self.finder = ObjectFinder(scene.plotter, document, tasks, available=available)
+        self.finder.requested.connect(self._found)
         self.inspect_button = QToolButton()
         self.inspect_button.setText("Inspect…")
         self.inspect_button.clicked.connect(self.inspect)
         self.inspect_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        window.statusBar().addPermanentWidget(self.inspect_button)
 
     def reset(self):
         self.finder.reset()
@@ -40,45 +47,31 @@ class ObjectController(QObject):
         else:
             self.keys.add(key)
         self.refresh()
-        self.window.status.setText(f"{len(self.keys)} entities selected · Inspect to view inventories and data")
-        self.window._sync()
+        self.message.emit(f"{len(self.keys)} entities selected · Inspect to view inventories and data")
+        self.changed.emit()
 
     def select_region(self):
-        window = self.window
         if not self.available():
             return
-        if window.selected.region is None:
-            self._selected(window.session._entities)
+        if self.document.selected.region is None:
+            self._selected(self.document.session._entities)
             return
-        window._run("objects", self._selected, session=window.session.fork(), operation="select", selection=window.selected.region)
+        self._submit("select", self._selected, selection=self.document.selected.region)
 
     def _selected(self, keys):
-        window = self.window
         self.keys = set(keys)
         self.refresh()
-        window.status.setText(f"{len(self.keys)} entities selected in {'region' if window.selected.region else 'loaded area'}")
-        window._sync()
-
-    def available(self):
-        window = self.window
-        return (window.session is not None and not window.worker.busy and window.pending is None
-                and not window.placement.active and not window.repeat.active)
+        self.message.emit(f"{len(self.keys)} entities selected in {'region' if self.document.selected.region else 'loaded area'}")
+        self.changed.emit()
 
     def sync(self):
-        window = self.window
-        single_block = window.selected.region is not None and window.selected.region.volume == 1
-        ready = self.available()
-        self.inspect_button.setVisible(window.session is not None)
-        self.inspect_button.setEnabled(ready and (bool(self.keys) or single_block))
-        actions = window.menus.actions
-        actions["inspect"].setEnabled(self.inspect_button.isEnabled())
-        actions["entity_all"].setEnabled(ready)
-        for name in ("entity_move", "entity_duplicate", "entity_rotate", "entity_delete"):
-            actions[name].setEnabled(ready and bool(self.keys) and not window.session.readonly)
-        self.finder.sync()
+        selection = self.document.selected.region
+        single_block = selection is not None and selection.volume == 1
+        self.inspect_button.setVisible(self.document.session is not None)
+        self.inspect_button.setEnabled(self.available() and (bool(self.keys) or single_block))
 
     def refresh(self):
-        session, scene = self.window.session, self.window.scene
+        session, scene = self.document.session, self.scene
         if session is not None:
             self.keys.intersection_update(session._entities)
         bounds = tuple(scene.entity_bounds[key] for key in sorted(self.keys) if key in scene.entity_bounds)
@@ -99,20 +92,19 @@ class ObjectController(QObject):
     def inspect(self):
         if not self.available():
             return
-        window = self.window
-        position = window.selected.region.lower if not self.keys and window.selected.region is not None else None
-        window.navigation.suspend()
-        window._run("objects", self._inspected, session=window.session.fork(), operation="inspect", keys=tuple(sorted(self.keys)), position=position)
+        position = self.document.selected.region.lower if not self.keys and self.document.selected.region is not None else None
+        self.navigation.suspend()
+        self._submit("inspect", self._inspected, keys=tuple(sorted(self.keys)), position=position)
 
     def _inspected(self, records):
         if not records:
             return
         if self.dialog is not None:
             self.dialog.close()
-        self.dialog = ObjectInspector(self.window, records, readonly=self.window.session.readonly)
+        self.dialog = ObjectInspector(self.scene.plotter.window(), records, readonly=self.document.session.readonly)
         dialog = self.dialog
-        revision = self.window.session.revision
-        self.dialog.requested.connect(lambda edits: self._edit(revision, edits))
+        token = self.document.session_token
+        self.dialog.requested.connect(lambda edits: self._edit(token, edits))
         self.dialog.finished.connect(lambda result: self._closed(dialog))
         self.dialog.show()
         self.dialog.activateWindow()
@@ -121,23 +113,22 @@ class ObjectController(QObject):
         if self.dialog is dialog:
             self.dialog = None
             if QApplication.applicationState() == Qt.ApplicationState.ApplicationActive:
-                self.window.activateWindow()
-            target = self.finder.panel.search if self.finder.panel.isVisible() else self.window.plotter
+                self.scene.plotter.window().activateWindow()
+            target = self.finder.panel.search if self.finder.panel.isVisible() else self.scene.plotter
             target.setFocus()
 
-    def _edit(self, revision, edits):
-        if not self.available() or revision != self.window.session.revision:
+    def _edit(self, token, edits):
+        if not self.available() or token != self.document.session_token:
             if self.dialog is not None:
                 self.dialog.errors.setText("Document changed; reopen the inspector")
             return
-        self.window._run("objects", self._prepared, session=self.window.session.fork(), operation="edit", edits=edits)
+        self._submit("edit", self._prepared, edits=edits)
 
     def transform(self, action):
         if not self.available() or not self.keys:
             return
-        window = self.window
-        window.navigation.suspend()
-        dialog = QDialog(window)
+        self.navigation.suspend()
+        dialog = QDialog(self.scene.plotter.window())
         dialog.setWindowTitle(f"{action} {len(self.keys)} entities")
         form = QFormLayout(dialog)
         fields = []
@@ -155,27 +146,45 @@ class ObjectController(QObject):
         buttons.rejected.connect(dialog.reject)
         form.addRow(buttons)
         if not dialog.exec():
-            window.plotter.setFocus()
+            self.scene.plotter.setFocus()
             return
         values = dict(angle=fields[0].value()) if action == "Rotate" else dict(offset=tuple(field.value() for field in fields)) if fields else {}
-        window._run("objects", self._prepared, session=window.session.fork(), operation="transform", keys=tuple(sorted(self.keys)), action=action, **values)
+        self._submit("transform", self._prepared, keys=tuple(sorted(self.keys)), action=action, **values)
+
+    def _submit(self, operation, callback, **args):
+        token = self.document.session_token
+        def received(result):
+            if token == self.document.session_token:
+                callback(result)
+        return self.tasks.submit("objects", received, session=self.document.session.fork(), operation=operation, **args)
+
+    def _found(self, action, rows):
+        if rows[0].kind == "block":
+            self.keys.clear()
+            self.refresh()
+            position = rows[0].position
+            self.selection.set_bounds(position, tuple(v + 1 for v in position))
+        else:
+            self._selected(row.key for row in rows)
+        if action == "inspect":
+            self.inspect()
+        elif action == "show":
+            bounds = [self.scene.entity_bounds.get(row.key, (row.position, tuple(v + 1 for v in row.position))) for row in rows]
+            self.navigation.camera.focus_bounds(bounds)
+            self.reveal_requested.emit(tuple(row.position for row in rows))
 
     def _prepared(self, change):
         if not change:
-            self.window.status.setText("No changes")
+            self.message.emit("No changes")
             return
         selected = {delta.key for delta in change.entities if delta.after is not None}
-        self.window._run("apply", lambda session: self._applied(session, selected), session=self.window.session, change=change)
+        self.edits.commit(change, lambda session: self._applied(session, selected))
 
     def _applied(self, session, selected):
-        window = self.window
-        window._resized_document(session)
-        window.session = session
         if self.dialog is not None:
             self.dialog.close()
         self.keys = selected & session._entities.keys()
-        window._refresh_palette()
-        window.render_scene()
-        window.plotter.setFocus()
-        window.status.setText("Object changes applied · Undo is available")
-        window._sync()
+        self.applied.emit()
+        self.scene.plotter.setFocus()
+        self.message.emit("Object changes applied · Undo is available")
+        self.changed.emit()

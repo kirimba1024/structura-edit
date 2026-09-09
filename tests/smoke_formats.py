@@ -48,14 +48,14 @@ def main():
     window.show()
     try:
         for path in paths:
-            window.open_path(path)
+            window.sources.open_path(path)
             settle(window)
-            assert window.session is not None and window.session.path == path, window.status.text()
+            assert window.document.session is not None and window.document.session.path == path, window.status.text()
             assert window.views.ready and window.scene.actors, window.status.text()
             assert window.views.maps_current is window.views.current
-            assert window.session.state_at((0, 0, 0) if path.suffix == ".schematic" else (1, 1, 1)) == "minecraft:stone"
+            assert window.document.session.state_at((0, 0, 0) if path.suffix == ".schematic" else (1, 1, 1)) == "minecraft:stone"
         assert len(answered) == 1, answered
-        window.open_path(paths[0])
+        window.sources.open_path(paths[0])
         settle(window)
         window.placement.start("import", path=str(paths[-1]))
         settle(window)
@@ -64,10 +64,10 @@ def main():
         window.placement.set_position((3, 0, 0))
         window.placement.apply(include_entities=True)
         settle(window)
-        assert window.session.state_at((4, 1, 1)) == "minecraft:stone"
+        assert window.document.session.state_at((4, 1, 1)) == "minecraft:stone"
         window.undo()
         settle(window)
-        assert window.session.size == source.size and not window.session.dirty
+        assert window.document.session.size == source.size and not window.document.session.dirty
         assert all(path.read_bytes() == content for path, content in original.items())
         report = dict(opened=[path.name for path in paths], source_version="Sponge v1 Open and Import; Apply and Undo",
                       preview="scene and maps ready", originals="unchanged")
@@ -75,7 +75,7 @@ def main():
         print(json.dumps(report), flush=True)
     finally:
         timer.stop()
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete)

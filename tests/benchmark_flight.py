@@ -25,16 +25,16 @@ def main():
     window.navigation.mouse_look.capture = False
     window.show()
     try:
-        window.open_path(args.path)
+        window.sources.open_path(args.path)
         settle(window)
         window.navigation.stop()
         window.fit_scene()
         if args.close:
-            center = np.asarray(window.session.size) / 2
-            window.plotter.camera.position = center + np.array((0.2, 0.25, 0.85)) * max(window.session.size)
+            center = np.asarray(window.document.session.size) / 2
+            window.plotter.camera.position = center + np.array((0.2, 0.25, 0.85)) * max(window.document.session.size)
             window.plotter.camera.focal_point = center
         if args.ghost:
-            upper = tuple(max(1, value // 2) for value in window.session.size)
+            upper = tuple(max(1, value // 2) for value in window.document.session.size)
             window.selection_actions.set_bounds((0, 0, 0), upper)
             window.placement.start("duplicate")
             settle(window)
@@ -71,7 +71,7 @@ def main():
         actual = np.diff(completed)
         report = dict(completed_frames=len(completed), rendered_fps=float(1 / actual.mean()) if len(actual) else 0,
                       actual_render_ms_mean=float(np.mean(durations) * 1000) if durations else 0,
-                      blocks=len(window.session._document.source.present), actors=len(window.scene.actors),
+                      blocks=len(window.document.session._document.source.present), actors=len(window.scene.actors),
                       viewport=list(window.plotter.render_window.GetSize()), frames=len(frames),
                       fps=float(1 / intervals.mean()), frame_ms_p95=float(np.percentile(intervals, 95) * 1000),
                       actual_render_ms_p95=float(np.percentile(durations, 95) * 1000) if durations else 0,
@@ -79,7 +79,7 @@ def main():
         Path(args.output).write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete)

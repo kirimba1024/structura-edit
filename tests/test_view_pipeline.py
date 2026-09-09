@@ -69,6 +69,38 @@ def test_reset_rejects_pending_results(edit):
     assert not frames and not images and not view.ready
 
 
+def test_accepting_preview_updates_display_revision_without_rebuilding(edit):
+    view, calls, frames, _ = pipeline()
+    accepted = []
+    view.scene.accept_preview = lambda: accepted.append(True)
+    view.scene.display_revision = edit.revision
+    change = edit.set_block((0, 0, 0), "minecraft:glass")
+    view.request(edit, change, None, True)
+    view.flush()
+    calls.pop()[1]("preview")
+    request = view.current
+    edit.apply(change)
+    assert view.accept(edit, request=request)
+    assert accepted == [True] and len(frames) == 1
+    assert view.scene.display_revision == edit.revision and view.displayed.change is None
+
+
+def test_changed_view_during_apply_does_not_mark_old_geometry_current(edit):
+    view, calls, _, _ = pipeline()
+    view.scene.accept_preview = lambda: pytest.fail("Old geometry was accepted")
+    view.scene.display_revision = edit.revision
+    change = edit.set_block((0, 0, 0), "minecraft:glass")
+    view.request(edit, change, None, True)
+    view.flush()
+    calls.pop()[1]("preview")
+    request, displayed = view.current, view.displayed
+    view.request(edit, change, None, False)
+    edit.apply(change)
+    assert not view.accept(edit, request=request)
+    assert view.scene.display_revision == 0 and view.displayed is displayed
+    assert view.render_queued
+
+
 def test_initial_framing_survives_replacing_an_inflight_request(edit):
     view, calls, _, _ = pipeline()
     framed = []

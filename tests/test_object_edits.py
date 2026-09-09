@@ -115,7 +115,7 @@ def test_entity_transactions_and_selection_do_not_mutate_source(objects):
 
 def test_selection_worker_filters_positions_and_all_selection_does_not_parse_nbt(objects, monkeypatch):
     from structura_edit.entity_data import EntityData
-    from structura_edit.jobs import execute
+    from structura_edit.tasks import execute
     from structura_edit.object_edits import select_entities
 
     region = objects.select(((3, 3, 3), (4, 4, 4)))

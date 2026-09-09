@@ -1,31 +1,29 @@
 from math import floor
 
-from PySide6.QtCore import QObject, Qt, QSignalBlocker
+from PySide6.QtCore import QObject, Qt, QSignalBlocker, Signal
 from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QPushButton, QSpinBox, QToolButton
 
 from .height_slice import HeightSlice
 
 
 class HeightSliceController(QObject):
-    def __init__(self, window):
-        super().__init__(window)
-        self.window = window
+    changed = Signal()
+
+    def __init__(self, document, views, navigation):
+        super().__init__(navigation)
+        self.document, self.views, self.navigation = document, views, navigation
+        self.plotter = navigation.camera.plotter
         self.value = HeightSlice()
-        self.button = QToolButton()
-        self.button.setText(self.value.label)
-        self.button.setToolTip("Height slice · show interiors without changing blocks")
-        self.button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.button = QToolButton(text=self.value.label, toolTip="Height slice · show interiors without changing blocks",
+                                  focusPolicy=Qt.FocusPolicy.NoFocus)
         self.button.clicked.connect(self.show)
-        window.statusBar().addPermanentWidget(self.button)
-        self.dialog = QDialog(window, Qt.WindowType.Tool)
+        self.dialog = QDialog(self.plotter.window(), Qt.WindowType.Tool)
         self.dialog.setWindowTitle("Height slice")
         form = QFormLayout(self.dialog)
         self.mode = QComboBox()
         for label, mode in (("All layers", "all"), ("Up to Y", "below"), ("Single layer", "layer")):
             self.mode.addItem(label, mode)
-        self.y = QSpinBox()
-        self.y.setRange(-30_000_000, 30_000_000)
-        self.y.setKeyboardTracking(False)
+        self.y = QSpinBox(minimum=-30_000_000, maximum=30_000_000, keyboardTracking=False)
         self.at_camera = QPushButton("Use camera height")
         self.at_camera.clicked.connect(self.use_camera)
         form.addRow("Show", self.mode)
@@ -41,7 +39,7 @@ class HeightSliceController(QObject):
         form.addRow(buttons)
         self.mode.currentIndexChanged.connect(self._changed)
         self.y.valueChanged.connect(self._changed)
-        self.dialog.finished.connect(lambda: window.plotter.setFocus())
+        self.dialog.finished.connect(lambda: self.plotter.setFocus())
 
     def reset(self, session):
         with QSignalBlocker(self.mode), QSignalBlocker(self.y):
@@ -51,27 +49,23 @@ class HeightSliceController(QObject):
         self.button.setText(self.value.label)
         self.dialog.hide()
 
-    def sync(self):
-        window = self.window
-        available = window.session is not None and not window.placement.active
-        available = available and (not window.worker.busy or (window._job and window._job[0] in ("render", "map")))
-        self.button.setVisible(window.session is not None)
+    def sync(self, *, available):
+        self.button.setVisible(self.document.session is not None)
         self.button.setEnabled(bool(available))
         self.dialog.setEnabled(bool(available))
         self.y.setEnabled(self.value.mode != "all")
-        window.menus.actions["height"].setEnabled(bool(available))
 
     def show(self):
         if self.button.isEnabled():
-            self.window.navigation.suspend()
+            self.navigation.suspend()
             self.dialog.show()
             self.dialog.raise_()
             self.dialog.activateWindow()
 
     def use_camera(self):
-        state = self.window.views.displayed.state if self.window.views.displayed else self.window.session
+        state = self.views.displayed.state if self.views.displayed else self.document.session
         with QSignalBlocker(self.mode), QSignalBlocker(self.y):
-            self.y.setValue(floor(self.window.plotter.camera.position[1] + state.origin[1]))
+            self.y.setValue(floor(self.plotter.camera.position[1] + state.origin[1]))
             if self.mode.currentData() == "all":
                 self.mode.setCurrentIndex(1)
         self._changed()
@@ -83,5 +77,9 @@ class HeightSliceController(QObject):
             return
         self.value = value
         self.button.setText(value.label)
-        self.window.overlay.set_hover(None)
-        self.window.render_scene()
+        self.changed.emit()
+
+    def reveal(self, positions):
+        low, high = self.value.interval(self.document.session)
+        if any(not low <= position[1] < high for position in positions):
+            self.mode.setCurrentIndex(0)

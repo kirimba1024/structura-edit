@@ -29,7 +29,7 @@ def main():
     window = EditorWindow(off_screen=True, cache_dir=output / "cache")
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         window.placement.start("take")
@@ -37,7 +37,7 @@ def main():
         placement = window.placement
         assert placement.model is not None and placement.bar.isVisible()
         actors = tuple(placement.view.actors)
-        assert actors and window.session.state_at((2, 0, 2)) == "minecraft:chest"
+        assert actors and window.document.session.state_at((2, 0, 2)) == "minecraft:chest"
         placement.hover(screen(window, (6, 0, 6)))
         QTest.mouseClick(window.plotter, Qt.MouseButton.LeftButton, pos=screen(window, (6, 0, 6)))
         assert not placement.model.following
@@ -47,20 +47,20 @@ def main():
         QTest.keyClick(window.plotter, Qt.Key.Key_Up, Qt.KeyboardModifier.ShiftModifier)
         assert placement.model.position == (6, 2, 5)
         assert window.plotter.camera.position == camera and not window.navigation.keys
-        assert tuple(placement.view.actors) == actors and not window.worker.busy
+        assert tuple(placement.view.actors) == actors and not window.tasks.busy
         placement.set_position((-1, 2, 5))
-        camera_before = np.asarray(window.plotter.camera.position) + window.session.origin
+        camera_before = np.asarray(window.plotter.camera.position) + window.document.session.origin
         assert placement.bar.apply.isEnabled() and "Outside" not in placement.bar.hint.text()
         QTest.keyClick(window.plotter, Qt.Key.Key_Return)
         settle(window)
-        assert window.session.size == (13, 6, 12) and window.session.origin == (-1, 0, 0)
-        assert window.session.state_at((0, 2, 5)) == "minecraft:chest"
-        assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera_before)
+        assert window.document.session.size == (13, 6, 12) and window.document.session.origin == (-1, 0, 0)
+        assert window.document.session.state_at((0, 2, 5)) == "minecraft:chest"
+        assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera_before)
         window.undo()
         settle(window)
-        assert window.session.size == source.size and window.session.origin == (0, 0, 0)
-        assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera_before)
-        assert not placement.active and not window.session.dirty
+        assert window.document.session.size == source.size and window.document.session.origin == (0, 0, 0)
+        assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera_before)
+        assert not placement.active and not window.document.session.dirty
         window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         placement.start("take")
         settle(window)
@@ -69,22 +69,22 @@ def main():
         placement.bar.grab().save(str(output / "controls.png"))
         QTest.keyClick(window.plotter, Qt.Key.Key_Return)
         settle(window)
-        assert not placement.active and len(window.session.history.entries) == 1
-        assert window.session.state_at((2, 0, 2)) == "minecraft:air"
-        assert window.session.state_at((6, 2, 5)) == "minecraft:chest"
-        assert window.session.snapshot().block_nbt[(6, 2, 5)]["Items"] == source.block_nbt[(2, 0, 2)]["Items"]
+        assert not placement.active and len(window.document.session.history.entries) == 1
+        assert window.document.session.state_at((2, 0, 2)) == "minecraft:air"
+        assert window.document.session.state_at((6, 2, 5)) == "minecraft:chest"
+        assert window.document.session.snapshot().block_nbt[(6, 2, 5)]["Items"] == source.block_nbt[(2, 0, 2)]["Items"]
         assert Structure(path).name_at((2, 0, 2)) == "minecraft:chest"
         window.undo()
         settle(window)
-        assert window.session.state_at((2, 0, 2)) == "minecraft:chest"
-        assert not window.session.can_undo and not window.session.dirty
+        assert window.document.session.state_at((2, 0, 2)) == "minecraft:chest"
+        assert not window.document.session.can_undo and not window.document.session.dirty
         window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         window.show_operation("Move blocks")
         window.operation.set_values({"offset": (-4, 0, 0)})
-        camera_before = np.asarray(window.plotter.camera.position) + window.session.origin
+        camera_before = np.asarray(window.plotter.camera.position) + window.document.session.origin
         window.preview_operation()
         settle(window)
-        assert window.pending is not None and window.pending.resize is not None
+        assert window.document.pending is not None and window.document.pending.resize is not None
         state = window.views.displayed.state
         assert state.origin == (-2, 0, 0) and window.minimap.canvas.origin == state.origin
         assert np.allclose(np.asarray(window.plotter.camera.position) + state.origin, camera_before)
@@ -102,18 +102,18 @@ def main():
         settle(window)
         window.apply_pending()
         settle(window)
-        assert window.selection().lower == (0, 0, 2)
-        assert window.session.state_at((0, 0, 2)) == "minecraft:chest"
-        assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera_before)
+        assert window.document.selection().lower == (0, 0, 2)
+        assert window.document.session.state_at((0, 0, 2)) == "minecraft:chest"
+        assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera_before)
         window.undo()
         settle(window)
-        assert window.session.size == source.size and not window.session.dirty
+        assert window.document.session.size == source.size and not window.document.session.dirty
         assert np.allclose(window.plotter.camera.position, camera_before)
         window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         placement.start("copy")
         settle(window)
         copied = placement.clipboard
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         assert placement.clipboard is copied
         placement.start("paste")
@@ -124,7 +124,7 @@ def main():
         save_structure(source, donor, source.size)
         placement.start("import", path=str(donor))
         settle(window)
-        assert placement.model is not None and window.session.path == path
+        assert placement.model is not None and window.document.session.path == path
         assert placement.model.clipboard.size == source.size
         window.escape()
         report = dict(take="cancel preserves source; Apply is one undo", input="pin, XYZ and arrows; camera unchanged",
@@ -132,7 +132,7 @@ def main():
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

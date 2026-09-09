@@ -160,7 +160,7 @@ def test_legacy_open_is_editable_and_saves_normalized_nbt_without_overwriting_so
 
 def test_sponge_v1_requests_missing_version_and_can_be_opened_after_answer(tmp_path, structure):
     from structura_core.export_schematic import schematic_root
-    from structura_edit.jobs import execute
+    from structura_edit.tasks import execute
     from structura_edit.source_loading import SourceVersionRequired
 
     root = schematic_root(structure)

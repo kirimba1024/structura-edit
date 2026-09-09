@@ -36,7 +36,7 @@ def check_maps(window, output):
     assert minimap.maps.previous[1] is renderer
     assert all(canvas.image_pixels[view] is before[view] for view in VIEWS)
     window.move_camera((9.1, 2.9, 8.9))
-    assert not window.worker.busy
+    assert not window.tasks.busy
     settle(window)
     assert {view for view in VIEWS if before[view] is not canvas.image_pixels[view]} == {"west", "east"}
     centered(canvas)
@@ -71,7 +71,7 @@ def check_counts_and_guides(window, output):
     assert stats.items.gridSize().width() < 80
     assert "minecraft:" in stats.model.item(0).toolTip()
     stats.grab().save(str(output / "counts.png"))
-    window.guides.update(window.session, bounds=False, chunks=True)
+    window.guides.update(window.document.session, bounds=False, chunks=True)
     assert len(window.guides.actors) == 1
     style = window.guides.actors[0].GetProperty()
     assert style.GetLineWidth() == 2 and np.isclose(style.GetOpacity(), 0.35)
@@ -111,20 +111,20 @@ def main():
     window = EditorWindow(off_screen=True, cache_dir=output / "cache")
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         check_maps(window, output)
         check_counts_and_guides(window, output)
         check_error_copy(window, output)
-        assert not window.session.dirty
+        assert not window.document.session.dirty
         report = dict(maps="camera centered in all views, camera cuts, unchanged axes reused, M pan and return",
                       counts="compact cells, hover names and IDs, no ambiguous no air", guides="2 px, 35% opacity",
                       errors="visible Error button, full selectable text, Copy error")
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

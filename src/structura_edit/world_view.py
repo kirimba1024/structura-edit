@@ -59,12 +59,13 @@ class WorldView(EditSession):
                 x, _, z = (float(p) + o for p, o in zip(position, self.origin))
                 if (int(x // 16), int(z // 16)) not in self.loaded_chunks:
                     raise ValueError("Entity destination includes absent chunks; select a loaded area")
-        for delta in change.changes:
-            x, y, z = (p + o for p, o in zip(delta.position, self.origin))
-            if (x // 16, z // 16) not in self.loaded_chunks:
-                raise ValueError("Placement includes absent chunks; select a loaded area")
-            if self.loaded_sections is not None and (x // 16, y // 16, z // 16) not in self.loaded_sections:
-                raise ValueError("Placement includes an absent section; stay within the world's existing build height")
+
+    def _check_destination(self, position):
+        x, y, z = (p + o for p, o in zip(position, self.origin))
+        if (x // 16, z // 16) not in self.loaded_chunks:
+            raise ValueError("Placement includes absent chunks; select a loaded area")
+        if self.loaded_sections is not None and (x // 16, y // 16, z // 16) not in self.loaded_sections:
+            raise ValueError("Placement includes an absent section; stay within the world's existing build height")
 
     def _portable(self, cell, position):
         cell = detached_cell(self._document.source, cell or AIR_CELL, position)
@@ -83,13 +84,8 @@ class WorldView(EditSession):
         self._sync_changes()
         return result
 
-    def undo(self):
-        result = self.world_changes.step(undo=True)
-        self._sync_changes()
-        return result
-
-    def redo(self):
-        result = self.world_changes.step(undo=False)
+    def _step_history(self, *, undo):
+        result = self.world_changes.step(undo=undo)
         self._sync_changes()
         return result
 

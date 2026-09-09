@@ -21,7 +21,7 @@ def check_map(window, output):
     renderer = minimap.maps.previous[1]
     camera = view.camera.position
     window.selection_actions.select_all()
-    selection = window.selection()
+    selection = window.document.selection()
     view.setFocus()
     QTest.keyPress(view, Qt.Key.Key_W)
     QTest.keyClick(view, Qt.Key.Key_M)
@@ -76,13 +76,13 @@ def check_map(window, output):
     assert minimap.size() == view.size()
     QTest.keyClick(minimap, Qt.Key.Key_Escape)
     assert not minimap.large and view.hasFocus()
-    assert window.selection() == selection and view.camera.position == camera
+    assert window.document.selection() == selection and view.camera.position == camera
     assert all(canvas.images[key] is image for key, image in images.items())
     settle(window)
     assert minimap.maps.previous[1] is renderer
     for name in VIEWS:
         assert (canvas.screen_point(canvas.position, name) - canvas.tile_rect(name).center()).manhattanLength() < 1e-6
-    assert not window.worker.busy and not window.views.map_queued
+    assert not window.tasks.busy and not window.views.map_queued
     QTest.mouseClick(minimap.header, Qt.MouseButton.LeftButton)
     assert minimap.collapsed
     QTest.keyClick(view, Qt.Key.Key_M)
@@ -100,14 +100,14 @@ def check_map(window, output):
 
 
 def check_progress(window):
-    window._run("recipe", lambda result: None, session=window.session.fork(), selection=window.session.select(),
+    window.tasks.submit("recipe", lambda result: None, session=window.document.session.fork(), selection=window.document.session.select(),
                 code="import time\ntime.sleep(5)")
     assert not window.progress.isVisible()
     QTest.qWait(450)
     assert window.progress.isVisible() and window.progress.bar.maximum() == 0
     QTest.mouseClick(window.progress.cancel, Qt.MouseButton.LeftButton)
     settle(window)
-    assert not window.progress.isVisible() and not window.session.dirty
+    assert not window.progress.isVisible() and not window.document.session.dirty
 
 
 def settle_cache(cache):
@@ -142,7 +142,7 @@ def check_atlas(window, output):
     original = cached_pixel()
     assert original.alpha() == 255
     area = canvas.layout.area("top")
-    window.world.center = tuple(p + (96 if axis == 0 else 0) for axis, p in enumerate(window.session.center))
+    window.world.center = tuple(p + (96 if axis == 0 else 0) for axis, p in enumerate(window.document.session.center))
     window.world.radius = 0
     window.world.request(recenter=True)
     settle(window)
@@ -167,7 +167,7 @@ def main():
     window.show()
     QApplication.setActiveWindow(window)
     try:
-        window.open_path(args.path)
+        window.sources.open_path(args.path)
         settle(window)
         check_map(window, args.output)
         if window.world.active:
@@ -182,7 +182,7 @@ def main():
         (args.output / "result.json").write_text(json.dumps(result, indent=2))
         print(json.dumps(result), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         app.processEvents()
 

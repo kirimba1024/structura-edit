@@ -70,10 +70,13 @@ class ViewPipeline:
         if self.current is not self.maps_current:
             self.map_queued = self.current is not None
 
-    def accept(self, session):
-        if self.ready and self.displayed is not None:
-            self.scene.accept_preview()
-            self.displayed = replace(self.displayed, session=session.fork(), change=None)
+    def accept(self, session, *, request=None):
+        if not self.ready or self.displayed is None or (request is not None and request is not self.current):
+            return False
+        self.scene.accept_preview()
+        self.scene.display_revision = session.revision
+        self.displayed = replace(self.displayed, session=session.fork(), change=None)
+        return True
 
     def rebase(self, session):
         self.current = self.displayed = replace(self.current, session=session.fork(), change=None, fit=False)

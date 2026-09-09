@@ -57,7 +57,7 @@ def check_drag(window, output):
         assert all(placement.model.position[i] == original[i] for i in range(3) if i != axis)
         QTest.keyClick(view, Qt.Key.Key_W)
         QTest.keyClick(view, Qt.Key.Key_Return)
-        assert tuple(tuple(v) for v in view.camera_position) == camera and not window.worker.busy
+        assert tuple(tuple(v) for v in view.camera_position) == camera and not window.tasks.busy
         QTest.keyClick(view, Qt.Key.Key_Escape)
         assert placement.model.position == original and placement.drag.drag is None
         QTest.mouseRelease(view, Qt.MouseButton.LeftButton, pos=destination)
@@ -68,7 +68,7 @@ def check_drag(window, output):
     QTest.mouseRelease(view, Qt.MouseButton.LeftButton, pos=destination)
     assert placement.drag.drag is None and placement.model.position == moved
     assert tuple(tuple(v) for v in view.camera_position) == camera
-    assert tuple(placement.view.actors) == actors and not window.worker.busy
+    assert tuple(placement.view.actors) == actors and not window.tasks.busy
     for zoom in (0.8, 1.25):
         view.camera.zoom(zoom)
         for start, end in placement.drag.gizmo.handles().values():
@@ -78,7 +78,7 @@ def check_drag(window, output):
     for index in range(200):
         placement.set_position((5 + index % 8, 1, 5))
     elapsed = time.perf_counter() - started
-    assert tuple(placement.view.actors) == actors and not window.worker.busy
+    assert tuple(placement.view.actors) == actors and not window.tasks.busy
     placement.set_position(original)
     view.screenshot(str(output / "gizmo.png"))
     return dict(moves=200, update_ms=elapsed * 1000 / 200, rebuilt_meshes=0)
@@ -90,40 +90,40 @@ def check_keep_placing(window, source, path, output):
     placement.bar.repeat.click()
     assert placement.model.keep_placing
     placement.set_position((-1, 2, 5))
-    camera = np.asarray(window.plotter.camera.position) + window.session.origin
+    camera = np.asarray(window.plotter.camera.position) + window.document.session.origin
     placement.bar.apply.click()
     settle(window)
     assert placement.active and not placement.model.take and placement.model.following
-    assert window.session.origin == (-1, 0, 0)
-    assert window.session.state_at((3, 0, 2)) == "minecraft:air"
-    assert window.session.state_at((0, 2, 5)) == "minecraft:chest"
-    assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera)
+    assert window.document.session.origin == (-1, 0, 0)
+    assert window.document.session.state_at((3, 0, 2)) == "minecraft:air"
+    assert window.document.session.state_at((0, 2, 5)) == "minecraft:chest"
+    assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera)
     assert tuple(placement.view.actors) == actors
     placement.set_position((8, 2, 5))
     placement.bar.apply.click()
     settle(window)
-    assert len(window.session.history.entries) == 2
+    assert len(window.document.session.history.entries) == 2
     assert tuple(placement.view.actors) == actors
     expected = source.block_nbt[(2, 0, 2)]["Items"]
-    assert window.session.snapshot().block_nbt[(8, 2, 5)]["Items"] == expected
+    assert window.document.session.snapshot().block_nbt[(8, 2, 5)]["Items"] == expected
     placement.bar.cancel.click()
     assert not placement.active
     saved = output / "placed.nbt"
-    window.save_path(saved)
+    window.sources.save_path(saved)
     settle(window)
     assert Structure(saved).block_nbt[(0, 2, 5)]["Items"] == expected
     assert Structure(saved).block_nbt[(8, 2, 5)]["Items"] == expected
     assert Structure(path).name_at((2, 0, 2)) == "minecraft:chest"
     window.undo()
     settle(window)
-    assert window.session.state_at((8, 2, 5)) in (None, "minecraft:air")
+    assert window.document.session.state_at((8, 2, 5)) in (None, "minecraft:air")
     window.undo()
     settle(window)
-    assert window.session.size == source.size and window.session.origin == (0, 0, 0)
-    assert window.session.state_at((2, 0, 2)) == "minecraft:chest"
-    window.save_path(output / "restored.nbt")
+    assert window.document.session.size == source.size and window.document.session.origin == (0, 0, 0)
+    assert window.document.session.state_at((2, 0, 2)) == "minecraft:chest"
+    window.sources.save_path(output / "restored.nbt")
     settle(window)
-    window.open_path(path)
+    window.sources.open_path(path)
     settle(window)
     window.navigation.stop()
 
@@ -143,13 +143,13 @@ def check_repeat(window, source, path, output):
     assert not repeat.bar.apply.isEnabled()
     repeat.bar.preview.click()
     settle(window)
-    assert window.pending is not None and not window.session.dirty and repeat.bar.apply.isEnabled()
+    assert window.document.pending is not None and not window.document.session.dirty and repeat.bar.apply.isEnabled()
     assert window.views.displayed.state.origin == (0, -6, 0)
     assert window.scene.height == window.slicing.value
     assert window.plotter.geometry() == viewport
     repeat.bar.grab().save(str(output / "repeat.png"))
     repeat.bar.gap.setValue(0)
-    assert window.pending is None and not repeat.bar.apply.isEnabled()
+    assert window.document.pending is None and not repeat.bar.apply.isEnabled()
     settle(window)
     repeat.bar.preview.click()
     settle(window)
@@ -157,21 +157,21 @@ def check_repeat(window, source, path, output):
     repeat.bar.apply.click()
     settle(window)
     assert not repeat.active and not repeat.bar.isVisible()
-    assert len(window.session.history.entries) == 1 and window.session.origin == (0, -3, 0)
-    assert window.session.state_at((2, 3, 2)) == "minecraft:chest"
+    assert len(window.document.session.history.entries) == 1 and window.document.session.origin == (0, -3, 0)
+    assert window.document.session.state_at((2, 3, 2)) == "minecraft:chest"
     for y in range(3):
-        assert window.session.state_at((2, y, 2)) == "minecraft:chest"
-        assert window.session.snapshot().block_nbt[(2, y, 2)]["Items"] == source.block_nbt[(2, 0, 2)]["Items"]
-    assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera)
+        assert window.document.session.state_at((2, y, 2)) == "minecraft:chest"
+        assert window.document.session.snapshot().block_nbt[(2, y, 2)]["Items"] == source.block_nbt[(2, 0, 2)]["Items"]
+    assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera)
     window.undo()
     settle(window)
-    assert window.session.origin == (0, 0, 0) and window.session.size == source.size
-    assert not window.session.dirty
+    assert window.document.session.origin == (0, 0, 0) and window.document.session.size == source.size
+    assert not window.document.session.dirty
     window.redo()
     settle(window)
-    assert window.session.origin == (0, -3, 0)
+    assert window.document.session.origin == (0, -3, 0)
     saved = output / "repeated.nbt"
-    window.save_path(saved)
+    window.sources.save_path(saved)
     settle(window)
     assert len(Structure(saved).block_nbt) == 4
     assert Structure(path).size == source.size
@@ -180,7 +180,7 @@ def check_repeat(window, source, path, output):
     repeat.preview()
     repeat.close()
     settle(window)
-    assert not repeat.active and window.pending is None and not window.session.dirty
+    assert not repeat.active and window.document.pending is None and not window.document.session.dirty
 
 
 def main():
@@ -199,7 +199,7 @@ def main():
     window = EditorWindow(off_screen=True, cache_dir=output / "cache")
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         moves = check_drag(window, output)
@@ -214,7 +214,7 @@ def main():
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -10,6 +10,7 @@ from structura_core import Structure, save_structure
 
 from smoke_gui import settle
 from structura_edit.ui import EditorWindow
+from structura_edit.editor_document import EditPreview
 
 
 def main():
@@ -28,12 +29,12 @@ def main():
     window = EditorWindow(off_screen=True)
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         distant = tuple(window.scene.sections[(2, 0, 0)])
         entities = tuple(window.scene.sections["entities"])
         original = tuple(window.scene.sections[(0, 0, 0)])
-        window.pending = window.session.set_block((15, 1, 1), "minecraft:glass")
+        window.document.show_preview(EditPreview(window.document.session.set_block((15, 1, 1), "minecraft:glass")))
         start = perf_counter()
         window.render_scene()
         settle(window)
@@ -45,19 +46,19 @@ def main():
         window.apply_pending()
         settle(window)
         assert tuple(window.scene.sections[(0, 0, 0)]) == preview
-        assert window.session.state_at((15, 1, 1)) == "minecraft:glass"
+        assert window.document.session.state_at((15, 1, 1)) == "minecraft:glass"
         window.undo()
         settle(window)
-        assert window.session.state_at((15, 1, 1)) == "minecraft:stone"
+        assert window.document.session.state_at((15, 1, 1)) == "minecraft:stone"
         window.redo()
         settle(window)
-        assert window.session.state_at((15, 1, 1)) == "minecraft:glass"
-        window.pending = window.session.set_block((16, 1, 1), "minecraft:air")
+        assert window.document.session.state_at((15, 1, 1)) == "minecraft:glass"
+        window.document.show_preview(EditPreview(window.document.session.set_block((16, 1, 1), "minecraft:air")))
         window.render_scene()
         window.views.flush()
         window.discard_pending()
         settle(window)
-        assert window.session.state_at((16, 1, 1)) == "minecraft:stone"
+        assert window.document.session.state_at((16, 1, 1)) == "minecraft:stone"
         assert tuple(window.scene.sections[(2, 0, 0)]) == distant
         assert tuple(window.scene.sections["entities"]) == entities
         window.plotter.screenshot(str(args.output / "scene.png"))
@@ -67,7 +68,7 @@ def main():
         (args.output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

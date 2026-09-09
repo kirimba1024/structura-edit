@@ -76,9 +76,16 @@ class EditorMenus:
         search = edit.addAction("Find command…", self.find_command)
         search.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
-    def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, clipboard=False):
+    def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, repeating=False,
+             clipboard=False, object_count=0, single_block=False):
         ready = session is not None and not busy
         editable = ready and not session.readonly
+        objects_ready = ready and not preview and not placing
+        self.actions["inspect"].setEnabled(objects_ready and (object_count > 0 or single_block))
+        for name in ("entity_all", "find_objects"):
+            self.actions[name].setEnabled(objects_ready)
+        for name in ("entity_move", "entity_duplicate", "entity_rotate", "entity_delete"):
+            self.actions[name].setEnabled(objects_ready and editable and object_count > 0)
         self.selection_menu.setEnabled(session is not None)
         for name in (*REGION_COMMANDS, "recipe"):
             self.actions[name].setEnabled(editable and selected and not placing)
@@ -99,6 +106,7 @@ class EditorMenus:
         for name in ("take", "duplicate"):
             self.actions[name].setEnabled(editable and selected and not preview and not placing)
         self.actions["paste"].setEnabled(editable and clipboard and not preview and not placing)
+        self.actions["repeat"].setEnabled(editable and selected and not preview and not placing)
         self.actions["import"].setEnabled(editable and not preview and not placing)
         for name in ("all", "clear", "coordinates"):
             self.actions[name].setEnabled(ready and not placing)
@@ -108,7 +116,7 @@ class EditorMenus:
         for name in ("undo", "redo"):
             label = getattr(session.history, name + "_label") if session else ""
             self.actions[name].setText(name.title() + (" " + label if label else ""))
-        self.actions["apply"].setEnabled(editable and (preview_ready or placing))
+        self.actions["apply"].setEnabled(editable and (preview_ready or (placing and not repeating)))
         self.actions["discard"].setEnabled(preview or placing)
 
     def find_command(self):

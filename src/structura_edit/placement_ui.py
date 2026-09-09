@@ -6,7 +6,7 @@ from .placement import Placement
 from .placement_bar import PlacementBar
 from .placement_view import PlacementView
 from .placement_drag import PlacementDrag
-from .source_dialog import source_version_options
+from .source_ui import source_version_options
 from .source_loading import SourceVersionRequired
 
 
@@ -17,9 +17,10 @@ class PlacementController(QObject):
     cancel_requested = Signal()
     cancelled = Signal()
 
-    def __init__(self, scene, navigation, submit):
+    def __init__(self, scene, navigation, submit, commit):
         super().__init__(navigation)
         self.scene, self.navigation, self.submit = scene, navigation, submit
+        self._commit = commit
         self.bar = PlacementBar(scene.plotter)
         self.view = PlacementView(scene.plotter)
         self.clipboard = None
@@ -205,11 +206,13 @@ class PlacementController(QObject):
         if token != self.token or self.model is None:
             return
         change, data = result
+        self.commit(change, data)
+
+    def commit(self, change, data=None):
         offset = change.resize.offset if change.resize is not None else (0, 0, 0)
         bounds = tuple(tuple(v + d for v, d in zip(bound, offset)) for bound in self.model.bounds)
         self.committing = True
-        self.submit("apply", lambda session: self._applied(session, data, bounds, len(change)),
-                    session=self.session, change=change)
+        self._commit(change, lambda session: self._applied(session, data, bounds, len(change)))
 
     def _applied(self, session, data, bounds, count):
         self.committing = False

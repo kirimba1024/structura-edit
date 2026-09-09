@@ -6,7 +6,7 @@ from amulet_nbt import ByteArrayTag, CompoundTag, IntArrayTag, ListTag
 from structura_core.export_schematic import _encode_varints, schematic_root
 from structura_core.schematic import _palette, _varints
 
-from .schematic_objects import updated_entities
+from .schematic_objects import updated_entities, wrapped_block_entity
 
 
 def save_resized(schematic, structure, entities, path, cells):
@@ -31,11 +31,7 @@ def save_resized(schematic, structure, entities, path, cells):
             position = tuple(int(v) for v in record["Pos"])
             cell = cells.get(position)
             origin = cell.origin if cell is not None else position
-            wrapper = deepcopy(originals.get(origin, CompoundTag()))
-            wrapper["Pos"] = record.pop("Pos")
-            wrapper["Id"] = record.pop("Id")
-            wrapper["Data"] = record
-            records.append(wrapper)
+            records.append(wrapped_block_entity(originals.get(origin, CompoundTag()), record))
         blocks["BlockEntities"] = records
     output.root["Entities"] = updated_entities(schematic, entities)
     if output.version == 2 and "BiomeData" in output.root:

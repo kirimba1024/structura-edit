@@ -44,25 +44,14 @@ class PlacementPlan:
         return f"{changed:,} changed · {self.skipped:,} skipped" if changed else f"No changes · {self.skipped:,} skipped"
 
 
-def check_destination(edit, position):
-    if not hasattr(edit, "world_changes"):
-        return
-    x, y, z = (p + o for p, o in zip(position, edit.origin))
-    if (x // 16, z // 16) not in edit.loaded_chunks:
-        raise ValueError("Placement includes absent chunks; select a loaded area")
-    if edit.loaded_sections is not None and (x // 16, y // 16, z // 16) not in edit.loaded_sections:
-        raise ValueError("Placement includes an absent section; stay within the world's existing build height")
-
-
 def filter_destinations(edit, targets, rule):
     if rule.mode == "all":
-        if hasattr(edit, "world_changes"):
-            for position in targets:
-                check_destination(edit, position)
+        for position in targets:
+            edit._check_destination(position)
         return targets, 0
     accepted, allowed_states = {}, {}
     for position, cell in targets.items():
-        check_destination(edit, position)
+        edit._check_destination(position)
         before = edit._cell(position)
         state = before.state if before else None
         if state not in allowed_states:
@@ -72,7 +61,7 @@ def filter_destinations(edit, targets, rule):
     return accepted, len(targets) - len(accepted)
 
 
-def protect_skipped_sources(clipboard, cells, position, accepted):
+def take_targets(clipboard, cells, position, accepted):
     sources = dict(zip((local for local, _ in clipboard.cells), clipboard.sources))
     incoming = {tuple(p + d for p, d in zip(local, position)): sources[local] for local, cell in cells
                 if cell.state.split("[", 1)[0] not in EMPTY}
@@ -85,7 +74,9 @@ def protect_skipped_sources(clipboard, cells, position, accepted):
             skipped += 1
             if source in incoming:
                 protected.append(incoming[source])
-    return skipped
+    targets = {source: _Cell("minecraft:air") for target, source in incoming.items() if target in accepted}
+    targets.update(accepted)
+    return targets, skipped
 
 
 def plan_placement(edit, clipboard, positions, *, take=False, include_air=False, include_blocks=True, include_entities=True,
@@ -113,8 +104,10 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
                 *(range(lo, lo + size) for lo, size in zip(position, clipboard.size))))
         targets.update((tuple(p + d for p, d in zip(local, position)), cell) for local, cell in cells)
     accepted, skipped = filter_destinations(edit, targets, destination)
-    if take and skipped:
-        skipped += protect_skipped_sources(clipboard, cells, positions[0], accepted)
+    targets = accepted
+    if take:
+        targets, protected = take_targets(clipboard, cells, positions[0], accepted)
+        skipped += protected
     entities = place_entities(edit, clipboard, positions, take=take) if include_entities else ()
     if entities or destination.mode != "all" or not include_blocks:
         footprint = list(accepted) if destination.mode != "all" or not include_blocks else [lower, tuple(v - 1 for v in upper)]
@@ -122,16 +115,6 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
         lower = tuple(min(p[axis] for p in occupied) for axis in range(3)) if occupied else None
         size = tuple(max(p[axis] for p in occupied) - lower[axis] + 1 for axis in range(3)) if occupied else None
         resize = placement_extent(edit, lower, size) if occupied else None
-    if take:
-        targets = {}
-        sources = dict(zip((local for local, _ in clipboard.cells), clipboard.sources))
-        for local, cell in cells:
-            if cell.state.split("[", 1)[0] not in EMPTY and any(
-                    tuple(p + d for p, d in zip(local, destination_position)) in accepted for destination_position in positions):
-                targets[sources[local]] = _Cell("minecraft:air")
-        targets.update(accepted)
-    else:
-        targets = accepted
     changes = []
     for position, cell in targets.items():
         before = edit._cell(position)

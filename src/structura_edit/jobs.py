@@ -1,119 +1,13 @@
-import io
 import multiprocessing
 import queue
 import threading
 import traceback
-from contextlib import redirect_stdout, redirect_stderr
 from time import monotonic
-
-from .source_loading import open_source, open_with_version_request
-
-PROTECTED_JOBS = {"save", "export", "apply", "history"}
-
-
-class _Output(io.StringIO):
-    def write(self, text):
-        if self.tell() > 16_000:
-            self.seek(0)
-            self.truncate()
-        return super().write(text[-16_000:])
-
-
-def execute(kind, args, progress=None, *, object_search=None):
-    if kind in ("world", "render", "map", "clipboard", "placement"):
-        from .resources import refresh_resources
-
-        refresh_resources(args.get("assets"))
-    if kind in ("clipboard", "placement"):
-        from .placement_jobs import prepare_clipboard, prepare_placement
-
-        prepare = prepare_clipboard if kind == "clipboard" else prepare_placement
-        return prepare(**args, progress=progress)
-    if kind == "world":
-        from .preview import build_sections
-        from .sections import prepare_sections
-        from .height_slice import HeightSlice
-
-        session = open_source(**{key: args[key] for key in
-                                ("path", "center", "dimension", "radius", "vertical_radius", "include_entities")},
-                              world_changes=args.get("world_changes"))
-        height = args.get("height", HeightSlice())
-        rendered = build_sections(**prepare_sections(session, height=height), assets=args["assets"], progress=progress)
-        return session, dict(rendered, height=height)
-    if kind == "open":
-        return open_with_version_request(**args)
-    if kind == "save":
-        args["session"].save(args["path"])
-        return args["session"]
-    if kind == "apply":
-        args["session"].apply(args["change"])
-        return args["session"]
-    if kind == "history":
-        session, index = args["session"], args["index"]
-        if not 0 <= index <= len(session.history.entries):
-            raise ValueError("Invalid history position")
-        total = abs(index - session.history.cursor)
-        while session.history.cursor != index:
-            getattr(session, "undo" if index < session.history.cursor else "redo")()
-            if progress:
-                progress("History", total - abs(index - session.history.cursor), total)
-        return session
-    if kind == "render":
-        from .preview import build_sections
-
-        return build_sections(**args, progress=progress)
-    if kind == "export":
-        return args["session"].export_selection(args["selection"], args["path"])
-    if kind == "map":
-        import sqlite3
-        from .map_cache import store_maps
-        from .map_images import build_source_maps
-
-        images = build_source_maps(args["source"], args["assets"], progress=progress)
-        atlas = args.get("atlas")
-        if atlas is not None:
-            try:
-                images, atlas = store_maps(atlas, images)
-            except (OSError, ValueError, sqlite3.Error) as error:
-                return images, None, f"Map cache unavailable: {error}"
-        return images, atlas, ""
-    if kind == "objects":
-        from .object_edits import prepare_object_change
-
-        return prepare_object_change(**args)
-    if kind == "object_search":
-        from .object_search import ObjectSearch
-
-        return (object_search or ObjectSearch()).find(args["session"], **args["query"])
-    if kind == "operation":
-        from .commands import COMMANDS
-
-        return COMMANDS[args["mode"]].execute(args["session"], args["selection"], **args["values"])
-    if kind == "placement_plan":
-        from .clipboard_placement import plan_placement
-
-        placement = args["placement"]
-        return plan_placement(args["session"], placement.clipboard, (placement.position,), take=placement.take,
-                              include_air=placement.include_air, destination=placement.destination,
-                              include_blocks=placement.include_blocks, include_entities=placement.include_entities,
-                              label="Take" if placement.take else "Paste")
-    if kind == "repeat":
-        from .clipboard_placement import plan_stack
-
-        return plan_stack(args["session"], **{key: value for key, value in args.items() if key != "session"})
-    if kind == "recipe":
-        session = args["session"]
-        branch = session.fork()
-        output = _Output()
-        namespace = {"edit": branch, "selection": args["selection"]}
-        with redirect_stdout(output), redirect_stderr(output):
-            exec(compile(args["code"], "<structura recipe>", "exec"), namespace)
-        return session.diff(branch), output.getvalue()[-16_000:]
-    raise ValueError(f"Unknown task: {kind}")
 
 
 def _serve(connection):
     from .runtime_code import CodeVersion
+    from .tasks import execute
     from .object_search import ObjectSearch
 
     code = CodeVersion()
@@ -149,17 +43,27 @@ class Worker:
         self._closing = threading.Event()
         self.busy = False
 
+    def _start(self):
+        context = multiprocessing.get_context("spawn")
+        connection, child = context.Pipe()
+        process = context.Process(target=_serve, args=(child,), daemon=True)
+        try:
+            process.start()
+        except Exception:
+            connection.close()
+            process.close()
+            raise
+        finally:
+            child.close()
+        self._connection, self._process = connection, process
+
     def submit(self, kind, *, prepare_args=None, **args):
         if self.busy:
             raise RuntimeError("A task is already running")
         if self._process is None or not self._process.is_alive():
             if self._process is not None:
                 self.close()
-            context = multiprocessing.get_context("spawn")
-            self._connection, child = context.Pipe()
-            self._process = context.Process(target=_serve, args=(child,), daemon=True)
-            self._process.start()
-            child.close()
+            self._start()
         self.busy = True
         self._progress = queue.Queue(maxsize=1)
         updates = self._progress

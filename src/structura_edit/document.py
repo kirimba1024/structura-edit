@@ -1,11 +1,13 @@
 from copy import deepcopy
 from pathlib import Path
 
-from amulet_nbt import CompoundTag, IntArrayTag, IntTag, ListTag
 from structura_core import load_structure
 from structura_core.export_schematic import schematic_root
-from structura_core.nbt import save_structure
+from structura_core.nbt import parse_state, save_structure
 from structura_core.schematic import Schematic
+
+from .cell_data import cell_payload, cell_record
+from .schematic_objects import updated_block_entities, updated_entities
 
 
 def copy_structure(structure):
@@ -37,6 +39,31 @@ class Document:
                                    source_data_version=source_data_version, target_version=target_version, strict=strict)
         return cls(structure, path=path, readonly=suffix not in (".nbt", ".snbt", ".schematic"))
 
+    def snapshot(self, cells, entities):
+        structure = copy_structure(self.source)
+        literal_indices = {}
+        for position, cell in cells.items():
+            index = cell.variant
+            if index is None:
+                if cell.state not in literal_indices:
+                    literal_indices[cell.state] = len(structure.palette_raw)
+                    for palette in structure.palettes_raw:
+                        palette.append(parse_state(cell.state))
+                index = literal_indices[cell.state]
+            structure.present[position] = index
+            structure.block_nbt.pop(position, None)
+            if cell.keep_nbt:
+                structure.block_nbt[position] = cell_payload(self.source, cell, position)
+            if cell.origin != position or cell.data is not None:
+                record = cell_record(self.source, cell)
+                if record is None:
+                    structure._block_records.pop(position, None)
+                else:
+                    structure._block_records[position] = record
+        structure.entities = [value.unpack() for value in entities.values()]
+        structure.validate()
+        return structure
+
     def save(self, structure, path, cells, entities=None):
         if self.readonly:
             raise ValueError("This source is view-only in this release")
@@ -56,33 +83,8 @@ class Document:
                 blocks["BlockData" if output.version == 2 else "Data"] = encoded["BlockData"]
                 if output.version == 2:
                     blocks["PaletteMax"] = encoded["PaletteMax"]
-                records = blocks.get("BlockEntities", ListTag())
-                original = {tuple(int(v) for v in record["Pos"]): record for record in records}
-                generated = {tuple(int(v) for v in record["Pos"]): record for record in encoded["BlockEntities"]}
-                retained = [
-                    record for record in records
-                    if tuple(int(v) for v in record["Pos"]) not in cells
-                ]
-                for position, cell in cells.items():
-                    if cell.keep_nbt and cell.data is None and cell.origin in original:
-                        record = deepcopy(original[cell.origin])
-                        record["Pos"] = IntArrayTag(position)
-                        payload = record.get("Data", record) if output.version == 3 else record
-                        for axis, old, new in zip("xyz", cell.origin, position):
-                            if axis in payload and old != new:
-                                payload[axis] = IntTag(int(payload[axis]) + new - old)
-                        retained.append(record)
-                    elif cell.keep_nbt and position in generated:
-                        record = deepcopy(generated[position])
-                        if output.version == 3:
-                            wrapper = deepcopy(original.get(cell.origin, CompoundTag()))
-                            wrapper.update({"Pos": record.pop("Pos"), "Id": record.pop("Id"), "Data": record})
-                            record = wrapper
-                        retained.append(record)
-                blocks["BlockEntities"] = ListTag(retained)
+                blocks["BlockEntities"] = updated_block_entities(output, encoded["BlockEntities"], cells)
             if entities is not None and [value.unpack() for value in entities.values()] != self.source.entities:
-                from .schematic_objects import updated_entities
-
                 output.root["Entities"] = updated_entities(output, entities)
             output.save(path)
         else:

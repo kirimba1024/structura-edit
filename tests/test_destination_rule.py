@@ -91,18 +91,17 @@ def test_negative_keep_existing_placement_expands_and_restores(edit):
     assert edit.origin == (0, 0, 0) and not edit.dirty
 
 
-@pytest.mark.parametrize("mode", ["air", "material"])
-def test_missing_world_cells_are_not_treated_as_air(edit, mode):
+@pytest.mark.parametrize("mode", ["all", "air", "material"])
+def test_missing_world_cells_are_not_treated_as_air(edit, world_edit, mode):
     clipboard = edit.copy(edit.select(((0, 0, 0), (1, 1, 1))))
-    edit.world_changes = object()
-    edit.loaded_chunks = set()
-    edit.loaded_sections = set()
+    world_edit.loaded_chunks = set()
+    world_edit.loaded_sections = set()
     with pytest.raises(ValueError, match="absent chunks"):
-        edit.paste(clipboard, (2, 0, 0), destination=DestinationRule(mode, "minecraft:stone"))
-    edit.loaded_chunks = {(0, 0)}
+        world_edit.paste(clipboard, (2, 0, 0), destination=DestinationRule(mode, "minecraft:stone"))
+    world_edit.loaded_chunks = {(0, 0)}
     with pytest.raises(ValueError, match="absent section"):
-        edit.paste(clipboard, (2, 0, 0), destination=DestinationRule(mode, "minecraft:stone"))
-    assert not edit.dirty
+        world_edit.paste(clipboard, (2, 0, 0), destination=DestinationRule(mode, "minecraft:stone"))
+    assert not world_edit.dirty
 
 
 def test_modded_ids_and_canonical_exact_states_need_no_registry():

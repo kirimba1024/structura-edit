@@ -19,29 +19,23 @@ class RepeatBar(OverlayBar):
         layout = QGridLayout(self)
         layout.setContentsMargins(GRID, GRID, GRID, GRID)
         layout.setSpacing(GRID)
-        self.copies = QSpinBox()
-        self.copies.setRange(1, 500_000)
-        self.copies.setValue(3)
-        self.copies.setKeyboardTracking(False)
-        self.copies.setAccessibleName("Extra copies")
+        self.copies = QSpinBox(minimum=1, maximum=500_000, value=3, keyboardTracking=False,
+                               accessibleName="Extra copies")
         self.direction = QComboBox()
         for label, axis, sign in (("Up (+Y)", 1, 1), ("Down (−Y)", 1, -1), ("East (+X)", 0, 1),
                                   ("West (−X)", 0, -1), ("South (+Z)", 2, 1), ("North (−Z)", 2, -1)):
             self.direction.addItem(label, (axis, sign))
         self.direction.setAccessibleName("Copy direction")
-        self.gap = QSpinBox()
-        self.gap.setRange(0, 30_000_000)
-        self.gap.setKeyboardTracking(False)
-        self.gap.setAccessibleName("Gap in blocks")
-        self.gap.setToolTip("Empty space between copies; 0 places them edge to edge")
+        self.gap = QSpinBox(minimum=0, maximum=30_000_000, keyboardTracking=False, accessibleName="Gap in blocks",
+                            toolTip="Empty space between copies; 0 places them edge to edge")
         for column, (label, field) in enumerate((("Extra copies", self.copies), ("Direction", self.direction), ("Gap (blocks)", self.gap))):
             title = QLabel(label)
             title.setBuddy(field)
             layout.addWidget(title, 0, column * 2)
             layout.addWidget(field, 0, column * 2 + 1)
             layout.setColumnStretch(column * 2 + 1, 1)
-        self.air = CellCheckBox("Copy air")
-        self.air.setToolTip("Air inside each copy clears destination blocks; gaps remain unchanged")
+        self.air = CellCheckBox("Copy air",
+                                toolTip="Air inside each copy clears destination blocks; gaps remain unchanged")
         layout.addWidget(self.air, 0, 6)
         self.info = CellLabel("Repeat selection · original stays · one Undo")
         layout.addWidget(self.info, 1, 0, 1, 3)
@@ -51,8 +45,7 @@ class RepeatBar(OverlayBar):
         for name, label, signal, column in (("preview", "Preview", self.preview_requested, 4),
                                             ("apply", "Place copies", self.apply_requested, 5),
                                             ("cancel", "Cancel", self.cancel_requested, 6)):
-            button = QToolButton()
-            button.setText(label)
+            button = QToolButton(text=label)
             button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             button.clicked.connect(lambda checked=False, s=signal: self._submit(s))

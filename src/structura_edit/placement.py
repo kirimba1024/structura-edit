@@ -26,6 +26,14 @@ class Placement:
     def bounds(self):
         return self.position, tuple(p + size for p, size in zip(self.position, self.clipboard.size))
 
+    def plan(self, session):
+        from .clipboard_placement import plan_placement
+
+        return plan_placement(session, self.clipboard, (_position(self.position),), take=self.take,
+                              include_air=self.include_air, destination=self.destination,
+                              include_blocks=self.include_blocks, include_entities=self.include_entities,
+                              label="Take" if self.take else "Paste")
+
     def reason(self, session):
         if session.readonly:
             return "View-only document"

@@ -34,9 +34,7 @@ def prepare_placement(session, placement, *, assets=None, include_entities=True,
     reason = placement.reason(session)
     if reason:
         raise ValueError(reason)
-    change = session.paste(placement.clipboard, placement.position, take=placement.take,
-                           include_air=placement.include_air, destination=placement.destination,
-                           include_blocks=placement.include_blocks, include_entities=placement.include_entities)
+    change = placement.plan(session).change
     prepared = prepare_sections(session, change, previous=(session, None),
                                 include_entities=include_entities, previous_entities=include_entities,
                                 height=height, previous_height=height)

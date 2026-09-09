@@ -26,6 +26,17 @@ class FreeCamera:
         self.translate(np.asarray(position) - self.plotter.camera.position)
         self.render()
 
+    def focus_bounds(self, bounds):
+        lower = tuple(min(bound[0][axis] for bound in bounds) for axis in range(3))
+        upper = tuple(max(bound[1][axis] for bound in bounds) for axis in range(3))
+        center = tuple((lo + hi) / 2 for lo, hi in zip(lower, upper))
+        distance = max(6, math.dist(lower, upper) * 1.5)
+        camera = self.plotter.camera
+        camera.position = tuple(value - direction * distance for value, direction in zip(center, camera.direction))
+        camera.focal_point = center
+        self.needs_render = True
+        self.render()
+
     def look(self, dx, dy):
         camera = self.plotter.camera
         forward = np.asarray(camera.direction, dtype=float)

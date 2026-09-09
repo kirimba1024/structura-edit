@@ -46,7 +46,7 @@ def review(window):
     placement.bar.apply.click()
     settle(window)
     assert window.placement_review.plan is not None
-    assert not window.session.dirty
+    assert not window.document.session.dirty
     assert placement.bar.apply.text() == "Place" and placement.bar.isVisible()
     assert all(not actor.GetVisibility() for actor in placement.view.actors)
     assert not placement.drag.gizmo.handles()
@@ -77,7 +77,7 @@ def check_placement(window, path, output):
     placement.bar.grab().save(str(output / "filtered-preview.png"))
     placement.bar.adjust.click()
     settle(window)
-    assert window.pending is None and window.placement_review.plan is None and placement.active
+    assert window.document.pending is None and window.placement_review.plan is None and placement.active
     assert all(actor.GetVisibility() for actor in placement.view.actors)
     choose_rule(placement.bar.destination, "material", "minecraft:obsidian", output=output)
     plan = review(window)
@@ -94,21 +94,21 @@ def check_placement(window, path, output):
     assert placement.active and placement.model.following and not placement.model.take
     assert tuple(placement.view.actors) == actors
     assert all(actor in preview_actors for actor in window.scene.actors)
-    assert window.session.state_at((2, 0, 2)) == "minecraft:stone"
-    assert window.session.state_at((3, 0, 2)) == "minecraft:air"
-    assert window.session.state_at((7, 0, 2)) == "minecraft:chest"
-    assert len(window.session.history.entries) == 1 and window.pending is None
+    assert window.document.session.state_at((2, 0, 2)) == "minecraft:stone"
+    assert window.document.session.state_at((3, 0, 2)) == "minecraft:air"
+    assert window.document.session.state_at((7, 0, 2)) == "minecraft:chest"
+    assert len(window.document.session.history.entries) == 1 and window.document.pending is None
     placement.bar.cancel.click()
     window.undo()
     settle(window)
-    assert not window.session.dirty and window.session.state_at((3, 0, 2)) == "minecraft:chest"
+    assert not window.document.session.dirty and window.document.session.state_at((3, 0, 2)) == "minecraft:chest"
     window.redo()
     settle(window)
     saved = output / "filtered.nbt"
-    window.save_path(saved)
+    window.sources.save_path(saved)
     settle(window)
     assert Structure(saved).block_nbt[(7, 0, 2)]["Items"] == Structure(path).block_nbt[(3, 0, 2)]["Items"]
-    window.open_path(path)
+    window.sources.open_path(path)
     settle(window)
     window.navigation.stop()
 
@@ -122,20 +122,20 @@ def check_repeat(window, output):
     choose_rule(bar.destination, "air")
     bar.preview.click()
     settle(window)
-    assert window.pending and window.repeat.plan.skipped == 1 and bar.apply.isEnabled()
+    assert window.document.pending and window.repeat.plan.skipped == 1 and bar.apply.isEnabled()
     assert window.views.displayed.state.state_at((6, 0, 2)) == "minecraft:gold_block"
     bar.grab().save(str(output / "repeat-rule.png"))
     bar.apply.click()
     settle(window)
-    assert len(window.session.history.entries) == 1 and window.session.state_at((6, 0, 2)) == "minecraft:gold_block"
+    assert len(window.document.session.history.entries) == 1 and window.document.session.state_at((6, 0, 2)) == "minecraft:gold_block"
     window.undo()
     settle(window)
-    assert not window.session.dirty
+    assert not window.document.session.dirty
     window.repeat.start()
     window.repeat.preview()
     window.repeat.close()
     settle(window)
-    assert not window.session.dirty and window.pending is None
+    assert not window.document.session.dirty and window.document.pending is None
 
 
 def check_negative_review(window):
@@ -145,20 +145,20 @@ def check_negative_review(window):
     placement = window.placement
     placement.set_position((-2, -1, -3))
     choose_rule(placement.bar.destination, "air")
-    camera = np.asarray(window.plotter.camera.position) + window.session.origin
+    camera = np.asarray(window.plotter.camera.position) + window.document.session.origin
     review(window)
     assert np.allclose(np.asarray(window.plotter.camera.position) + window.views.displayed.state.origin, camera)
     placement.bar.adjust.click()
     settle(window)
-    assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera)
+    assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera)
     review(window)
     placement.bar.apply.click()
     settle(window)
-    assert window.session.origin == (-2, -1, -3) and not placement.active
-    assert np.allclose(np.asarray(window.plotter.camera.position) + window.session.origin, camera)
+    assert window.document.session.origin == (-2, -1, -3) and not placement.active
+    assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera)
     window.undo()
     settle(window)
-    assert not window.session.dirty and window.session.origin == (0, 0, 0)
+    assert not window.document.session.dirty and window.document.session.origin == (0, 0, 0)
 
 
 def main():
@@ -177,7 +177,7 @@ def main():
     window.resize(1104, 700)
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         check_placement(window, path, output)
@@ -191,7 +191,7 @@ def main():
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -4,7 +4,7 @@ pytest.importorskip("PySide6.QtWidgets")
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QInputDialog, QLineEdit
 
-from structura_edit.source_dialog import SourceDialog, source_version_options
+from structura_edit.source_ui import SourceDialog, source_version_options
 from structura_edit.source_loading import SourceVersionRequired
 
 

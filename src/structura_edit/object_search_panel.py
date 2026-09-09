@@ -60,33 +60,15 @@ class ObjectSearchPanel(QWidget):
         close.setAccessibleName("Close object search")
         title.addWidget(close)
         layout.addLayout(title)
-        self.search = QLineEdit()
-        self.search.setMaxLength(256)
-        self.search.setPlaceholderText("Name or ID…")
-        self.search.setToolTip("Find by block or entity ID; spaces separate words. Examples: chest, armor stand, mymod:")
-        self.search.setClearButtonEnabled(True)
-        self.search.textChanged.connect(self.changed)
-        self.search.returnPressed.connect(self.changed)
-        search_row = QHBoxLayout()
-        search_row.setSpacing(GRID)
-        search_row.addWidget(self.search, 1)
-        self.find = self.button("Find", self.changed.emit)
-        search_row.addWidget(self.find)
-        layout.addLayout(search_row)
-        filters = QHBoxLayout()
-        filters.setSpacing(GRID)
-        self.kind = QComboBox()
-        for text, kind in (("All objects", "all"), ("Entities", "entities"), ("Blocks", "blocks"), ("Block data", "data")):
-            self.kind.addItem(text, kind)
-        self.kind.setToolTip("Blocks with data includes any block carrying NBT, including modded containers")
-        self.kind.setMinimumWidth(0)
-        self.kind.currentIndexChanged.connect(self.changed)
-        self.in_selection = CellCheckBox("In selection")
-        self.in_selection.setToolTip("Search only inside the selected region, including hidden objects")
-        self.in_selection.toggled.connect(self.changed)
-        filters.addWidget(self.kind, 1)
-        filters.addWidget(self.in_selection, 1)
-        layout.addLayout(filters)
+        self._create_query(layout)
+        self._create_results(layout)
+        self.setFocusProxy(self.search)
+        for widget in (self, self.search, self.kind, self.in_selection, self.results):
+            widget.installEventFilter(self)
+        plotter.installEventFilter(self)
+        self.hide()
+
+    def _create_results(self, layout):
         self.model = ObjectResults(self)
         self.results = QTreeView()
         self.results.setModel(self.model)
@@ -126,16 +108,38 @@ class ObjectSearchPanel(QWidget):
         pages.addWidget(self.info, 1)
         pages.addWidget(self.next)
         layout.addLayout(pages)
-        self.setFocusProxy(self.search)
-        for widget in (self, self.search, self.kind, self.in_selection, self.results):
-            widget.installEventFilter(self)
-        plotter.installEventFilter(self)
-        self.hide()
+
+
+    def _create_query(self, layout):
+        self.search = QLineEdit(maxLength=256, placeholderText="Name or ID…",
+                                toolTip="Find by block or entity ID; spaces separate words. Examples: chest, armor stand, mymod:",
+                                clearButtonEnabled=True)
+        self.search.textChanged.connect(self.changed)
+        self.search.returnPressed.connect(self.changed)
+        search_row = QHBoxLayout()
+        search_row.setSpacing(GRID)
+        search_row.addWidget(self.search, 1)
+        self.find = self.button("Find", self.changed.emit)
+        search_row.addWidget(self.find)
+        layout.addLayout(search_row)
+        filters = QHBoxLayout()
+        filters.setSpacing(GRID)
+        self.kind = QComboBox()
+        for text, kind in (("All objects", "all"), ("Entities", "entities"), ("Blocks", "blocks"), ("Block data", "data")):
+            self.kind.addItem(text, kind)
+        self.kind.setToolTip("Blocks with data includes any block carrying NBT, including modded containers")
+        self.kind.setMinimumWidth(0)
+        self.kind.currentIndexChanged.connect(self.changed)
+        self.in_selection = CellCheckBox("In selection",
+                                         toolTip="Search only inside the selected region, including hidden objects")
+        self.in_selection.toggled.connect(self.changed)
+        filters.addWidget(self.kind, 1)
+        filters.addWidget(self.in_selection, 1)
+        layout.addLayout(filters)
+
 
     def button(self, text, callback):
-        button = QToolButton()
-        button.setText(text)
-        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button = QToolButton(text=text, focusPolicy=Qt.FocusPolicy.NoFocus)
         button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button.clicked.connect(callback)
         return button

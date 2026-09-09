@@ -18,7 +18,7 @@ def wait_search(window):
     until = monotonic() + 20
     while monotonic() < until:
         QTest.qWait(20)
-        if not finder.pending and finder.inflight is None and not finder.timer.isActive() and not window.worker.busy:
+        if not finder.pending and finder.inflight is None and not finder.timer.isActive() and not window.tasks.busy:
             assert finder.result is not None, window.status.text()
             return
     raise AssertionError(f"Search did not settle: {window.status.text()}")
@@ -48,7 +48,7 @@ def main():
     window.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, False)
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         QApplication.setActiveWindow(window)
@@ -71,7 +71,7 @@ def main():
         rect = panel.kind.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, option, QStyle.SubControl.SC_ComboBoxEditField, panel.kind)
         assert panel.kind.fontMetrics().horizontalAdvance(panel.kind.currentText()) <= rect.width()
         panel.actions["select"].click()
-        assert window.selection().lower == (2, 0, 2) and window.selection().volume == 1
+        assert window.document.selection().lower == (2, 0, 2) and window.document.selection().volume == 1
         assert not window.objects.keys and window.plotter.geometry() == viewport
         panel.actions["show"].click()
         assert np.allclose(window.plotter.camera.focal_point, (2.5, 0.5, 2.5))
@@ -85,11 +85,11 @@ def main():
         dialog.apply.click()
         settle(window)
         wait_search(window)
-        assert int(window.session.snapshot().block_nbt[(2, 0, 2)]["storage"]["items"][0]["Count"]) == 7
+        assert int(window.document.session.snapshot().block_nbt[(2, 0, 2)]["storage"]["items"][0]["Count"]) == 7
         window.undo()
         settle(window)
         wait_search(window)
-        assert int(window.session.snapshot().block_nbt[(2, 0, 2)]["storage"]["items"][0]["Count"]) == 3
+        assert int(window.document.session.snapshot().block_nbt[(2, 0, 2)]["storage"]["items"][0]["Count"]) == 3
         query(window, "pig", "entities")
         assert finder.result.total == 2
         panel.results.selectAll()
@@ -111,14 +111,14 @@ def main():
         selection.select(panel.model.index(2, 0), QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows)
         assert not any(button.isEnabled() for button in panel.actions.values())
         old_token, old_result = finder.shown, finder.result
-        window._run("recipe", lambda result: None, session=window.session.fork(), selection=window.session.select(), code="import time\ntime.sleep(0.4)")
+        window.tasks.submit("recipe", lambda result: None, session=window.document.session.fork(), selection=window.document.session.select(), code="import time\ntime.sleep(0.4)")
         panel.search.setText("stone")
         panel.search.setText("pig")
         finder.received(old_token, old_result)
         assert panel.model.rowCount() == 0 and not panel.actions["inspect"].isEnabled()
         wait_search(window)
         assert finder.result.total == 2 and all(row.kind == "entity" for row in finder.result.rows)
-        window.session._document.readonly = True
+        window.document.session._document.readonly = True
         window._sync()
         assert window.menus.actions["find_objects"].isEnabled()
         panel.actions["inspect"].click()
@@ -131,7 +131,7 @@ def main():
         QTest.keyClick(panel.search, Qt.Key.Key_Escape)
         QTest.qWait(20)
         assert not panel.isVisible() and window.plotter.hasFocus()
-        assert window.plotter.geometry() == viewport and not window.session.dirty
+        assert window.plotter.geometry() == viewport and not window.document.session.dirty
         assert Structure(path).block_nbt == source.block_nbt
         result = dict(search="paged IDs, words, blocks with data, entities and region", actions="Show / Select / Inspect; exact block and entity group",
                       data="mod inventory edit and Undo, readonly inspect", safety="stale results ignored, latest query queued, mixed selection rejected",
@@ -139,7 +139,7 @@ def main():
         (output / "result.json").write_text(json.dumps(result, indent=2))
         print(json.dumps(result), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -35,7 +35,7 @@ def main():
     window = EditorWindow(off_screen=True, cache_dir=output / "cache")
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         QTest.qWait(100)
@@ -47,10 +47,10 @@ def main():
         QTest.qWait(50)
         assert 1 <= len(completed) <= 2, len(completed)
         window.plotter.render_window.RemoveObserver(observer)
-        key = next(iter(window.session._entities))
+        key = next(iter(window.document.session._entities))
         lower, upper = window.scene.entity_bounds[key]
         point = screen(window, (np.asarray(lower) + upper) / 2)
-        assert window.scene.entity_at(window.session, point) == key
+        assert window.scene.entity_at(window.document.session, point) == key
         QTest.mouseClick(window.plotter, Qt.MouseButton.LeftButton, pos=point)
         assert window.objects.keys == {key} and window.objects.inspect_button.isEnabled()
         window.objects.inspect_button.click()
@@ -64,11 +64,11 @@ def main():
         dialog.grab().save(str(output / "entity-inspector.png"))
         dialog.apply.click()
         settle(window)
-        assert int(window.session._entities[key].unpack()["nbt"]["Inventory"][0]["Count"]) == 7
-        assert int(window.session._entities[key].unpack()["nbt"]["custom"]["keep"]) == 42
+        assert int(window.document.session._entities[key].unpack()["nbt"]["Inventory"][0]["Count"]) == 7
+        assert int(window.document.session._entities[key].unpack()["nbt"]["custom"]["keep"]) == 42
         window.undo()
         settle(window)
-        assert int(window.session._entities[key].unpack()["nbt"]["Inventory"][0]["Count"]) == 2
+        assert int(window.document.session._entities[key].unpack()["nbt"]["Inventory"][0]["Count"]) == 2
         window.objects.keys.clear()
         window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
         window.objects.inspect()
@@ -80,12 +80,12 @@ def main():
         dialog.tree.replace_value(("data", "storage", "slots", 0, "Count"), from_snbt("9b"))
         dialog.apply.click()
         settle(window)
-        assert int(window.session.snapshot().block_nbt[(2, 0, 2)]["storage"]["slots"][0]["Count"]) == 9
+        assert int(window.document.session.snapshot().block_nbt[(2, 0, 2)]["storage"]["slots"][0]["Count"]) == 9
         window.selection_actions.set_bounds((0, 0, 0), (8, 8, 8))
         window.menus.actions["entity_all"].trigger()
         settle(window)
         assert len(window.objects.keys) == 2
-        initial = window.session.snapshot().entities
+        initial = window.document.session.snapshot().entities
         for action, value, count in (("move", 1, 2), ("rotate", 90, 2), ("duplicate", 1, 4), ("delete", 0, 0)):
             def accept(value=value):
                 dialog = QApplication.activeModalWidget()
@@ -96,24 +96,24 @@ def main():
             QTimer.singleShot(0, accept)
             window.menus.actions["entity_" + action].trigger()
             settle(window)
-            assert len(window.session._entities) == count
+            assert len(window.document.session._entities) == count
             if action == "duplicate":
                 assert len(window.objects.keys) == 2 and key not in window.objects.keys
             window.undo()
             settle(window)
-            assert window.session.snapshot().entities == initial
+            assert window.document.session.snapshot().entities == initial
             window.menus.actions["entity_all"].trigger()
             settle(window)
         saved = output / "edited.nbt"
-        window.session.save(saved)
-        assert Structure(saved).block_nbt == window.session.snapshot().block_nbt
+        window.document.session.save(saved)
+        assert Structure(saved).block_nbt == window.document.session.snapshot().block_nbt
         assert Structure(path).block_nbt == source.block_nbt
         window.plotter.screenshot(str(output / "entities.png"))
         print(json.dumps(dict(selection="click and region", actions="move, rotate, duplicate, delete, undo",
                               inspector="entity and block nested inventories", render="100 requests coalesced",
                               saved=str(saved))), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete)

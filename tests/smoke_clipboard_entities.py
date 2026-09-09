@@ -30,7 +30,7 @@ def check_placement(window, output):
     placement.start("take")
     settle(window)
     placement.set_position((6, 0, 5))
-    original = window.session.snapshot()
+    original = window.document.session.snapshot()
     actors = tuple(placement.view.actors)
     camera = tuple(tuple(v) for v in window.plotter.camera_position)
     viewport = window.plotter.geometry()
@@ -50,7 +50,7 @@ def check_placement(window, output):
     for _ in range(100):
         content.entities.click()
     elapsed = (perf_counter() - start) * 10
-    assert not window.worker.busy and tuple(placement.view.actors) == actors
+    assert not window.tasks.busy and tuple(placement.view.actors) == actors
     assert window.plotter.geometry() == viewport
     assert tuple(tuple(v) for v in window.plotter.camera_position) == camera
     placement.bar.grab().save(str(output / "placement.png"))
@@ -61,35 +61,35 @@ def check_placement(window, output):
     placement.set_destination(DestinationRule("air"))
     placement.bar.apply.click()
     settle(window)
-    assert window.pending and len(window.pending.entities) == 2 and not window.session.dirty
+    assert window.document.pending and len(window.document.pending.entities) == 2 and not window.document.session.dirty
     assert not content.isEnabled()
     assert all(not actor.GetVisibility() for actor in placement.view.actors)
     window.plotter.screenshot(str(output / "preview.png"))
     placement.bar.grab().save(str(output / "review.png"))
     placement.bar.apply.click()
     settle(window)
-    assert placement.active and not placement.model.take and len(window.session.history.entries) == 1
-    assert len(window.session._entities) == 2
-    unique_ids(window.session)
+    assert placement.active and not placement.model.take and len(window.document.session.history.entries) == 1
+    assert len(window.document.session._entities) == 2
+    unique_ids(window.document.session)
     placement.set_position((6, 0, 1))
     placement.bar.apply.click()
     settle(window)
     placement.bar.apply.click()
     settle(window)
-    assert len(window.session.history.entries) == 2 and len(window.session._entities) == 4
-    unique_ids(window.session)
+    assert len(window.document.session.history.entries) == 2 and len(window.document.session._entities) == 4
+    unique_ids(window.document.session)
     placement.bar.cancel.click()
     window.undo()
     settle(window)
     window.undo()
     settle(window)
-    assert window.session.snapshot().entities == original.entities
-    assert window.session.snapshot().block_nbt == original.block_nbt and not window.session.dirty
+    assert window.document.session.snapshot().entities == original.entities
+    assert window.document.session.snapshot().block_nbt == original.block_nbt and not window.document.session.dirty
     return dict(toggle_ms=round(elapsed, 3), toggles=100, rebuilt_meshes=0)
 
 
 def check_repeat(window, output):
-    original = window.session.snapshot()
+    original = window.document.session.snapshot()
     window.selection_actions.set_bounds((1, 0, 1), (4, 4, 4))
     window.repeat.start()
     bar = window.repeat.bar
@@ -98,10 +98,10 @@ def check_repeat(window, output):
     assert not bar.air.isEnabled() and not bar.destination.isEnabled()
     bar.preview.click()
     settle(window)
-    assert window.pending and not window.pending.changes and len(window.pending.entities) == 4
+    assert window.document.pending and not window.document.pending.changes and len(window.document.pending.entities) == 4
     assert "4 entities" in bar.info.text()
     click(bar.content.entities)
-    assert window.pending is None and not bar.preview.isEnabled() and not bar.apply.isEnabled()
+    assert window.document.pending is None and not bar.preview.isEnabled() and not bar.apply.isEnabled()
     settle(window)
     click(bar.content.entities)
     bar.preview.click()
@@ -109,16 +109,16 @@ def check_repeat(window, output):
     bar.grab().save(str(output / "repeat.png"))
     bar.apply.click()
     settle(window)
-    assert len(window.session._entities) == 6 and len(window.session.history.entries) == 1
-    assert window.session.snapshot().block_nbt == original.block_nbt
-    unique_ids(window.session)
+    assert len(window.document.session._entities) == 6 and len(window.document.session.history.entries) == 1
+    assert window.document.session.snapshot().block_nbt == original.block_nbt
+    unique_ids(window.document.session)
     path = output / "entities.nbt"
-    window.save_path(path)
+    window.sources.save_path(path)
     settle(window)
-    assert Structure(path).entities == window.session.snapshot().entities
+    assert Structure(path).entities == window.document.session.snapshot().entities
     window.undo()
     settle(window)
-    assert window.session.snapshot().entities == original.entities
+    assert window.document.session.snapshot().entities == original.entities
 
 
 def main():
@@ -139,7 +139,7 @@ def main():
     window.resize(1104, 720)
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         performance = check_placement(window, output)
@@ -151,7 +151,7 @@ def main():
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

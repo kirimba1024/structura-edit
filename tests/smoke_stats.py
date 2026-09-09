@@ -32,7 +32,7 @@ def main():
             return {stats.model.item(i).data(Qt.ItemDataRole.UserRole): stats.model.item(i).text()
                     for i in range(stats.model.rowCount())}
         try:
-            window.open_path(path)
+            window.sources.open_path(path)
             settle(window)
             window.selection_actions.select_all()
             assert not stats.toggle.isChecked() and stats.future is None
@@ -57,7 +57,7 @@ def main():
             QTest.qWait(180)
             QTest.keyRelease(window.plotter, Qt.Key.Key_W)
             assert stats.key == stats.ready_key == key and stats.future is None
-            assert not window.worker.busy and not window.views.render_queued and not window.views.map_queued
+            assert not window.tasks.busy and not window.views.render_queued and not window.views.map_queued
             window.minimap.set_large(True)
             assert not stats.isVisible()
             window.minimap.set_large(False)
@@ -67,7 +67,7 @@ def main():
             print(json.dumps({"stats": "collapsed by default; textures and counts; Apply/Undo refresh",
                               "interaction": "mouse preserves focus; map hides panel; flight starts no work"}), flush=True)
         finally:
-            window.session = None
+            window.document.load(None)
             window.close()
             window.deleteLater()
             QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

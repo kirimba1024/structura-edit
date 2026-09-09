@@ -31,6 +31,15 @@ class PlacementBar(OverlayBar):
         self.size_label.setMinimumWidth(GRID * 20)
         self.actions.addWidget(self.size_label, 1)
         self.stats = SelectionStats()
+        self._create_placement()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(GRID, GRID, GRID, GRID)
+        layout.setSpacing(0)
+        layout.addWidget(self.selection)
+        layout.addWidget(self.stats)
+        layout.addWidget(self.placement)
+
+    def _create_placement(self):
         self.placement = QWidget()
         layout = QGridLayout(self.placement)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -39,18 +48,15 @@ class PlacementBar(OverlayBar):
             layout.setColumnStretch(column, 1)
         self.info = CellLabel()
         layout.addWidget(self.info, 0, 0, 1, 4)
-        self.follow = CellCheckBox("Follow cursor")
-        self.follow.setToolTip("Follow the cursor · click in the scene to pin the preview")
-        self.follow.setAccessibleName("Follow cursor")
-        self.follow.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.follow = CellCheckBox("Follow cursor", toolTip="Follow the cursor · click in the scene to pin the preview",
+                                   accessibleName="Follow cursor", focusPolicy=Qt.FocusPolicy.NoFocus)
         self.follow.toggled.connect(self.follow_changed)
-        self.air = CellCheckBox("Copy air")
-        self.air.setToolTip("Include air and omitted cells; overwrite destination blocks")
-        self.air.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.air = CellCheckBox("Copy air", toolTip="Include air and omitted cells; overwrite destination blocks",
+                                focusPolicy=Qt.FocusPolicy.NoFocus)
         self.air.toggled.connect(self.air_changed)
-        self.repeat = CellCheckBox("Keep placing")
-        self.repeat.setToolTip("Keep this copy ready after placing; each placement can be undone")
-        self.repeat.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.repeat = CellCheckBox("Keep placing",
+                                   toolTip="Keep this copy ready after placing; each placement can be undone",
+                                   focusPolicy=Qt.FocusPolicy.NoFocus)
         self.repeat.toggled.connect(self.repeat_changed)
         layout.addWidget(self.follow, 0, 4, 1, 3)
         self.adjust = self._button("Adjust", self.adjust_requested)
@@ -66,6 +72,9 @@ class PlacementBar(OverlayBar):
         self.cancel.setToolTip("Cancel placement (Escape)")
         layout.addWidget(self.apply, 0, 10)
         layout.addWidget(self.cancel, 0, 11)
+        self._create_options(layout)
+
+    def _create_options(self, layout):
         self.details = QWidget()
         details = QGridLayout(self.details)
         details.setContentsMargins(0, 0, 0, 0)
@@ -74,12 +83,8 @@ class PlacementBar(OverlayBar):
             details.setColumnStretch(column, 1)
         self.coordinates = []
         for column, axis in enumerate("XYZ"):
-            field = QSpinBox()
-            field.setRange(-30_000_000, 30_000_000)
-            field.setKeyboardTracking(False)
-            field.setAccessibleName(f"Placement {axis}")
-            field.setPrefix(axis + " ")
-            field.setMinimumWidth(0)
+            field = QSpinBox(minimum=-30_000_000, maximum=30_000_000, keyboardTracking=False,
+                             accessibleName=f"Placement {axis}", prefix=axis + " ", minimumWidth=0)
             field.valueChanged.connect(self._coordinates_changed)
             details.addWidget(field, 0, column)
             self.coordinates.append(field)
@@ -105,17 +110,10 @@ class PlacementBar(OverlayBar):
         layout.addWidget(self.more, 1, 4, 1, 2)
         layout.addWidget(self.destination, 1, 6, 1, 3)
         layout.addWidget(self.hint, 1, 9, 1, 3)
-        layout.addWidget(self.details, 2, 0, 1, 12)
         self.details.hide()
         self.content = ClipboardContent()
         layout.addWidget(self.content, 2, 0, 1, 12)
         layout.addWidget(self.details, 3, 0, 1, 12)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(GRID, GRID, GRID, GRID)
-        layout.setSpacing(0)
-        layout.addWidget(self.selection)
-        layout.addWidget(self.stats)
-        layout.addWidget(self.placement)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -136,8 +134,7 @@ class PlacementBar(OverlayBar):
         layout.addWidget(self.details, 4 if narrow else 3, 0, 1, 12)
 
     def _button(self, text, signal):
-        button = QToolButton()
-        button.setText(text)
+        button = QToolButton(text=text)
         button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         button.clicked.connect(signal)

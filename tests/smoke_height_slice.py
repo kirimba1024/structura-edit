@@ -15,11 +15,11 @@ from structura_edit.ui import EditorWindow
 
 
 def check_world(window, path):
-    window.open_path(path)
+    window.sources.open_path(path)
     settle(window)
     window.navigation.stop()
     with QSignalBlocker(window.slicing.y):
-        window.slicing.y.setValue(int(window.session.center[1]) - 1)
+        window.slicing.y.setValue(int(window.document.session.center[1]) - 1)
     window.slicing.mode.setCurrentIndex(1)
     settle(window)
     assert window.minimap.cache.spec is None
@@ -37,7 +37,7 @@ def check_world(window, path):
         window.views.submit = submit
     assert window.views.displayed.height == current
     assert "render" not in submissions
-    assert not window.session.dirty and window.minimap.cache.spec is None
+    assert not window.document.session.dirty and window.minimap.cache.spec is None
     window.slicing.mode.setCurrentIndex(0)
     window.minimap.set_large(True)
     settle(window)
@@ -65,7 +65,7 @@ def main():
     window = EditorWindow(off_screen=True, cache_dir=output / "cache")
     window.show()
     try:
-        window.open_path(path)
+        window.sources.open_path(path)
         settle(window)
         window.navigation.stop()
         window.plotter.camera.position = (3, 20, 3)
@@ -74,7 +74,7 @@ def main():
         window.camera.needs_render = True
         window.camera.render()
         point = screen(window, (2, 0, 2))
-        assert window.scene.hit_at(window.session, point).position == (2, 5, 2)
+        assert window.scene.hit_at(window.document.session, point).position == (2, 5, 2)
         viewport_size = window.plotter.size()
         camera = tuple(window.plotter.camera.position)
         control = window.slicing
@@ -86,9 +86,9 @@ def main():
         settle(window)
         assert window.views.displayed.height == HeightSlice("below", 3)
         assert len(window.scene.entity_bounds) == 1
-        assert window.scene.hit_at(window.session, point).position == (2, 0, 2)
+        assert window.scene.hit_at(window.document.session, point).position == (2, 0, 2)
         QTest.mouseClick(window.plotter, Qt.MouseButton.LeftButton, pos=point)
-        assert window.selected.region.lower == (2, 0, 2)
+        assert window.document.selected.region.lower == (2, 0, 2)
         assert window.plotter.size() == viewport_size
         assert np.allclose(window.plotter.camera.position, camera)
         control.y.setValue(2)
@@ -99,13 +99,13 @@ def main():
         assert window.views.displayed.height == HeightSlice("below", 1)
         control.mode.setCurrentIndex(2)
         settle(window)
-        assert window.scene.hit_at(window.session, point) is None
+        assert window.scene.hit_at(window.document.session, point) is None
         control.y.setValue(-20)
         settle(window)
         assert not window.scene.actors and not window.scene.entity_keys
         control.mode.setCurrentIndex(0)
         settle(window)
-        assert window.scene.hit_at(window.session, point).position == (2, 5, 2)
+        assert window.scene.hit_at(window.document.session, point).position == (2, 5, 2)
         assert len(window.scene.entity_bounds) == 2
         control.use_camera()
         settle(window)
@@ -113,9 +113,9 @@ def main():
         control.dialog.grab().save(str(output / "height-control.png"))
         control.dialog.close()
         assert window.plotter.size() == viewport_size
-        assert not window.session.dirty and not window.session.can_undo
+        assert not window.document.session.dirty and not window.document.session.can_undo
         assert path.read_bytes() == original
-        window._opened(window.session, preserve_focus=True, fit=False)
+        window._opened(window.document.session, preserve_focus=True, fit=False)
         settle(window)
         assert window.views.displayed.height == HeightSlice("below", 20)
         print(json.dumps(dict(height="all / below / single / empty / camera / refresh",
@@ -124,7 +124,7 @@ def main():
         if args.world:
             check_world(window, args.world)
     finally:
-        window.session = None
+        window.document.load(None)
         window.close()
         window.deleteLater()
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete)

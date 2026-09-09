@@ -23,53 +23,7 @@ class OperationPanel(QWidget):
         self.fields = {}
         self.materials = QStringListModel(self)
         layout = QVBoxLayout(self)
-        self.form = QFormLayout()
-        self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
-        self.form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.mode = QComboBox()
-        self.mode.addItems(REGION_COMMANDS)
-        labels = ["Action", *(parameter.label + "…" for parameter in PARAMETERS.values() if isinstance(parameter.default, str))]
-        label_width = max(self.fontMetrics().horizontalAdvance(label) for label in labels) + GRID * 4
-        label_width = (label_width + GRID - 1) // GRID * GRID
-        self.form.addRow(CellLabel("Action", width=label_width), self.mode)
-        for key, parameter in PARAMETERS.items():
-            value = parameter.default
-            if isinstance(value, bool):
-                field = CellCheckBox(parameter.label)
-                field.toggled.connect(self.changed)
-            elif isinstance(value, tuple):
-                field = QWidget()
-                axes = QVBoxLayout(field)
-                axes.setContentsMargins(0, 0, 0, 0)
-                field.inputs = []
-                for axis in "XYZ":
-                    number = QSpinBox()
-                    number.setRange(-30_000_000, 30_000_000)
-                    number.setKeyboardTracking(False)
-                    number.setPrefix(axis + " ")
-                    number.setAccessibleName(f"Offset {axis}")
-                    number.valueChanged.connect(self.changed)
-                    field.inputs.append(number)
-                    axes.addWidget(number)
-            else:
-                field = QLineEdit()
-                completer = QCompleter(self.materials, field)
-                completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-                completer.setFilterMode(Qt.MatchFlag.MatchContains)
-                field.setCompleter(completer)
-                field.textChanged.connect(self.changed)
-            field.setToolTip(parameter.description)
-            self.fields[key] = field
-            if isinstance(value, (bool, tuple)):
-                self.form.addRow(field)
-            else:
-                button = QPushButton(parameter.label + "…")
-                button.setFixedWidth(label_width)
-                button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-                button.setToolTip("Choose a material from loaded and recent blocks")
-                button.clicked.connect(lambda checked=False, name=key: self.material_requested.emit(name))
-                self.form.addRow(button, field)
-        layout.addLayout(self.form)
+        self._create_form(layout)
         self.info = CellLabel()
         layout.addWidget(self.info)
         self.preview = QPushButton("Preview")
@@ -90,6 +44,56 @@ class OperationPanel(QWidget):
         self.mode.currentTextChanged.connect(self._mode_changed)
         self.reset_settings()
         self._mode_changed(self.current)
+
+    def _create_form(self, layout):
+        self.form = QFormLayout()
+        self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+        self.form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self.mode = QComboBox()
+        self.mode.addItems(REGION_COMMANDS)
+        labels = ["Action", *(parameter.label + "…" for parameter in PARAMETERS.values() if isinstance(parameter.default, str))]
+        label_width = max(self.fontMetrics().horizontalAdvance(label) for label in labels) + GRID * 4
+        label_width = (label_width + GRID - 1) // GRID * GRID
+        self.form.addRow(CellLabel("Action", width=label_width), self.mode)
+        for key, parameter in PARAMETERS.items():
+            field = self._parameter_field(parameter)
+            self.fields[key] = field
+            if isinstance(parameter.default, (bool, tuple)):
+                self.form.addRow(field)
+            else:
+                button = QPushButton(parameter.label + "…")
+                button.setFixedWidth(label_width)
+                button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                button.setToolTip("Choose a material from loaded and recent blocks")
+                button.clicked.connect(lambda checked=False, name=key: self.material_requested.emit(name))
+                self.form.addRow(button, field)
+        layout.addLayout(self.form)
+
+    def _parameter_field(self, parameter):
+        value = parameter.default
+        if isinstance(value, bool):
+            field = CellCheckBox(parameter.label)
+            field.toggled.connect(self.changed)
+        elif isinstance(value, tuple):
+            field = QWidget()
+            axes = QVBoxLayout(field)
+            axes.setContentsMargins(0, 0, 0, 0)
+            field.inputs = []
+            for axis in "XYZ":
+                number = QSpinBox(minimum=-30_000_000, maximum=30_000_000, keyboardTracking=False, prefix=axis + " ",
+                                  accessibleName=f"Offset {axis}")
+                number.valueChanged.connect(self.changed)
+                field.inputs.append(number)
+                axes.addWidget(number)
+        else:
+            field = QLineEdit()
+            completer = QCompleter(self.materials, field)
+            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+            completer.setFilterMode(Qt.MatchFlag.MatchContains)
+            field.setCompleter(completer)
+            field.textChanged.connect(self.changed)
+        field.setToolTip(parameter.description)
+        return field
 
     def set_materials(self, states):
         self.materials.setStringList(list(states))
@@ -148,8 +152,7 @@ class CommandSearch(QDialog):
         self.resize(460, 330)
         self.entries = entries
         layout = QVBoxLayout(self)
-        self.search = QLineEdit()
-        self.search.setPlaceholderText("Command name…")
+        self.search = QLineEdit(placeholderText="Command name…")
         self.results = QListWidget()
         self.help = QLabel()
         self.help.setWordWrap(True)

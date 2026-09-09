@@ -1,17 +1,17 @@
 from collections import Counter
 from contextlib import contextmanager
-from copy import copy, deepcopy
+from copy import copy
 from functools import lru_cache
 from uuid import uuid4
 
 from amulet_nbt import IntTag
 from structura_core.nbt import parse_state, state_key
 
-from .document import Document, copy_structure
+from .document import Document
 from .history import History
 from .entity_data import initial_entities, check_entities, write_entities
 from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
-from .cell_data import cell_payload, cell_record, material_data
+from .cell_data import material_data
 
 
 class EditSession:
@@ -80,6 +80,9 @@ class EditSession:
     def _check_readable(self, selection):
         self._check_selection(selection)
 
+    def _check_destination(self, position):
+        return None
+
     def _original(self, position):
         index = self._document.source.present.get(position)
         if index is None:
@@ -91,10 +94,13 @@ class EditSession:
 
     def _canonical_cell(self, position, cell):
         original = self._original(position)
-        if original and cell.data is None and cell.origin in (None, position) and cell.state == original.state and cell.keep_nbt == original.keep_nbt:
-            palettes = self._document.source.palettes_raw
-            if all(state_key(p[original.variant]) == cell.state for p in palettes):
-                return original
+        if original is None or cell.data is not None or cell.origin not in (None, position):
+            return cell
+        if cell.state != original.state or cell.keep_nbt != original.keep_nbt:
+            return cell
+        palettes = self._document.source.palettes_raw
+        if all(state_key(p[original.variant]) == cell.state for p in palettes):
+            return original
         return cell
 
     def state_at(self, position):
@@ -266,6 +272,7 @@ class EditSession:
         for delta in change.changes:
             if delta.position in seen or not all(lo <= v < hi for lo, v, hi in zip(lower, delta.position, upper)):
                 raise ValueError("Invalid or duplicate change position")
+            self._check_destination(delta.position)
             seen.add(delta.position)
             if self._cell(delta.position) != delta.before:
                 raise StaleChangeError("The change no longer matches this document")
@@ -312,34 +319,28 @@ class EditSession:
         return len(change)
 
     def undo(self):
-        if not self.can_undo:
-            return False
-        entry, change = self.history.get(self.history.cursor - 1)
-        from .document_resize import resize_document
-
-        resize_document(self, change.resize, reverse=True)
-        for delta in change.changes:
-            self._write(delta.position, delta.before)
-        write_entities(self._entities, change.entities, reverse=True)
-        self.history.cursor -= 1
-        self._transition = self._state_id, change
-        self._state_id = entry.before
-        self.revision += 1
-        return True
+        return self._step_history(undo=True)
 
     def redo(self):
-        if not self.can_redo:
-            return False
-        entry, change = self.history.get(self.history.cursor)
-        for delta in change.changes:
-            self._write(delta.position, delta.after)
-        write_entities(self._entities, change.entities)
+        return self._step_history(undo=False)
+
+    def _step_history(self, *, undo):
         from .document_resize import resize_document
 
-        resize_document(self, change.resize)
-        self.history.cursor += 1
+        index = self.history.cursor - 1 if undo else self.history.cursor
+        if not 0 <= index < len(self.history.entries):
+            return False
+        entry, change = self.history.get(index)
+        if undo:
+            resize_document(self, change.resize, reverse=True)
+        for delta in change.changes:
+            self._write(delta.position, delta.before if undo else delta.after)
+        write_entities(self._entities, change.entities, reverse=undo)
+        if not undo:
+            resize_document(self, change.resize)
+        self.history.cursor += -1 if undo else 1
         self._transition = self._state_id, change
-        self._state_id = entry.after
+        self._state_id = entry.before if undo else entry.after
         self.revision += 1
         return True
 
@@ -392,29 +393,7 @@ class EditSession:
         if change is not None:
             branch = self.fork()
             branch.apply(change)
-        structure = copy_structure(branch._document.source)
-        literal_indices = {}
-        for position, cell in branch._cells.items():
-            index = cell.variant
-            if index is None:
-                if cell.state not in literal_indices:
-                    literal_indices[cell.state] = len(structure.palette_raw)
-                    for palette in structure.palettes_raw:
-                        palette.append(parse_state(cell.state))
-                index = literal_indices[cell.state]
-            structure.present[position] = index
-            structure.block_nbt.pop(position, None)
-            if cell.keep_nbt:
-                structure.block_nbt[position] = cell_payload(branch._document.source, cell, position)
-            if cell.origin != position or cell.data is not None:
-                record = cell_record(branch._document.source, cell)
-                if record is None:
-                    structure._block_records.pop(position, None)
-                else:
-                    structure._block_records[position] = deepcopy(record)
-        structure.entities = [value.unpack() for value in branch._entities.values()]
-        structure.validate()
-        return structure
+        return branch._document.snapshot(branch._cells, branch._entities)
 
     def save(self, path=None):
         path = path or self.path

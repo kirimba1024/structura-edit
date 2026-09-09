@@ -22,46 +22,29 @@ class SelectionPanel(QWidget):
         layout = QVBoxLayout(self)
         self.info = CellLabel("No selection")
         layout.addWidget(self.info)
-        grid = QGridLayout()
-        self.fields = [[], []]
-        for row, name in enumerate(("Min", "Max")):
-            label = CellLabel(name)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setToolTip("Block coordinates · both endpoints included")
-            grid.addWidget(label, 0, row + 1)
-            grid.setColumnStretch(row + 1, 1)
-        for axis, name in enumerate("XYZ"):
-            label = CellLabel(name, width=CONTROL_HEIGHT)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            grid.addWidget(label, axis + 1, 0)
-            for row in range(2):
-                field = QSpinBox()
-                field.setKeyboardTracking(False)
-                field.setFixedHeight(CONTROL_HEIGHT)
-                field.setAccessibleName(f"Selection {'minimum' if row == 0 else 'maximum'} {name}")
-                field.valueChanged.connect(self._changed)
-                self.fields[row].append(field)
-                grid.addWidget(field, axis + 1, row + 1)
-        self.setFocusProxy(self.fields[0][0])
-        layout.addLayout(grid)
+        self._create_coordinates(layout)
+        self._create_adjustments(layout)
+        self.hint = CellLabel("Click a block to start")
+        layout.addWidget(self.hint)
+        self.step.valueChanged.connect(lambda: self._preview(self.preview_button))
         row = QHBoxLayout()
-        row.addWidget(CellLabel("Camera", width=GRID * 21))
-        for index, name in enumerate("AB"):
-            button = QPushButton(f"Set {name} · {index + 1}")
-            button.setToolTip(f"Set corner {name} at the camera's cell, even in empty space · {index + 1}")
-            button.clicked.connect(lambda checked=False, i=index: self.corner_requested.emit(i))
+        for name, signal in (("Select all", self.all_requested), ("Clear", self.clear_requested)):
+            button = QPushButton(name)
+            button.clicked.connect(signal)
             row.addWidget(button)
         layout.addLayout(row)
+        layout.addStretch()
+        for field in (*self.fields[0], *self.fields[1], self.step, *self.findChildren(QAbstractButton)):
+            field.installEventFilter(self)
+
+    def _create_adjustments(self, layout):
         self.adjustments = QWidget()
         adjustments = QVBoxLayout(self.adjustments)
         adjustments.setContentsMargins(0, 0, 0, 0)
         row = QHBoxLayout()
         row.addWidget(CellLabel("Step", width=GRID * 15))
-        self.step = QSpinBox()
-        self.step.setRange(1, 30_000_000)
-        self.step.setKeyboardTracking(False)
-        self.step.setMinimumWidth(0)
-        self.step.setAccessibleName("Selection adjustment step")
+        self.step = QSpinBox(minimum=1, maximum=30_000_000, keyboardTracking=False, minimumWidth=0,
+                             accessibleName="Selection adjustment step")
         row.addWidget(self.step, 1)
         for name, sign in (("Grow", 1), ("Shrink", -1)):
             button = QPushButton(name)
@@ -75,28 +58,45 @@ class SelectionPanel(QWidget):
         row.addWidget(CellLabel("Shift", width=GRID * 18))
         for axis, name in enumerate("XYZ"):
             for sign in (-1, 1):
-                button = QToolButton()
-                button.setText(name + ("−" if sign < 0 else "+"))
-                button.setMinimumWidth(GRID * 9)
-                button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-                button.setToolTip(f"Shift bounds {'−' if sign < 0 else '+'}{name} by the step · blocks stay in place")
+                button = QToolButton(text=name + ("−" if sign < 0 else "+"), minimumWidth=GRID * 9,
+                                     focusPolicy=Qt.FocusPolicy.StrongFocus,
+                                     toolTip=f"Shift bounds {'−' if sign < 0 else '+'}{name} by the step · blocks stay in place")
                 button.clicked.connect(lambda checked=False, a=axis, s=sign: self._shift(a, s))
                 self.adjust_buttons[button] = ("shift", tuple(sign if i == axis else 0 for i in range(3)))
                 row.addWidget(button, 1)
         adjustments.addLayout(row)
         layout.addWidget(self.adjustments)
-        self.hint = CellLabel("Click a block to start")
-        layout.addWidget(self.hint)
-        self.step.valueChanged.connect(lambda: self._preview(self.preview_button))
+
+    def _create_coordinates(self, layout):
+        grid = QGridLayout()
+        self.fields = [[], []]
+        for row, name in enumerate(("Min", "Max")):
+            label = CellLabel(name)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setToolTip("Block coordinates · both endpoints included")
+            grid.addWidget(label, 0, row + 1)
+            grid.setColumnStretch(row + 1, 1)
+        for axis, name in enumerate("XYZ"):
+            label = CellLabel(name, width=CONTROL_HEIGHT)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            grid.addWidget(label, axis + 1, 0)
+            for row in range(2):
+                field = QSpinBox(keyboardTracking=False)
+                field.setFixedHeight(CONTROL_HEIGHT)
+                field.setAccessibleName(f"Selection {'minimum' if row == 0 else 'maximum'} {name}")
+                field.valueChanged.connect(self._changed)
+                self.fields[row].append(field)
+                grid.addWidget(field, axis + 1, row + 1)
+        self.setFocusProxy(self.fields[0][0])
+        layout.addLayout(grid)
         row = QHBoxLayout()
-        for name, signal in (("Select all", self.all_requested), ("Clear", self.clear_requested)):
-            button = QPushButton(name)
-            button.clicked.connect(signal)
+        row.addWidget(CellLabel("Camera", width=GRID * 21))
+        for index, name in enumerate("AB"):
+            button = QPushButton(f"Set {name} · {index + 1}",
+                                 toolTip=f"Set corner {name} at the camera's cell, even in empty space · {index + 1}")
+            button.clicked.connect(lambda checked=False, i=index: self.corner_requested.emit(i))
             row.addWidget(button)
         layout.addLayout(row)
-        layout.addStretch()
-        for field in (*self.fields[0], *self.fields[1], self.step, *self.findChildren(QAbstractButton)):
-            field.installEventFilter(self)
 
     def set_document(self, size, origin=(0, 0, 0)):
         self.origin = origin

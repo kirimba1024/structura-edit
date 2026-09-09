@@ -24,7 +24,7 @@ def main():
         window = EditorWindow(off_screen=True, cache_dir=Path(temporary) / "cache")
         window.show()
         try:
-            window.open_path(path)
+            window.sources.open_path(path)
             settle(window)
             window.resize(1104, 600)
             window.selection_actions.set_bounds((0, 0, 0), (3, 1, 1))
@@ -37,13 +37,13 @@ def main():
             QTest.keyClicks(bar.coordinates[0], "5")
             assert placement.model.position == (4, 0, 2)
             camera = window.plotter.camera_position
-            revision = window.session.revision
+            revision = window.document.session.revision
             for text in ("+90°", "Flip X"):
                 button = next(button for button in bar.transforms if button.text() == text)
                 QTest.mouseClick(button, Qt.MouseButton.LeftButton)
                 assert all(not button.isEnabled() for button in bar.transforms)
                 settle(window)
-                assert window.plotter.camera_position == camera and window.session.revision == revision
+                assert window.plotter.camera_position == camera and window.document.session.revision == revision
                 assert not placement.model.following and placement.model.position == (6, 0, 1)
                 assert placement.view.source.bounds == ((0, 0, 0), (3, 1, 1))
             assert placement.model.clipboard.size == (1, 1, 3)
@@ -64,24 +64,24 @@ def main():
             window.progress.finish()
             QTest.mouseClick(bar.apply, Qt.MouseButton.LeftButton)
             settle(window)
-            assert not placement.active and window.session.history.cursor == 1
-            assert window.session.state_at((0, 0, 0)) == window.session.state_at((1, 0, 0)) == "minecraft:air"
-            assert window.session.state_at((6, 0, 1)) == "minecraft:stone"
-            assert window.session.state_at((6, 0, 2)) == "minecraft:chest[facing=west]"
-            assert str(window.session.snapshot().block_nbt[(6, 0, 2)]["Items"][0]["id"]) == "minecraft:diamond"
+            assert not placement.active and window.document.session.history.cursor == 1
+            assert window.document.session.state_at((0, 0, 0)) == window.document.session.state_at((1, 0, 0)) == "minecraft:air"
+            assert window.document.session.state_at((6, 0, 1)) == "minecraft:stone"
+            assert window.document.session.state_at((6, 0, 2)) == "minecraft:chest[facing=west]"
+            assert str(window.document.session.snapshot().block_nbt[(6, 0, 2)]["Items"][0]["id"]) == "minecraft:diamond"
             window.undo()
             settle(window)
-            assert not window.session.dirty and window.session.state_at((1, 0, 0)) == "minecraft:chest[facing=north]"
+            assert not window.document.session.dirty and window.document.session.state_at((1, 0, 0)) == "minecraft:chest[facing=north]"
             placement.start("paste")
             settle(window)
             assert placement.model.clipboard.size == (1, 1, 3)
             window.escape()
-            assert not window.session.dirty and not placement.active
+            assert not window.document.session.dirty and not placement.active
             print(json.dumps({"transform": "clockwise rotation and mirror update the ghost and directional state",
                               "placement": "anchor and camera preserved; Take clears source; NBT retained; one Undo",
                               "layout": "controls fit with side panel at minimum window width"}), flush=True)
         finally:
-            window.session = None
+            window.document.load(None)
             window.close()
             window.deleteLater()
             QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 import pytest
-from amulet_nbt import ListTag
+from amulet_nbt import IntTag, ListTag, StringTag
 from structura_core import Structure
 from structura_core.nbt import parse_state, load_root
 
@@ -46,6 +46,22 @@ def test_air_holes_and_structure_void_are_distinct(edit, tmp_path):
     assert (0, 1, 0) in saved.present and (1, 1, 0) not in saved.present
     assert edit.undo()
     assert edit.state_at((0, 1, 0)) is None
+
+
+def test_snapshot_records_are_detached_from_document_and_other_snapshots(edit):
+    region = edit.select(((0, 0, 0), (2, 1, 1)))
+    edit.apply(edit.move(region, (0, 1, 0), copy=True))
+    snapshot = edit.snapshot()
+    untouched = edit.snapshot()
+    snapshot._block_records[(0, 1, 0)]["extra"] = StringTag("changed")
+    snapshot.block_nbt[(1, 1, 0)]["Items"][0]["count"] = IntTag(99)
+    snapshot.entities[0]["nbt"]["custom"] = StringTag("changed")
+    for source in (untouched, edit.snapshot()):
+        assert str(source._block_records[(0, 1, 0)]["extra"]) == "keep"
+        assert int(source.block_nbt[(1, 1, 0)]["Items"][0]["count"]) == 3
+        assert str(source.entities[0]["nbt"]["custom"]) == "keep"
+    edit.undo()
+    assert str(edit.snapshot()._block_records[(0, 0, 0)]["extra"]) == "keep"
 
 
 def test_payload_removal_and_restoration(edit, tmp_path):

@@ -2,7 +2,8 @@ import time
 
 import pytest
 
-from structura_edit.jobs import Worker, execute
+from structura_edit.jobs import Worker
+from structura_edit.tasks import execute
 
 
 def wait(worker, timeout=20):
@@ -20,6 +21,38 @@ def test_recipe_failure_is_atomic(edit):
         execute("recipe", {"session": edit, "selection": edit.select(), "code": 'edit.apply(edit.set_block((0, 0, 0), "minecraft:glass"))\nraise RuntimeError("intentional")'})
     assert edit.state_at((0, 0, 0)) == "minecraft:stone"
     assert not edit.dirty
+
+
+def test_recipe_output_retains_last_characters_across_writes(edit):
+    text = "a" * 6000 + "b" * 6000 + "c" * 6000 + "d" * 6000
+    change, output = execute("recipe", {"session": edit, "selection": edit.select(),
+                                      "code": 'for letter in "abcd": print(letter * 6000, end="")'})
+    assert output == text[-16_000:]
+    assert not change and not edit.dirty
+
+
+def test_recipe_stdout_reports_full_write_length(edit):
+    _, output = execute("recipe", {"session": edit, "selection": edit.select(),
+                                  "code": 'import sys\ncount = sys.stdout.write("x" * 20_000)\nprint(count)'})
+    assert len(output) == 16_000 and output.endswith("20000\n")
+
+
+@pytest.mark.parametrize("index", [0.5, True, -1, 100, "1", None])
+def test_invalid_history_position_is_rejected_before_changing_document(edit, index):
+    edit.apply(edit.set_block((0, 0, 0), "minecraft:glass"))
+    with pytest.raises(ValueError, match="Invalid history position"):
+        execute("history", {"session": edit, "index": index})
+    assert edit.history.cursor == 1 and edit.state_at((0, 0, 0)) == "minecraft:glass"
+
+
+def test_history_task_reports_progress_in_both_directions(edit):
+    for state in ("minecraft:glass", "minecraft:gold_block", "minecraft:diamond_block"):
+        edit.apply(edit.set_block((0, 0, 0), state))
+    progress = []
+    for index, expected in ((0, "minecraft:stone"), (3, "minecraft:diamond_block")):
+        result = execute("history", {"session": edit, "index": index}, lambda *update: progress.append(update))
+        assert result is edit and edit.state_at((0, 0, 0)) == expected
+    assert progress == [("History", done, 3) for done in (1, 2, 3, 1, 2, 3)]
 
 
 def test_worker_cancel_and_recover(edit):
