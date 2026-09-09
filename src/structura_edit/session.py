@@ -419,7 +419,7 @@ class EditSession:
             branch.apply(change)
         return branch._document.snapshot(branch._cells, branch._entities)
 
-    def save(self, path=None):
+    def save(self, path=None, force=False):
         path = path or self.path
         if path is None:
             raise ValueError("Choose a destination filename")

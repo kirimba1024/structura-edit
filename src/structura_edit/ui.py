@@ -1,9 +1,10 @@
 from time import perf_counter
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QToolButton
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QToolButton
 
 from .camera import FreeCamera
+from .changes_ui import ChangesController, SceneChanges
 from .connected_actions import ConnectedActions
 from .materials_ui import MaterialController
 from .controls import CellLabel
@@ -19,6 +20,7 @@ from .navigation import CONTROLS, Navigation
 from .placement_ui import PlacementController
 from .placement_review import PlacementReview
 from .repeat_ui import RepeatController
+from .restore_ui import BackupDialog, ConflictsDialog
 from .scene import Scene
 from .scene_guides import SceneGuides
 from .editor_document import EditorDocument
@@ -52,6 +54,8 @@ class EditorWindow(QMainWindow):
         self.overlay = self.workbench.overlay
         self.scene = Scene(self.plotter)
         self.guides = SceneGuides(self.plotter)
+        self.scene_changes = SceneChanges(self.plotter)
+        self.changes_ctrl = ChangesController(self.document, self.tasks, self.scene_changes)
         self.camera = FreeCamera(self.plotter, self.minimap.set_camera)
         self.navigation = Navigation(self.plotter, self.camera, capture_mouse=not off_screen)
         self.views = ViewPipeline(self.scene, self.camera, self.minimap, self.tasks.submit, self._rendered,
@@ -105,6 +109,7 @@ class EditorWindow(QMainWindow):
         self.menus = EditorMenus(self, {
             "open": self.sources.open_dialog, "save": self.sources.save_dialog,
             "export": self.sources.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
+            "revert": self.revert_all, "backups": self.restore_backup, "changes": self.changes_toggled,
             "apply": self.apply_pending, "discard": self.discard_pending, "recipe": self.show_recipe,
             "all": self.selection_actions.select_all, "clear": self.selection_actions.clear,
             "connected": self.connected.toggle,
@@ -184,6 +189,7 @@ class EditorWindow(QMainWindow):
         self.navigation.extend_changed.connect(self.extend_selection)
         self.connected.changed.connect(self._selection_changed)
         self.connected.message.connect(self.status.setText)
+        self.changes_ctrl.message.connect(self.status.setText)
         self.navigation.fit_requested.connect(self.fit_scene)
         self.navigation.apply_requested.connect(self.apply_pending)
         self.navigation.cancel_requested.connect(self.escape)
@@ -224,11 +230,12 @@ class EditorWindow(QMainWindow):
         preview_ready = bool(pending) and self.views.ready
         placing = self.placement.active or self.repeat.active
         self.connected.sync()
+        self.changes_ctrl.refresh()
         self.menus.sync(session, busy=self.tasks.busy, selected=selected,
                         preview=pending is not None, preview_ready=preview_ready, world_active=self.world.active,
                         placing=placing, repeating=self.repeat.active, clipboard=self.placement.clipboard is not None,
                         object_count=len(self.objects.keys), single_block=selected and selection.volume == 1,
-                        connected=self.connected.active)
+                        connected=self.connected.active, changes=self.changes_ctrl.active)
         self.placement.set_context(session, selection, self.assets,
                                     busy=self.tasks.busy or (self.placement.active and not self.views.ready and self.placement_review.plan is None),
                                     available=ready and pending is None and self.views.ready and not self.repeat.active,
@@ -282,6 +289,44 @@ class EditorWindow(QMainWindow):
         if kind == "world" and self.world.queued is None:
             self.world.reset_request()
         self._error(message)
+        if kind == "save" and "World changed at" in message:
+            self.review_conflicts()
+
+    def changes_toggled(self):
+        self.changes_ctrl.set_active(self.menus.actions["changes"].isChecked())
+
+    def revert_all(self):
+        session = self.document.session
+        if session is None or not session.can_undo or self.tasks.busy or self.document.pending is not None:
+            return
+        answer = QMessageBox.question(self, "Revert to opened", "Undo every change made in this session?")
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self.seek_history(0)
+        self.status.setText("Reverted to the opened document")
+
+    def restore_backup(self):
+        session = self.document.session
+        if not self.world.active or session is None or self.tasks.busy or self.document.pending is not None:
+            return
+        dialog = BackupDialog(self, session.path, self.tasks.submit, self.status.setText)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.exec()
+
+    def review_conflicts(self):
+        session = self.document.session
+        if session is None or not self.world.active or self.tasks.busy or self.document.pending is not None:
+            return
+
+        def received(rows):
+            if not rows:
+                self.status.setText("No conflicts remain; save again")
+                return
+            dialog = ConflictsDialog(self, rows)
+            if dialog.exec():
+                self.edits.save(session.path, self.sources.saved, force=True)
+
+        self.tasks.submit("conflicts", received, session=session)
 
     def _tick(self):
         self.tasks.poll()
@@ -329,6 +374,7 @@ class EditorWindow(QMainWindow):
 
     def _opened(self, session, *, rendered=None, fit=True, preserve_focus=False):
         self.placement.cancel()
+        self.changes_ctrl.reset()
         if not session.readonly:
             session.history.prepare()
         self.document.load(session)

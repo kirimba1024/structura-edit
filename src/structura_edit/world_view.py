@@ -95,7 +95,7 @@ class WorldView(EditSession):
         branch._sync_changes()
         return branch
 
-    def save(self, path=None):
+    def save(self, path=None, force=False):
         from pathlib import Path
         from structura_core.world_write import save_world_patch
 
@@ -106,7 +106,7 @@ class WorldView(EditSession):
         snapshot = self.snapshot()
         patch = {position: tuple((cell.state, cell.data.nbt if cell.keep_nbt and cell.data else None) for cell in pair)
                  for position, pair in self.world_changes.patch.items()}
-        self.last_backup = save_world_patch(self.path, patch, entities=entity_patches(self.world_changes))
+        self.last_backup = save_world_patch(self.path, patch, entities=entity_patches(self.world_changes), force=force)
         self._document = Document(snapshot, path=self.path)
         self._states = tuple(state_key(p) for p in snapshot.palette_raw)
         self._base_counts = Counter(snapshot.present.values())

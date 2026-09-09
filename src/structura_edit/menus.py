@@ -22,10 +22,12 @@ class EditorMenus:
             (file, "save", "Save as…", QKeySequence.StandardKey.Save),
             (file, "export", "Export selection…", None),
             (file, "import", "Import schematic…", "Ctrl+Shift+I"),
+            (file, "backups", "Restore backup…", None),
             (file, "close", "Close", QKeySequence.StandardKey.Close),
             (edit, "undo", "Undo", QKeySequence.StandardKey.Undo),
             (edit, "redo", "Redo", QKeySequence.StandardKey.Redo),
             (edit, "history", "History…", None),
+            (edit, "revert", "Revert to opened…", None),
             (edit, "copy", "Copy", QKeySequence.StandardKey.Copy),
             (edit, "take", "Take", QKeySequence.StandardKey.Cut),
             (edit, "paste", "Paste", QKeySequence.StandardKey.Paste),
@@ -57,15 +59,16 @@ class EditorMenus:
             (view, "bounds", "Schematic / loaded-area outline", None),
             (view, "chunks", "Chunk outlines", None),
             (view, "resources", "Minecraft resources…", None),
+            (view, "changes", "Unsaved changes", None),
         )
         for menu, name, label, shortcut in entries:
             action = QAction(label, window)
             action.triggered.connect(callbacks[name])
             if shortcut is not None:
                 action.setShortcut(QKeySequence(shortcut))
-            if name in ("entities", "bounds", "chunks", "connected"):
+            if name in ("entities", "bounds", "chunks", "connected", "changes"):
                 action.setCheckable(True)
-                action.setChecked(name != "chunks" and name != "connected")
+                action.setChecked(name not in ("chunks", "connected", "changes"))
             menu.addAction(action)
             self.actions[name] = action
         selection.addSeparator()
@@ -78,12 +81,16 @@ class EditorMenus:
         search.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
     def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, repeating=False,
-             clipboard=False, object_count=0, single_block=False, connected=False):
+             clipboard=False, object_count=0, single_block=False, connected=False, changes=False):
         ready = session is not None and not busy
         editable = ready and not session.readonly
         objects_ready = ready and not preview and not placing
         self.actions["connected"].setChecked(connected)
         self.actions["connected"].setEnabled(ready and not placing)
+        self.actions["changes"].setChecked(changes)
+        self.actions["changes"].setEnabled(ready)
+        self.actions["revert"].setEnabled(editable and session.can_undo and not preview and not placing)
+        self.actions["backups"].setEnabled(world_active and not placing and not preview and not busy)
         self.actions["inspect"].setEnabled(objects_ready and (object_count > 0 or single_block))
         for name in ("entity_all", "find_objects"):
             self.actions[name].setEnabled(objects_ready)

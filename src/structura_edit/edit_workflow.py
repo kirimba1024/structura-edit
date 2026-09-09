@@ -85,8 +85,8 @@ class EditWorkflow:
         self.document.invalidate()
         return self._replace("history", callback, index=index)
 
-    def save(self, path, callback):
+    def save(self, path, callback, force=False):
         session = self.document.session
         if session is None or session.readonly or self.document.pending is not None:
             return False
-        return self._replace("save", callback, path=str(path))
+        return self._replace("save", callback, path=str(path), force=force)

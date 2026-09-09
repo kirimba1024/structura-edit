@@ -53,7 +53,7 @@ def _world(args, context):
 
 
 def _save(args, context):
-    args["session"].save(args["path"])
+    args["session"].save(args["path"], force=args.get("force", False))
     return args["session"]
 
 
@@ -163,6 +163,31 @@ def _item_icons(args, context):
     return render_icons(args["ids"], args["assets"])
 
 
+def _changes(args, context):
+    from .changes_view import unsaved_changes
+
+    return unsaved_changes(args["session"])
+
+
+def _backups(args, context):
+    from structura_core.world_staging import list_backups, restore_backup, verify_backup
+
+    if args.get("restore"):
+        return {"restored": restore_backup(args["world"], args["backup"], progress=context.progress)}
+    if args.get("verify"):
+        return {"verified": verify_backup(args["backup"], progress=context.progress)}
+    return {"backups": list_backups(args["world"])}
+
+
+def _conflicts(args, context):
+    from structura_core.world_write import world_conflicts
+
+    session = args["session"]
+    patch = {position: tuple((cell.state, cell.data.nbt if cell.keep_nbt and cell.data else None) for cell in pair)
+             for position, pair in session.world_changes.patch.items()}
+    return world_conflicts(session.path, patch)
+
+
 TASKS = {
     "open": Task(_open, "Opening…"),
     "world": Task(_world, "Loading world…", resources=True),
@@ -177,6 +202,9 @@ TASKS = {
     "operation": Task(_operation, "Preparing change…"),
     "connected": Task(_connected, "Selecting connected blocks…"),
     "item_icons": Task(_item_icons, "", resources=True),
+    "changes": Task(_changes, "Collecting unsaved changes…"),
+    "backups": Task(_backups, "Reading backups…"),
+    "conflicts": Task(_conflicts, "Checking the world for conflicts…"),
     "clipboard": Task(_clipboard, "Preparing clipboard…", resources=True),
     "placement": Task(_placement, "Preparing placement…", resources=True),
     "placement_plan": Task(_placement_plan, "Checking placement rule…"),
