@@ -53,19 +53,19 @@ class ObjectController(QObject):
     def select_region(self):
         if not self.available():
             return
-        if self.document.selected.region is None:
+        if self.document.selected.current is None:
             self._selected(self.document.session._entities)
             return
-        self._submit("select", self._selected, selection=self.document.selected.region)
+        self._submit("select", self._selected, selection=self.document.selected.current)
 
     def _selected(self, keys):
         self.keys = set(keys)
         self.refresh()
-        self.message.emit(f"{len(self.keys)} entities selected in {'region' if self.document.selected.region else 'loaded area'}")
+        self.message.emit(f"{len(self.keys)} entities selected in {'region' if self.document.selected.current else 'loaded area'}")
         self.changed.emit()
 
     def sync(self):
-        selection = self.document.selected.region
+        selection = self.document.selected.current
         single_block = selection is not None and selection.volume == 1
         self.inspect_button.setVisible(self.document.session is not None)
         self.inspect_button.setEnabled(self.available() and (bool(self.keys) or single_block))
@@ -92,7 +92,7 @@ class ObjectController(QObject):
     def inspect(self):
         if not self.available():
             return
-        position = self.document.selected.region.lower if not self.keys and self.document.selected.region is not None else None
+        position = self.document.selected.current.lower if not self.keys and self.document.selected.current is not None else None
         self.navigation.suspend()
         self._submit("inspect", self._inspected, keys=tuple(sorted(self.keys)), position=position)
 

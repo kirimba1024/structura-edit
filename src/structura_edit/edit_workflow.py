@@ -12,7 +12,8 @@ def prepared_preview(kind, result, selection, args):
     if kind in ("repeat", "placement_plan"):
         return EditPreview(result.change, kind, plan=result)
     values = args["values"]
-    material = state_key(parse_state(values["target"])) if values.get("target") else None
+    target = values.get("target")
+    material = state_key(parse_state(target)) if isinstance(target, str) and target else None
     destination = None
     if args["mode"] == "Move blocks":
         offset = values["offset"]
@@ -44,7 +45,7 @@ class EditWorkflow:
         session = self.document.session
         if session is None or session.readonly or self.tasks.busy:
             return False
-        selection = self.document.selected.region
+        selection = self.document.selected.current
         if kind != "placement_plan":
             if selection is None:
                 return False

@@ -51,16 +51,16 @@ class EditorDocument:
 
     @property
     def selection_token(self):
-        return self.session_token, self.selected.region
+        return self.session_token, self.selected.region, self.selected.cells
 
     @property
     def input_token(self):
         return self.selection_token, self._input_revision
 
     def selection(self):
-        if self.selected.region is None:
+        if self.selected.current is None:
             raise ValueError("Click a block to select it; Shift+click another block to extend the region")
-        return self.selected.region
+        return self.selected.current
 
     def load(self, session):
         self._session = session

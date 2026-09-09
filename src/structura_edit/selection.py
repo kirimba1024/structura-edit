@@ -1,3 +1,4 @@
+from .cell_set import CellSet
 from .changes import Selection, _position
 
 
@@ -5,6 +6,7 @@ class RegionSelection:
     def __init__(self):
         self.size = (1, 1, 1)
         self.region = None
+        self.cells = None
         self.anchor = None
         self.preview = None
         self.extending = False
@@ -15,6 +17,7 @@ class RegionSelection:
 
     def clear(self):
         self.region = None
+        self.cells = None
         self.anchor = None
         self.preview = None
         self.extending = False
@@ -24,13 +27,40 @@ class RegionSelection:
         if any(hi > size for hi, size in zip(region.upper, self.size)):
             raise ValueError("Outside document bounds")
         self.region = region
+        self.cells = None
         self.anchor = region.lower
         self.preview = None
         self.extending = False
 
     @property
+    def current(self):
+        return self.cells if self.cells is not None else self.region
+
+    def add_cells(self, cells):
+        base = self.cells if self.cells is not None else (
+            CellSet.from_box(self.region) if self.region is not None else None)
+        self._set_cells(cells if base is None else base.union(cells))
+
+    def subtract_cells(self, cells):
+        if self.cells is not None or self.region is not None:
+            base = self.cells if self.cells is not None else CellSet.from_box(self.region)
+            self._set_cells(base.difference(cells))
+
+    def _set_cells(self, cells):
+        if not cells:
+            self.clear()
+            return
+        if any(v < 0 for v in cells.lower) or any(hi > size for hi, size in zip(cells.upper, self.size)):
+            raise ValueError("Outside document bounds")
+        self.cells = cells
+        self.region = Selection(cells.lower, cells.upper)
+        self.anchor = None
+        self.preview = None
+        self.extending = False
+
+    @property
     def opposite(self):
-        if self.region is None:
+        if self.region is None or self.anchor is None:
             return None
         return tuple(hi - 1 if anchor == lo else lo
                      for anchor, lo, hi in zip(self.anchor, self.region.lower, self.region.upper))

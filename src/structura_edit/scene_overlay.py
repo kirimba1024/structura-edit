@@ -59,7 +59,7 @@ class SceneOverlay:
 
     def set_selection(self, selection, temporary=None, corners=()):
         previous = self.corners
-        self.corners = corners if selection else ()
+        self.corners = tuple(corner for corner in corners if corner is not None) if selection else ()
         changed = self.selection.set_bounds((selection.lower, selection.upper) if selection else None)
         changed |= self.temporary.set_bounds((temporary.lower, temporary.upper) if temporary else None)
         if changed or previous != self.corners:

@@ -69,7 +69,7 @@ class ObjectFinder(QObject):
             panel.hide()
             self.timer.stop()
         panel.in_selection.setEnabled(self.document.selected.region is not None)
-        revision = (search_revision(self.document.session), self.document.selected.region if panel.in_selection.isChecked() else None) if self.document.session else None
+        revision = (search_revision(self.document.session), self.document.selected.current if panel.in_selection.isChecked() else None) if self.document.session else None
         if revision != self.revision:
             self.revision = revision
             self.changed()
@@ -86,7 +86,7 @@ class ObjectFinder(QObject):
         panel = self.panel
         if not panel.isVisible() or not self.pending or not self.available():
             return
-        if panel.in_selection.isChecked() and self.document.selected.region is None:
+        if panel.in_selection.isChecked() and self.document.selected.current is None:
             self.pending = False
             panel.info.setText("Select a region first")
             return
@@ -95,7 +95,7 @@ class ObjectFinder(QObject):
         self.inflight = token
         self.tasks.submit("object_search", lambda result: self.received(token, result), session=self.document.session.fork(),
                     query=dict(text=panel.search.text(), kind=panel.kind.currentData(),
-                               selection=self.document.selected.region if panel.in_selection.isChecked() else None, offset=self.offset))
+                               selection=self.document.selected.current if panel.in_selection.isChecked() else None, offset=self.offset))
 
     def received(self, token, result):
         self.inflight = None

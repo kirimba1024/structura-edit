@@ -112,7 +112,7 @@ class SourceController(QObject):
             self.placement.start("import", path=path)
 
     def export_dialog(self):
-        if not self.document.session or self.tasks.busy or self.document.pending is not None or self.document.selected.region is None:
+        if not self.document.session or self.tasks.busy or self.document.pending is not None or self.document.selected.current is None:
             return
         path, _ = QFileDialog.getSaveFileName(self.parent(), "Export selection as Structure NBT", "selection.nbt",
                                              "Structure NBT (*.nbt);;Text NBT (*.snbt)")

@@ -1,5 +1,5 @@
 from PySide6.QtCore import QEvent, Qt, Signal
-from PySide6.QtWidgets import QAbstractButton, QGridLayout, QHBoxLayout, QPushButton, QSpinBox, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QAbstractButton, QComboBox, QGridLayout, QHBoxLayout, QPushButton, QSpinBox, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import CONTROL_HEIGHT, GRID
 from .controls import CellLabel
@@ -12,6 +12,9 @@ class SelectionPanel(QWidget):
     corner_requested = Signal(int)
     all_requested = Signal()
     clear_requested = Signal()
+    connected_toggled = Signal(bool)
+    criterion_changed = Signal(str)
+    subtract_toggled = Signal(bool)
     dismissed = Signal()
 
     def __init__(self):
@@ -24,6 +27,7 @@ class SelectionPanel(QWidget):
         layout.addWidget(self.info)
         self._create_coordinates(layout)
         self._create_adjustments(layout)
+        self._create_connected(layout)
         self.hint = CellLabel("Click a block to start")
         layout.addWidget(self.hint)
         self.step.valueChanged.connect(lambda: self._preview(self.preview_button))
@@ -67,6 +71,26 @@ class SelectionPanel(QWidget):
         adjustments.addLayout(row)
         layout.addWidget(self.adjustments)
 
+    def _create_connected(self, layout):
+        row = QHBoxLayout()
+        row.setSpacing(GRID)
+        self.connected = QPushButton("Connected", checkable=True,
+                                     toolTip="Flood-fill the clicked block and its matching neighbours · Esc exits")
+        self.connected.toggled.connect(self.connected_toggled)
+        self.criterion = QComboBox(accessibleName="Connected criterion")
+        self.criterion.addItems(("Material", "Exact state", "Non-air"))
+        self.criterion.setToolTip("Neighbour rule for the flood fill")
+        self.criterion.setEnabled(False)
+        self.criterion.currentTextChanged.connect(self.criterion_changed)
+        self.subtract = QPushButton("Subtract", checkable=True,
+                                     toolTip="Remove the filled cells instead of adding them")
+        self.subtract.setEnabled(False)
+        self.subtract.toggled.connect(self.subtract_toggled)
+        row.addWidget(self.connected)
+        row.addWidget(self.criterion, stretch=1)
+        row.addWidget(self.subtract)
+        layout.addLayout(row)
+
     def _create_coordinates(self, layout):
         grid = QGridLayout()
         self.fields = [[], []]
@@ -109,12 +133,14 @@ class SelectionPanel(QWidget):
                 field.blockSignals(False)
 
     def set_selection(self, selection):
+        linked = hasattr(selection, "sections")
         self.adjustments.setEnabled(selection is not None)
-        self.hint.setText("Selection only · blocks stay" if selection else "Click a block to start")
+        self.hint.setText("Click a block to start" if selection is None else
+                          "Grow, Shrink and coordinates convert to a box" if linked else "Selection only · blocks stay")
         self.hint.setToolTip(self.hint.text())
         self.info.setText("No selection" if selection is None else
                           "×".join(str(hi - lo) for lo, hi in zip(selection.lower, selection.upper))
-                          + f" · {selection.volume:,} cells")
+                          + f" · {selection.volume:,} cells" + (" · connected" if linked else ""))
         if selection is not None:
             values = (selection.lower, tuple(p - 1 for p in selection.upper))
             for row, coordinates in zip(self.fields, values):

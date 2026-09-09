@@ -151,6 +151,12 @@ def _recipe(args, context):
     return session.diff(branch), output.getvalue()
 
 
+def _connected(args, context):
+    from .connected import connected_selection
+
+    return connected_selection(args["session"], args["start"], criterion=args["criterion"], progress=context.progress)
+
+
 TASKS = {
     "open": Task(_open, "Opening…"),
     "world": Task(_world, "Loading world…", resources=True),
@@ -163,6 +169,7 @@ TASKS = {
     "objects": Task(_objects, "Preparing object data…"),
     "object_search": Task(_object_search, "Finding objects…"),
     "operation": Task(_operation, "Preparing change…"),
+    "connected": Task(_connected, "Selecting connected blocks…"),
     "clipboard": Task(_clipboard, "Preparing clipboard…", resources=True),
     "placement": Task(_placement, "Preparing placement…", resources=True),
     "placement_plan": Task(_placement_plan, "Checking placement rule…"),

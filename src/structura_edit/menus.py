@@ -43,6 +43,7 @@ class EditorMenus:
             (objects, "entity_delete", "Delete entities…", None),
             (selection, "all", "Select all", None),
             (selection, "clear", "Clear selection", None),
+            (selection, "connected", "Connected select", None),
             (selection, "coordinates", "Coordinates…", None),
             (selection, "materials", "Materials…", None),
             (view, "fit", "Fit scene (F)", None),
@@ -62,9 +63,9 @@ class EditorMenus:
             action.triggered.connect(callbacks[name])
             if shortcut is not None:
                 action.setShortcut(QKeySequence(shortcut))
-            if name in ("entities", "bounds", "chunks"):
+            if name in ("entities", "bounds", "chunks", "connected"):
                 action.setCheckable(True)
-                action.setChecked(name != "chunks")
+                action.setChecked(name != "chunks" and name != "connected")
             menu.addAction(action)
             self.actions[name] = action
         selection.addSeparator()
@@ -77,10 +78,12 @@ class EditorMenus:
         search.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
     def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, repeating=False,
-             clipboard=False, object_count=0, single_block=False):
+             clipboard=False, object_count=0, single_block=False, connected=False):
         ready = session is not None and not busy
         editable = ready and not session.readonly
         objects_ready = ready and not preview and not placing
+        self.actions["connected"].setChecked(connected)
+        self.actions["connected"].setEnabled(ready and not placing)
         self.actions["inspect"].setEnabled(objects_ready and (object_count > 0 or single_block))
         for name in ("entity_all", "find_objects"):
             self.actions[name].setEnabled(objects_ready)

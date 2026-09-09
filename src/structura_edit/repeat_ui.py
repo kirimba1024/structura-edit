@@ -32,7 +32,7 @@ class RepeatController(QObject):
     def start(self):
         session = self.document.session
         if (session is None or session.readonly or self.tasks.busy or self.placing
-                or self.document.selected.region is None or self.document.pending is not None):
+                or self.document.selected.current is None or self.document.pending is not None):
             return
         self.source = self.document.selection_token
         self.started.emit()

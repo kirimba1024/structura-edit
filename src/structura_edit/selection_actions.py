@@ -25,7 +25,7 @@ class SelectionActions(QObject):
         try:
             action(*args)
         except ValueError as error:
-            self.panel.set_selection(self.model.region)
+            self.panel.set_selection(self.model.current)
             self.panel.hint.setText(str(error))
             self.panel.hint.setToolTip(str(error))
             self.message.emit(str(error))
@@ -46,7 +46,7 @@ class SelectionActions(QObject):
 
     def preview(self, mode, value):
         self.model.preview = None
-        self.panel.hint.setText("Selection only · blocks stay" if self.model.region else "Click a block to start")
+        self.panel.hint.setText("Selection only · blocks stay" if self.model.current else "Click a block to start")
         if mode and self.available():
             try:
                 self.model.preview = self.model.adjusted(mode, value)

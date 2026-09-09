@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QToolButton
 
 from .camera import FreeCamera
+from .connected_actions import ConnectedActions
 from .materials_ui import MaterialController
 from .controls import CellLabel
 from .appearance import CONTROL_HEIGHT, GRID
@@ -61,6 +62,9 @@ class EditorWindow(QMainWindow):
         self.selection_actions = SelectionActions(self.document.selected, self.panels.selection, self.plotter.camera,
                                                   available=lambda: self.document.session is not None and not self.placement.active
                                                   and not self.repeat.active and not self.tasks.busy)
+        self.connected = ConnectedActions(self.document, self.tasks, self.panels.selection,
+                                          available=lambda: self.document.session is not None
+                                          and not self.placement.active and not self.repeat.active)
         self.operation = self.panels.operation
         self.placement = PlacementController(self.scene, self.navigation, self.tasks.submit, self.edits.commit)
         self.placement_review = PlacementReview(self.placement, self.document, self.edits, self.tasks, self.views)
@@ -102,6 +106,7 @@ class EditorWindow(QMainWindow):
             "export": self.sources.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
             "apply": self.apply_pending, "discard": self.discard_pending, "recipe": self.show_recipe,
             "all": self.selection_actions.select_all, "clear": self.selection_actions.clear,
+            "connected": self.connected.toggle,
             "coordinates": lambda: self.panels.show("selection"), "materials": lambda: self.materials.show(),
             "fit": self.fit_scene, "map": self.minimap.toggle_large, "goto": self.camera_dialog, "refresh": self.world.refresh,
             "fly": self.fly_camera,
@@ -176,6 +181,8 @@ class EditorWindow(QMainWindow):
         self.navigation.sampled.connect(self.sample_material)
         self.navigation.corner_requested.connect(self.selection_actions.at_camera)
         self.navigation.extend_changed.connect(self.extend_selection)
+        self.connected.changed.connect(self._selection_changed)
+        self.connected.message.connect(self.status.setText)
         self.navigation.fit_requested.connect(self.fit_scene)
         self.navigation.apply_requested.connect(self.apply_pending)
         self.navigation.cancel_requested.connect(self.escape)
@@ -209,16 +216,18 @@ class EditorWindow(QMainWindow):
 
     def _sync(self):
         session, pending = self.document.session, self.document.pending
-        selection = self.document.selected.region
+        selection = self.document.selected.current
         ready = session is not None and not self.tasks.busy
         editable = ready and not session.readonly
         selected = selection is not None
         preview_ready = bool(pending) and self.views.ready
         placing = self.placement.active or self.repeat.active
+        self.connected.sync()
         self.menus.sync(session, busy=self.tasks.busy, selected=selected,
                         preview=pending is not None, preview_ready=preview_ready, world_active=self.world.active,
                         placing=placing, repeating=self.repeat.active, clipboard=self.placement.clipboard is not None,
-                        object_count=len(self.objects.keys), single_block=selected and selection.volume == 1)
+                        object_count=len(self.objects.keys), single_block=selected and selection.volume == 1,
+                        connected=self.connected.active)
         self.placement.set_context(session, selection, self.assets,
                                     busy=self.tasks.busy or (self.placement.active and not self.views.ready and self.placement_review.plan is None),
                                     available=ready and pending is None and self.views.ready and not self.repeat.active,
@@ -350,7 +359,7 @@ class EditorWindow(QMainWindow):
 
     def _selection_changed(self):
         self._invalidate()
-        selection = self.document.selected.region
+        selection = self.document.selected.current
         self._show_selection(selection)
         self.panels.selection.set_selection(selection)
         self.operation.info.setText(self.panels.selection.info.text())
@@ -368,6 +377,12 @@ class EditorWindow(QMainWindow):
             self.objects.select(entity, extend)
             return
         hit = self.scene.hit_at(self.document.session, point)
+        if self.connected.active:
+            if hit is not None:
+                self.objects.keys.clear()
+                self.objects.refresh()
+                self.connected.pick(hit)
+            return
         if hit is not None:
             self.objects.keys.clear()
             self.objects.refresh()
@@ -418,7 +433,7 @@ class EditorWindow(QMainWindow):
         self.minimap.set_selection((selection.lower, selection.upper) if selection else None)
 
     def show_operation(self, mode):
-        if not self.document.session or self.document.session.readonly or self.document.selected.region is None:
+        if not self.document.session or self.document.session.readonly or self.document.selected.current is None:
             return
         self.navigation.stop()
         self.operation.mode.setCurrentText(mode)
@@ -566,6 +581,10 @@ class EditorWindow(QMainWindow):
                 self.placement.cancel()
             self.plotter.setFocus()
             return
+        if self.connected.active:
+            self.connected.set_active(False)
+            self.plotter.setFocus()
+            return
         if self.document.pending is not None:
             self.discard_pending()
         else:
@@ -616,7 +635,7 @@ class EditorWindow(QMainWindow):
     def _placement_applied(self, session, data, bounds, count):
         clipped = tuple(tuple(max(0, min(p, size)) for p, size in zip(bound, session.size)) for bound in bounds)
         self.document.selected.set_bounds(*clipped)
-        self.panels.selection.set_selection(self.document.selected.region)
+        self.panels.selection.set_selection(self.document.selected.current)
         if data is None:
             self.views.accept(session)
             self.views.rebase(session)
