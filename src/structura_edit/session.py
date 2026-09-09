@@ -12,6 +12,7 @@ from .history import History
 from .entity_data import initial_entities, check_entities, write_entities
 from .cell_set import CellSet
 from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
+from .condition import Condition
 from .cell_data import material_data
 
 
@@ -187,15 +188,25 @@ class EditSession:
 
     def replace(self, selection, source, target, *, exact=False, preserve_properties=False):
         self._check_selection(selection)
-        source = state_key(parse_state(source))
-        exact = exact or "[" in source
-        def matches(cell):
-            return cell.state == source if exact else cell.state.split("[", 1)[0] == source
-        matching_indices = {i for i, state in enumerate(self._states) if matches(_Cell(state))}
-        base = self._document.source.present
-        positions = (p for p in self.positions() if p in selection and (
-            matches(self._cells[p]) if p in self._cells else base[p] in matching_indices
-        ))
+        if isinstance(source, str) and not source.strip():
+            source = Condition("non-air")
+        if isinstance(source, Condition):
+            def state_at(position):
+                cell = self._cell(position)
+                return cell.state if cell else None
+            pool = selection.positions() if isinstance(selection, CellSet) else (
+                p for p in self.positions() if p in selection)
+            positions = (p for p in pool if source.matches(state_at(p)))
+        else:
+            source = state_key(parse_state(source))
+            exact = exact or "[" in source
+            def matches(cell):
+                return cell.state == source if exact else cell.state.split("[", 1)[0] == source
+            matching_indices = {i for i, state in enumerate(self._states) if matches(_Cell(state))}
+            base = self._document.source.present
+            positions = (p for p in self.positions() if p in selection and (
+                matches(self._cells[p]) if p in self._cells else base[p] in matching_indices
+            ))
         if preserve_properties:
             from structura_core.blockstates import replace_material
 

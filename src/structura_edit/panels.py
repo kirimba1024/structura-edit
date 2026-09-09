@@ -1,11 +1,13 @@
 from PySide6.QtCore import Qt, Signal, QStringListModel
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
-    QLabel, QLineEdit, QListWidget, QPushButton, QSpinBox, QVBoxLayout, QWidget,
+    QLabel, QLineEdit, QListWidget, QPushButton, QSpinBox, QToolButton, QVBoxLayout, QWidget,
 )
 
 from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS, UI_COMMANDS
 from .appearance import GRID
+from .condition import Condition
+from .condition_ui import choose_condition
 from .controls import CellCheckBox, CellLabel
 
 
@@ -21,6 +23,8 @@ class OperationPanel(QWidget):
         self.saved = {}
         self.current = REGION_COMMANDS[0]
         self.fields = {}
+        self.holders = {}
+        self.conditions = {}
         self.materials = QStringListModel(self)
         layout = QVBoxLayout(self)
         self._create_form(layout)
@@ -67,7 +71,7 @@ class OperationPanel(QWidget):
                 button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 button.setToolTip("Choose a material from loaded and recent blocks")
                 button.clicked.connect(lambda checked=False, name=key: self.material_requested.emit(name))
-                self.form.addRow(button, field)
+                self.form.addRow(button, self._condition_field(key, field) if key in ("source", "mask") else field)
         layout.addLayout(self.form)
 
     def _parameter_field(self, parameter):
@@ -99,6 +103,34 @@ class OperationPanel(QWidget):
         field.setToolTip(parameter.description)
         return field
 
+    def _condition_field(self, key, field):
+        condition = QToolButton(text="…")
+        condition.setFixedWidth(GRID * 7)
+        condition.setToolTip("Choose a condition: air, materials or properties")
+        condition.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        condition.clicked.connect(lambda: self.pick_condition(key))
+        field.textChanged.connect(lambda text: self._forget_condition(key, text))
+        holder = QWidget()
+        row = QHBoxLayout(holder)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(GRID)
+        row.addWidget(field, stretch=1)
+        row.addWidget(condition)
+        self.holders[key] = holder
+        return holder
+
+    def pick_condition(self, key):
+        chosen = choose_condition(self, self.conditions.get(key), self.materials.stringList())
+        if chosen is not None and chosen is not self.conditions.get(key):
+            self.conditions[key] = chosen
+            self.fields[key].setText(chosen.label)
+            self.changed.emit()
+
+    def _forget_condition(self, key, text):
+        condition = self.conditions.get(key)
+        if condition is not None and text != condition.label:
+            del self.conditions[key]
+
     def set_materials(self, states):
         self.materials.setStringList(list(states))
 
@@ -109,7 +141,8 @@ class OperationPanel(QWidget):
             if isinstance(field, QCheckBox):
                 result[key] = field.isChecked()
             elif isinstance(field, QLineEdit):
-                result[key] = field.text().strip()
+                condition = self.conditions.get(key)
+                result[key] = condition if condition is not None and field.text() == condition.label else field.text().strip()
             elif isinstance(field, QSpinBox):
                 result[key] = field.value()
             else:
@@ -124,7 +157,12 @@ class OperationPanel(QWidget):
                 if isinstance(field, QCheckBox):
                     field.setChecked(value)
                 elif isinstance(field, QLineEdit):
-                    field.setText(value)
+                    if isinstance(value, Condition):
+                        self.conditions[key] = value
+                    else:
+                        self.conditions.pop(key, None)
+                        value = str(value)
+                    field.setText(value.label if isinstance(value, Condition) else value)
                     field.setCursorPosition(0)
                 elif isinstance(field, QSpinBox):
                     field.setValue(value)
@@ -144,7 +182,7 @@ class OperationPanel(QWidget):
         self.saved[self.current].pop("target", None)
         self.current = name
         for key, field in self.fields.items():
-            self.form.setRowVisible(field, key in COMMANDS[name].parameters)
+            self.form.setRowVisible(self.holders.get(key, field), key in COMMANDS[name].parameters)
         field = self.fields[COMMANDS[name].parameters[0]]
         self.setFocusProxy(field.inputs[0] if hasattr(field, "inputs") else field)
         values = self.saved.get(name, COMMANDS[name].defaults()).copy()

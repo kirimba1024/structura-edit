@@ -1,6 +1,7 @@
 from structura_core.nbt import parse_state, state_key
 
 from .changes import Selection
+from .condition import Condition
 from .picking import EMPTY
 
 
@@ -35,7 +36,8 @@ def _shell(selection, thickness):
 def shape_positions(session, selection, form, mask, surface, thickness=1):
     if form not in ("Box", "Walls", "Shell", "Ellipsoid", "Cylinder", "Top surface", "Hollow", "Overlay surface"):
         raise ValueError(f"Unknown shape: {form}")
-    mask = state_key(parse_state(mask)) if mask else None
+    predicate = mask.matches if isinstance(mask, Condition) else None
+    mask = None if predicate or not mask else state_key(parse_state(mask))
     lower, upper = selection.lower, selection.upper
     center = tuple((lo + hi) / 2 for lo, hi in zip(lower, upper))
     radius = tuple((hi - lo) / 2 for lo, hi in zip(lower, upper))
@@ -57,6 +59,10 @@ def shape_positions(session, selection, form, mask, surface, thickness=1):
         if mask:
             state = session.state_at(position)
             if state is None or (state if "[" in mask else state.split("[", 1)[0]) != mask:
+                continue
+        if predicate:
+            state = session.state_at(position)
+            if not predicate(state):
                 continue
         if surface and (empty(position) or not any(empty(tuple(v + (d if i == axis else 0) for i, v in enumerate(position))) for axis in range(3) for d in (-1, 1))):
             continue

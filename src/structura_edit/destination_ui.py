@@ -1,7 +1,8 @@
 from PySide6.QtCore import Qt, Signal, QStringListModel
-from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QLabel, QSizePolicy, QToolButton
+from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QLabel, QPushButton, QSizePolicy, QToolButton
 
 from .appearance import CONTROL_HEIGHT, GRID, PANEL_WIDTH
+from .condition_ui import choose_condition
 from .destination_rule import DestinationRule
 
 
@@ -41,7 +42,8 @@ class DestinationButton(QToolButton):
         layout.setContentsMargins(GRID * 2, GRID * 2, GRID * 2, GRID * 2)
         layout.setSpacing(GRID)
         mode = QComboBox()
-        for label, key in (("Replace all", "all"), ("Keep existing", "air"), ("Only material", "material")):
+        for label, key in (("Replace all", "all"), ("Keep existing", "air"), ("Only material", "material"),
+                           ("Only where", "where")):
             mode.addItem(label, key)
         mode.setCurrentIndex(mode.findData(self.rule.mode))
         material = QComboBox()
@@ -59,6 +61,10 @@ class DestinationButton(QToolButton):
         material.setAccessibleName("Destination material")
         layout.addRow("Replace", mode)
         layout.addRow("Material", material)
+        condition = QPushButton("Condition…")
+        condition.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout.addRow(condition)
+        chosen = self.rule.condition if self.rule.mode == "where" else None
         note = QLabel()
         note.setFixedHeight(CONTROL_HEIGHT * 2)
         layout.addRow(note)
@@ -71,19 +77,33 @@ class DestinationButton(QToolButton):
         material.editTextChanged.connect(clear_error)
         def mode_changed():
             layout.setRowVisible(material, mode.currentData() == "material")
+            layout.setRowVisible(condition, mode.currentData() == "where")
             note.setText({"all": "Replace destination blocks\nin the copied area.",
                           "air": "Fill air only.\nKeep existing blocks.",
-                          "material": "Match a block ID, or an exact\nstate with properties."}[mode.currentData()])
+                          "material": "Match a block ID, or an exact\nstate with properties.",
+                          "where": "Replace destinations that\nmatch the condition."}[mode.currentData()])
             clear_error()
         mode.currentIndexChanged.connect(mode_changed)
+
+        def describe_condition():
+            picked = getattr(dialog, "condition", None)
+            condition.setText("Condition: " + picked.label if picked else "Condition…")
+        def pick_condition():
+            dialog.condition = choose_condition(dialog, dialog.condition, self.materials.stringList())
+            describe_condition()
+        condition.clicked.connect(pick_condition)
+        dialog.condition = chosen
+        describe_condition()
         mode_changed()
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Use rule")
         def accept():
             try:
-                rule = DestinationRule(mode.currentData(), material.currentText().strip())
+                rule = DestinationRule(mode.currentData(), material.currentText().strip(),
+                                       condition=getattr(dialog, "condition", None) if mode.currentData() == "where" else None)
             except ValueError:
-                error.setText("Enter a block ID:\nminecraft:stone")
+                error.setText("Enter a block ID:\nminecraft:stone" if mode.currentData() == "material"
+                              else "Choose a condition first")
                 layout.setRowVisible(error, True)
                 dialog.adjustSize()
                 material.setFocus()
