@@ -23,7 +23,7 @@ QPushButton:pressed, QToolButton:pressed, QToolButton:checked { background: $PAN
 QPushButton:focus, QToolButton:focus, QPushButton:default { border-color: $ACCENT; }
 QWidget:disabled { color: $BORDER; }
 QLineEdit, QPlainTextEdit, QAbstractSpinBox, QComboBox, QAbstractItemView {
-    background: #fffdf0; border: 1px solid $BORDER; border-radius: 0;
+    background: $INPUT_BASE; border: 1px solid $BORDER; border-radius: 0;
     selection-background-color: $ACCENT; selection-color: white;
 }
 QLineEdit, QAbstractSpinBox, QComboBox { min-height: ${CONTROL_CONTENT}px; max-height: ${CONTROL_CONTENT}px; padding: 1px 4px; }
@@ -48,7 +48,7 @@ QCheckBox {
 QCheckBox:hover { background: $PANEL_HOVER; }
 QCheckBox:checked { background: $PANEL_PRESSED; }
 QCheckBox:focus { border-color: $ACCENT; }
-QCheckBox::indicator { width: 14px; height: 14px; border: 1px solid $BORDER; background: #fffdf0; }
+QCheckBox::indicator { width: 14px; height: 14px; border: 1px solid $BORDER; background: $INPUT_BASE; }
 QCheckBox::indicator:checked { image: url("$ASSETS/check.svg"); }
 QCheckBox::indicator:focus { border-color: $ACCENT; }
 QMenuBar::item { padding: 2px 8px; background: transparent; }

@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 
 from .commands import COMMANDS, UI_COMMANDS
+from .navigation import CONTROLS
 from .panels import CommandSearch
 
 
@@ -16,6 +17,7 @@ class EditorMenus:
         selection = bar.addMenu("&Selection")
         view = bar.addMenu("&View")
         objects = bar.addMenu("&Objects")
+        help_menu = bar.addMenu("&Help")
         self.selection_menu = selection
         entries = (
             (file, "open", "Open…", QKeySequence.StandardKey.Open),
@@ -43,8 +45,8 @@ class EditorMenus:
             (objects, "entity_duplicate", "Duplicate entities…", None),
             (objects, "entity_rotate", "Rotate entities…", None),
             (objects, "entity_delete", "Delete entities…", None),
-            (selection, "all", "Select all", None),
-            (selection, "clear", "Clear selection", None),
+            (selection, "all", "Select all", "Ctrl+A"),
+            (selection, "clear", "Clear selection", "Ctrl+Shift+A"),
             (selection, "connected", "Connected select", None),
             (selection, "coordinates", "Coordinates…", None),
             (selection, "materials", "Materials…", None),
@@ -60,6 +62,8 @@ class EditorMenus:
             (view, "chunks", "Chunk outlines", None),
             (view, "resources", "Minecraft resources…", None),
             (view, "changes", "Unsaved changes", None),
+            (help_menu, "controls", "Controls and keys…", None),
+            (help_menu, "about", "About Structura Edit", None),
         )
         for menu, name, label, shortcut in entries:
             action = QAction(label, window)
@@ -79,6 +83,36 @@ class EditorMenus:
             self.actions[name] = action
         search = edit.addAction("Find command…", self.find_command)
         search.setShortcut(QKeySequence("Ctrl+Shift+P"))
+
+    def show_controls(self):
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
+
+        from .appearance import GRID, PANEL_WIDTH
+
+        dialog = QDialog(self.window)
+        dialog.setWindowTitle("Controls and keys")
+        dialog.setFixedWidth(PANEL_WIDTH)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(*([GRID * 2] * 4))
+        layout.setSpacing(GRID)
+        text = QLabel(CONTROLS)
+        text.setWordWrap(True)
+        layout.addWidget(text, 1)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.clicked.connect(dialog.close)
+        layout.addWidget(buttons)
+        dialog.exec()
+
+    def show_about(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        import structura_edit
+
+        box = QMessageBox(self.window)
+        box.setWindowTitle("About Structura Edit")
+        box.setText(f"Structura Edit {structura_edit.__version__}")
+        box.setInformativeText("A schematic and world editor.\nEditing stays separate from the publishing pipeline.")
+        box.exec()
 
     def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, repeating=False,
              clipboard=False, object_count=0, single_block=False, connected=False, changes=False):

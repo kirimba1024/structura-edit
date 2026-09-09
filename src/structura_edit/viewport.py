@@ -6,7 +6,7 @@ from PySide6.QtCore import QTimer, Qt, Signal
 from pyvistaqt import QtInteractor
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleUser
 
-from .appearance import SCENE_BACKGROUND, TEXT
+from .appearance import AXIS_COLORS, SCENE_BACKGROUND, TEXT
 
 class SceneView(QtInteractor):
     resized = Signal()
@@ -23,7 +23,7 @@ class SceneView(QtInteractor):
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.add_axes(interactive=False, viewport=(0, 0, 0.085, 0.13), line_width=2, color=TEXT,
-                      x_color="#e37468", y_color="#8ebd70", z_color="#729bcc")
+                      x_color=AXIS_COLORS[0], y_color=AXIS_COLORS[1], z_color=AXIS_COLORS[2])
 
     def render(self):
         if not self.suppress_rendering:

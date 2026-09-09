@@ -1,6 +1,13 @@
 ACCENT = "#26a888"
 AXIS_COLORS = ("#cd6253", "#348659", "#397ca9")
+CROSSHAIR = "#f5f3e6"
+CROSSHAIR_EDGE = "#000000"
+GUIDE = "#687d80"
 HOVER = "#eee9d7"
+INPUT_BASE = "#fffdf0"
+MAP_CAMERA = "#fff5dc"
+MAP_ENTITY = "#f5f3e8"
+MAP_PLAYER = "#e4ce68"
 REMOVAL = "#ef6652"
 MAP_BACKGROUND = "#d8e6cc"
 SCENE_BACKGROUND = "#cfe6ed"

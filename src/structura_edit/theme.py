@@ -47,7 +47,7 @@ def apply_theme(widget):
         app.setFont(pixel_font())
         app.setAttribute(Qt.ApplicationAttribute.AA_DontUseNativeDialogs)
         palette = app.palette()
-        colors = {"Window": appearance.PANEL_BACKGROUND, "WindowText": appearance.TEXT, "Base": "#fffdf0",
+        colors = {"Window": appearance.PANEL_BACKGROUND, "WindowText": appearance.TEXT, "Base": appearance.INPUT_BASE,
                   "Text": appearance.TEXT, "Button": appearance.PANEL_BACKGROUND, "ButtonText": appearance.TEXT,
                   "Highlight": appearance.ACCENT, "HighlightedText": "#ffffff", "ToolTipBase": appearance.PANEL_BACKGROUND,
                   "ToolTipText": appearance.TEXT, "AlternateBase": appearance.PANEL_PRESSED}

@@ -8,7 +8,7 @@ from vtkmodules.vtkPythonContext2D import vtkPythonItem
 from vtkmodules.vtkRenderingContext2D import vtkPen
 from vtkmodules.vtkRenderingContextOpenGL2 import vtkOpenGLContextActor
 
-from .appearance import ACCENT, FONT_SIZE, GRID, HOVER, PANEL_BACKGROUND, SELECTION_FILL, TEMPORARY_FILL, TEXT
+from .appearance import ACCENT, CROSSHAIR, CROSSHAIR_EDGE, FONT_SIZE, GRID, HOVER, PANEL_BACKGROUND, SELECTION_FILL, TEMPORARY_FILL, TEXT
 
 class BoundsMarker:
     def __init__(self, plotter, color, *, fill=0, width=1):
@@ -86,7 +86,8 @@ class SceneOverlay:
             x, y = width / 2, height / 2
             pen = painter.GetPen()
             pen.SetLineType(vtkPen.SOLID_LINE)
-            for color, width in (((0, 0, 0, 160), 3), ((245, 243, 230, 220), 1)):
+            colors = ((*pv.Color(CROSSHAIR_EDGE).int_rgb, 160), 3), ((*pv.Color(CROSSHAIR).int_rgb, 220), 1)
+            for color, width in colors:
                 pen.SetColor(*color)
                 pen.SetWidth(width * scale)
                 for sign in (-1, 1):

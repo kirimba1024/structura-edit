@@ -110,6 +110,7 @@ class EditorWindow(QMainWindow):
             "open": self.sources.open_dialog, "save": self.sources.save_dialog,
             "export": self.sources.export_dialog, "close": self.close, "undo": self.undo, "redo": self.redo,
             "revert": self.revert_all, "backups": self.restore_backup, "changes": self.changes_toggled,
+            "controls": lambda: self.menus.show_controls(), "about": lambda: self.menus.show_about(),
             "apply": self.apply_pending, "discard": self.discard_pending, "recipe": self.show_recipe,
             "all": self.selection_actions.select_all, "clear": self.selection_actions.clear,
             "connected": self.connected.toggle,

@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from .map_layout import MapLayout, projection_rect
 from .loading import MAP_TILE_SIZE
 from .map_projection import LABELS, VIEWS, depth_axis, project, unproject, slice_bounds
-from .appearance import ACCENT, BORDER, MAP_BACKGROUND, PANEL_BACKGROUND, REMOVAL, TEXT
+from .appearance import ACCENT, BORDER, MAP_BACKGROUND, MAP_CAMERA, MAP_ENTITY, MAP_PLAYER, PANEL_BACKGROUND, REMOVAL, TEXT
 
 
 class MapCanvas(QWidget):
@@ -88,7 +88,7 @@ class MapCanvas(QWidget):
                 lower, upper = slice_bounds(self.size_blocks, self.map_cut, view)
                 if not lower <= position[depth_axis(view)] < upper:
                     continue
-                painter.setBrush(QColor("#f5f3e8" if player else "#e4ce68"))
+                painter.setBrush(QColor(MAP_ENTITY if player else MAP_PLAYER))
                 point = self.screen_point(position, view)
                 painter.drawRect(QRectF(round(point.x()) - 2, round(point.y()) - 2, 4, 4))
             point = self.screen_point(self.position, view)
@@ -100,12 +100,12 @@ class MapCanvas(QWidget):
                     direction /= length
                     side = QPointF(-direction.y(), direction.x())
                     painter.setBrush(QColor(REMOVAL))
-                    painter.setPen(QPen(QColor("#fff5dc"), 1))
+                    painter.setPen(QPen(QColor(MAP_CAMERA), 1))
                     painter.drawPolygon(QPolygonF([point + direction * 6, point - direction * 4 + side * 4,
                                                     point - direction * 4 - side * 4]))
                 else:
                     painter.setBrush(QColor(REMOVAL))
-                    painter.setPen(QPen(QColor("#fff5dc"), 1))
+                    painter.setPen(QPen(QColor(MAP_CAMERA), 1))
                     painter.drawRect(QRectF(round(point.x()) - 2, round(point.y()) - 2, 4, 4))
             painter.setPen(QPen(QColor(ACCENT if self.layout.large and self.layout.focused == view else BORDER), 1))
             painter.setBrush(Qt.BrushStyle.NoBrush)

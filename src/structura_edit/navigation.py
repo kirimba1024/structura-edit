@@ -16,7 +16,7 @@ CONTROLS = ("Move mouse / one finger: look after opening · Escape: release curs
             "Shift+`: resume freelook · Hold RMB: temporary look\n"
             "− / +: speed · Mouse wheel while looking: speed · Shift+click: region\n"
             "I / middle click: pick material · 1 / 2: corner A / B at camera\n"
-            "F: frame scene · M: map\n"
+            "F: frame scene · M: map · Ctrl+Shift+P: find command\n"
             "Enter: apply preview · Escape: cancel")
 
 

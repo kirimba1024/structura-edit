@@ -4,7 +4,7 @@ from math import ceil
 import numpy as np
 import pyvista as pv
 
-from .appearance import CHUNK_LINE_OPACITY, CHUNK_LINE_WIDTH
+from .appearance import CHUNK_LINE_OPACITY, CHUNK_LINE_WIDTH, GUIDE
 
 
 def box_edges(lower, upper):
@@ -65,7 +65,7 @@ class SceneGuides:
     def _add(self, mesh, opacity, width=1):
         if mesh is None:
             return
-        actor = self.plotter.add_mesh(mesh, color="#687d80", opacity=opacity, line_width=width,
+        actor = self.plotter.add_mesh(mesh, color=GUIDE, opacity=opacity, line_width=width,
                                       lighting=False, pickable=False, reset_camera=False, render=False)
         actor.SetUseBounds(False)
         self.actors.append(actor)
