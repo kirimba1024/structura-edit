@@ -9,6 +9,15 @@ from .appearance import GRID
 from .condition import Condition
 from .condition_ui import choose_condition
 from .controls import CellCheckBox, CellLabel
+from .mix import Mix
+from .mix_ui import choose_mix
+
+
+SUFFIXES = {
+    "source": ("Choose a condition: air, materials or properties", "condition"),
+    "mask": ("Choose a condition: air, materials or properties", "condition"),
+    "target": ("Choose a weighted mix of materials", "mix"),
+}
 
 
 class OperationPanel(QWidget):
@@ -24,7 +33,7 @@ class OperationPanel(QWidget):
         self.current = REGION_COMMANDS[0]
         self.fields = {}
         self.holders = {}
-        self.conditions = {}
+        self.chosen = {}
         self.materials = QStringListModel(self)
         layout = QVBoxLayout(self)
         self._create_form(layout)
@@ -71,7 +80,7 @@ class OperationPanel(QWidget):
                 button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 button.setToolTip("Choose a material from loaded and recent blocks")
                 button.clicked.connect(lambda checked=False, name=key: self.material_requested.emit(name))
-                self.form.addRow(button, self._condition_field(key, field) if key in ("source", "mask") else field)
+                self.form.addRow(button, self._suffix_field(key, field) if key in SUFFIXES else field)
         layout.addLayout(self.form)
 
     def _parameter_field(self, parameter):
@@ -103,33 +112,38 @@ class OperationPanel(QWidget):
         field.setToolTip(parameter.description)
         return field
 
-    def _condition_field(self, key, field):
-        condition = QToolButton(text="…")
-        condition.setFixedWidth(GRID * 7)
-        condition.setToolTip("Choose a condition: air, materials or properties")
-        condition.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        condition.clicked.connect(lambda: self.pick_condition(key))
-        field.textChanged.connect(lambda text: self._forget_condition(key, text))
+    def _suffix_field(self, key, field):
+        tooltip, kind = SUFFIXES[key]
+        button = QToolButton(text="…")
+        button.setFixedWidth(GRID * 7)
+        button.setToolTip(tooltip)
+        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button.clicked.connect(lambda: self.pick_special(key, kind))
+        field.textChanged.connect(lambda text: self._forget(key, text))
         holder = QWidget()
         row = QHBoxLayout(holder)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(GRID)
         row.addWidget(field, stretch=1)
-        row.addWidget(condition)
+        row.addWidget(button)
         self.holders[key] = holder
         return holder
 
-    def pick_condition(self, key):
-        chosen = choose_condition(self, self.conditions.get(key), self.materials.stringList())
-        if chosen is not None and chosen is not self.conditions.get(key):
-            self.conditions[key] = chosen
+    def pick_special(self, key, kind):
+        current = self.chosen.get(key)
+        if kind == "condition":
+            chosen = choose_condition(self, current, self.materials.stringList())
+        else:
+            chosen = choose_mix(self, current, self.materials.stringList())
+        if chosen is not None and chosen is not current:
+            self.chosen[key] = chosen
             self.fields[key].setText(chosen.label)
             self.changed.emit()
 
-    def _forget_condition(self, key, text):
-        condition = self.conditions.get(key)
-        if condition is not None and text != condition.label:
-            del self.conditions[key]
+    def _forget(self, key, text):
+        chosen = self.chosen.get(key)
+        if chosen is not None and text != chosen.label:
+            del self.chosen[key]
 
     def set_materials(self, states):
         self.materials.setStringList(list(states))
@@ -141,8 +155,8 @@ class OperationPanel(QWidget):
             if isinstance(field, QCheckBox):
                 result[key] = field.isChecked()
             elif isinstance(field, QLineEdit):
-                condition = self.conditions.get(key)
-                result[key] = condition if condition is not None and field.text() == condition.label else field.text().strip()
+                chosen = self.chosen.get(key)
+                result[key] = chosen if chosen is not None and field.text() == chosen.label else field.text().strip()
             elif isinstance(field, QSpinBox):
                 result[key] = field.value()
             else:
@@ -157,12 +171,12 @@ class OperationPanel(QWidget):
                 if isinstance(field, QCheckBox):
                     field.setChecked(value)
                 elif isinstance(field, QLineEdit):
-                    if isinstance(value, Condition):
-                        self.conditions[key] = value
+                    if isinstance(value, (Condition, Mix)):
+                        self.chosen[key] = value
                     else:
-                        self.conditions.pop(key, None)
+                        self.chosen.pop(key, None)
                         value = str(value)
-                    field.setText(value.label if isinstance(value, Condition) else value)
+                    field.setText(value.label if isinstance(value, (Condition, Mix)) else value)
                     field.setCursorPosition(0)
                 elif isinstance(field, QSpinBox):
                     field.setValue(value)
@@ -178,6 +192,7 @@ class OperationPanel(QWidget):
 
     def _mode_changed(self, name):
         target = self.fields["target"].text()
+        chosen = self.chosen.get("target")
         self.saved[self.current] = self.values()
         self.saved[self.current].pop("target", None)
         self.current = name
@@ -186,7 +201,7 @@ class OperationPanel(QWidget):
         field = self.fields[COMMANDS[name].parameters[0]]
         self.setFocusProxy(field.inputs[0] if hasattr(field, "inputs") else field)
         values = self.saved.get(name, COMMANDS[name].defaults()).copy()
-        values["target"] = target
+        values["target"] = chosen.label if chosen is not None else target
         self.set_values(values)
         self.info.setText(COMMANDS[name].description)
 

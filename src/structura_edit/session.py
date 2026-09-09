@@ -13,6 +13,7 @@ from .entity_data import initial_entities, check_entities, write_entities
 from .cell_set import CellSet
 from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
 from .condition import Condition
+from .mix import Mix
 from .cell_data import material_data
 
 
@@ -210,6 +211,10 @@ class EditSession:
         if preserve_properties:
             from structura_core.blockstates import replace_material
 
+            if isinstance(target, Mix):
+                resolve = lru_cache(maxsize=None)(lambda state, picked: replace_material(state, picked))
+                return self._change(positions, lambda position, cell: resolve(cell.state, target(position, cell)),
+                                    "Replace")
             resolve = lru_cache(maxsize=None)(lambda state: replace_material(state, target))
             return self._change(positions, lambda position, cell: resolve(cell.state), "Replace")
         return self._change(positions, target, "Replace")
