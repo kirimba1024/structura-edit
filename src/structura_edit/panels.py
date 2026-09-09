@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QListWidget, QPushButton, QSpinBox, QVBoxLayout, QWidget,
 )
 
-from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS
+from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS, UI_COMMANDS
 from .appearance import GRID
 from .controls import CellCheckBox, CellLabel
 
@@ -50,7 +50,8 @@ class OperationPanel(QWidget):
         self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
         self.form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.mode = QComboBox()
-        self.mode.addItems(REGION_COMMANDS)
+        self.mode.addItems(UI_COMMANDS)
+        self.mode.insertSeparator(len(REGION_COMMANDS))
         labels = ["Action", *(parameter.label + "…" for parameter in PARAMETERS.values() if isinstance(parameter.default, str))]
         label_width = max(self.fontMetrics().horizontalAdvance(label) for label in labels) + GRID * 4
         label_width = (label_width + GRID - 1) // GRID * GRID
@@ -74,6 +75,9 @@ class OperationPanel(QWidget):
         if isinstance(value, bool):
             field = CellCheckBox(parameter.label)
             field.toggled.connect(self.changed)
+        elif isinstance(value, int):
+            field = QSpinBox(minimum=1, maximum=16, keyboardTracking=False, accessibleName=parameter.label)
+            field.valueChanged.connect(self.changed)
         elif isinstance(value, tuple):
             field = QWidget()
             axes = QVBoxLayout(field)
@@ -106,6 +110,8 @@ class OperationPanel(QWidget):
                 result[key] = field.isChecked()
             elif isinstance(field, QLineEdit):
                 result[key] = field.text().strip()
+            elif isinstance(field, QSpinBox):
+                result[key] = field.value()
             else:
                 result[key] = tuple(f.value() for f in field.inputs)
         return result
@@ -120,6 +126,8 @@ class OperationPanel(QWidget):
                 elif isinstance(field, QLineEdit):
                     field.setText(value)
                     field.setCursorPosition(0)
+                elif isinstance(field, QSpinBox):
+                    field.setValue(value)
                 else:
                     for axis, number in zip(field.inputs, value):
                         axis.setValue(number)

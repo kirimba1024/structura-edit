@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 
-from .commands import COMMANDS, REGION_COMMANDS
+from .commands import COMMANDS, UI_COMMANDS
 from .panels import CommandSearch
 
 
@@ -68,7 +68,7 @@ class EditorMenus:
             menu.addAction(action)
             self.actions[name] = action
         selection.addSeparator()
-        for name in REGION_COMMANDS:
+        for name in UI_COMMANDS:
             command = COMMANDS[name]
             action = selection.addAction(name + "…", lambda checked=False, n=name: callbacks["operation"](n))
             action.setToolTip(command.description)
@@ -87,7 +87,7 @@ class EditorMenus:
         for name in ("entity_move", "entity_duplicate", "entity_rotate", "entity_delete"):
             self.actions[name].setEnabled(objects_ready and editable and object_count > 0)
         self.selection_menu.setEnabled(session is not None)
-        for name in (*REGION_COMMANDS, "recipe"):
+        for name in (*UI_COMMANDS, "recipe"):
             self.actions[name].setEnabled(editable and selected and not placing)
         self.actions["open"].setEnabled(not busy)
         self.actions["resources"].setEnabled(not busy and not placing)

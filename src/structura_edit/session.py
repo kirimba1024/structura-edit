@@ -237,13 +237,13 @@ class EditSession:
         return plan_stack(self, selection, copies, step, include_air=include_air, include_blocks=include_blocks, include_entities=include_entities,
                           destination=destination or DestinationRule()).change
 
-    def shape(self, selection, target, *, form="Box", mask=None, surface=False):
+    def shape(self, selection, target, *, form="Box", mask=None, surface=False, thickness=1):
         from .operations import shape_positions
 
         self._check_selection(selection)
         if selection.volume > self.operation_limit:
             raise ValueError("Shape exceeds the cell budget; select a smaller region")
-        return self._change(shape_positions(self, selection, form, mask, surface), target, form)
+        return self._change(shape_positions(self, selection, form, mask, surface, thickness), target, form)
 
     def export_selection(self, selection, path):
         from pathlib import Path
