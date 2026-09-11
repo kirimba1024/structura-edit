@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication
 from structura_core import Structure, save_structure
 
 from smoke_gui import settle
+from structura_edit.navigation import DOUBLE_ESCAPE_MS
 from structura_edit.ui import EditorWindow
 
 
@@ -61,6 +62,7 @@ def main():
             QTest.keyPress(window.plotter, Qt.Key.Key_Escape)
             assert not window.connected.active
             assert window.document.selected.cells is not None
+            QTest.qWait(DOUBLE_ESCAPE_MS + 50)
             QTest.keyPress(window.plotter, Qt.Key.Key_Escape)
             settle(window)
             assert window.document.selected.current is None

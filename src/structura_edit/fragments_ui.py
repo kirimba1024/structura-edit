@@ -13,7 +13,7 @@ class FragmentController(QObject):
     def save(self):
         window = self.window
         selection = window.document.selected.current
-        if selection is None or window.tasks.busy:
+        if not window.capabilities.can_export:
             return
         window.navigation.stop()
         name, accepted = QInputDialog.getText(window, "Save fragment", "Name:")
@@ -41,7 +41,7 @@ class FragmentController(QObject):
 
     def show(self):
         window = self.window
-        if window.tasks.busy:
+        if not window.capabilities.can_place:
             return
         window.navigation.stop()
         def listed(rows):

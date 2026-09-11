@@ -175,18 +175,16 @@ class EditorMenus:
         box.setInformativeText("A schematic and world editor.\nEditing stays separate from the publishing pipeline.")
         box.exec()
 
-    def sync(self, session, *, busy, selected, preview, preview_ready, world_active, placing=False, repeating=False,
+    def sync(self, session, caps, *, busy, selected, preview, world_active, placing=False,
              clipboard=False, object_count=0, single_block=False, connected=False, changes=False, stroke=False):
-        ready = session is not None and not busy
-        editable = ready and not session.readonly
-        objects_ready = ready and not preview and not placing
+        ready, editable, objects_ready = caps.ready, caps.editable, caps.can_inspect
         self.actions["connected"].setChecked(connected)
-        self.actions["connected"].setEnabled(ready and not placing)
+        self.actions["connected"].setEnabled(caps.can_select)
         self.actions["planar"].setEnabled(editable and not placing and not preview)
         self.actions["paint"].setEnabled(editable and selected and not placing and not preview)
         self.actions["changes"].setChecked(changes)
         self.actions["changes"].setEnabled(ready)
-        self.actions["revert"].setEnabled(editable and session.can_undo and not preview and not placing)
+        self.actions["revert"].setEnabled(caps.can_seek_history and session.can_undo)
         self.actions["backups"].setEnabled(world_active and not placing and not preview and not busy)
         self.actions["inspect"].setEnabled(objects_ready and (object_count > 0 or selected))
         for name in ("entity_all", "find_objects"):
@@ -203,41 +201,39 @@ class EditorMenus:
         else:
             reason = "Select a region" if not selected else ""
         for name in (*UI_COMMANDS, "recipe"):
-            self.actions[name].setEnabled(editable and selected and not placing)
+            self.actions[name].setEnabled(caps.can_operate)
             self.actions[name].setToolTip(reason or (COMMANDS[name].description if name in COMMANDS else "Run local Python"))
         self.actions["open"].setEnabled(not busy)
-        self.actions["draft_save"].setEnabled(editable and not preview and not placing)
+        self.actions["draft_save"].setEnabled(caps.can_save_draft)
         self.actions["draft_recover"].setEnabled(not busy and not preview and not placing)
         self.actions["resources"].setEnabled(not busy and not placing)
         self.actions["entities"].setEnabled(not placing)
-        self.actions["materials"].setEnabled(ready and not placing and not preview)
+        self.actions["materials"].setEnabled(caps.can_choose_material)
         self.actions["map"].setEnabled(session is not None)
         self.actions["fly"].setEnabled(session is not None)
         self.actions["refresh"].setEnabled(world_active and not placing and not preview)
         self.actions["world_settings"].setEnabled(world_active and not placing and not preview)
-        self.actions["save"].setEnabled(editable and not preview and not placing)
+        self.actions["save"].setEnabled(caps.can_save)
         self.actions["save"].setText("Save world" if world_active else "Save")
-        self.actions["save_as"].setEnabled(editable and not world_active and not preview and not placing)
-        if world_active:
-            self.actions["save"].setEnabled(editable and session.dirty and not preview and not placing)
-        self.actions["export"].setEnabled(ready and selected and not preview and not placing)
-        self.actions["fragment_save"].setEnabled(ready and selected and not preview and not placing)
-        self.actions["fragments"].setEnabled(editable and not preview and not placing)
-        self.actions["copy"].setEnabled(ready and selected and not preview and not placing)
+        self.actions["save_as"].setEnabled(caps.can_save_as)
+        self.actions["export"].setEnabled(caps.can_export)
+        self.actions["fragment_save"].setEnabled(caps.can_export)
+        self.actions["fragments"].setEnabled(caps.can_place)
+        self.actions["copy"].setEnabled(caps.can_copy)
         for name in ("take", "duplicate"):
-            self.actions[name].setEnabled(editable and selected and not preview and not placing)
-        self.actions["paste"].setEnabled(editable and clipboard and not preview and not placing)
+            self.actions[name].setEnabled(caps.can_place and selected)
+        self.actions["paste"].setEnabled(caps.can_place and clipboard)
         self.actions["repeat"].setEnabled(editable and selected and not preview and not placing)
-        self.actions["import"].setEnabled(editable and not preview and not placing)
+        self.actions["import"].setEnabled(caps.can_place)
         for name in ("all", "clear", "coordinates", "select_tool"):
-            self.actions[name].setEnabled(ready and not placing)
+            self.actions[name].setEnabled(caps.can_select)
         self.actions["history"].setEnabled(session is not None)
         for name in ("undo", "redo"):
             state = history_action(session, name, busy=busy, preview=preview, placing=placing, stroke=stroke)
             self.actions[name].setText(state.label)
             self.actions[name].setEnabled(state.enabled)
-        self.actions["apply"].setEnabled(editable and not stroke and (preview_ready or (placing and not repeating)))
-        self.actions["discard"].setEnabled(preview or placing)
+        self.actions["apply"].setEnabled(caps.can_apply)
+        self.actions["discard"].setEnabled(caps.can_discard)
 
     def find_command(self):
         entries = [(action.text().replace("&", ""), action) for action in self.actions.values()]

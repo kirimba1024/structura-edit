@@ -7,6 +7,7 @@
 
 | Исторический вопрос | Материал |
 |---|---|
+| Приём async-результатов, capabilities, resize и Mix | [проверки и замеры](2026-09/editor-contracts-2026-09-11.json) |
 | Сокращение контекста и единый запуск проверок | [результаты](2026-09/context-compaction-2026-09-11.json) |
 | Последний data-path этап и цифры IPC/search/sparse | [data-path](2026-09/data-path-delivery-2026-09-11.md) и соседний evidence.json |
 | Task ID, Cancel, потеря ответа и подтверждение history | [worker lifecycle](2026-09/worker-lifecycle-2026-09-11.md) |

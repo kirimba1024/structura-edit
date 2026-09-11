@@ -52,14 +52,18 @@ class PlacementReview(QObject):
 
     def load_area(self, *, commit):
         token = self.document.input_token, self.placement.token
+        session_token = self.document.session_token
         def received(result):
             if token != (self.document.input_token, self.placement.token):
                 return
             session, model = result
+            update = self.document.replace(session, token=session_token)
+            if update is None:
+                return
             self.placement.model = model
             self.placement.clipboard = model.clipboard
             self.placement.session = session
-            self.edits.updated(self.document.replace(session))
+            self.edits.updated(update)
             self.prepare_plan(commit=commit)
         self.tasks.submit("placement_area", received, session=self.document.session, placement=self.placement.model)
 

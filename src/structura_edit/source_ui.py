@@ -59,11 +59,12 @@ class SourceController(QObject):
     opening = Signal()
     message = Signal(str)
 
-    def __init__(self, parent, document, tasks, edits, world, placement, *, opened, saved):
+    def __init__(self, parent, document, tasks, edits, world, placement, *, opened, saved, capabilities):
         super().__init__(parent)
         self.document, self.tasks, self.edits = document, tasks, edits
         self.world, self.placement = world, placement
         self.opened, self.saved = opened, saved
+        self.capabilities = capabilities
         self.demo_path = None
 
     def _received(self, session):
@@ -113,14 +114,14 @@ class SourceController(QObject):
                       source_data_version=source_data_version)
 
     def import_dialog(self):
-        if not self.document.session or self.document.session.readonly or self.tasks.busy or self.placement.active:
+        if not self.capabilities().can_place:
             return
         path, _ = QFileDialog.getOpenFileName(self.parent(), "Import as placement", "", STRUCTURE_FILTER)
         if path:
             self.placement.start("import", path=path)
 
     def export_dialog(self):
-        if not self.document.session or self.tasks.busy or self.document.pending is not None or self.document.selected.current is None:
+        if not self.capabilities().can_export:
             return
         path, _ = QFileDialog.getSaveFileName(self.parent(), "Export selection", "selection.nbt",
                                              "Structure NBT (*.nbt);;Text NBT (*.snbt);;Sponge (*.schem)")
@@ -143,7 +144,8 @@ class SourceController(QObject):
         self.tasks.submit("export_review", reviewed, session=session, selection=selection, path=path)
 
     def save_dialog(self, *, save_as=False, on_saved=None):
-        if not self.document.session or self.tasks.busy or self.document.pending is not None or self.placement.active:
+        caps = self.capabilities()
+        if not (caps.can_save_as if save_as else caps.can_save):
             self.message.emit("Finish the current operation before saving")
             return False
         if self.world.active:
@@ -165,7 +167,7 @@ class SourceController(QObject):
         return False
 
     def save_path(self, path, *, on_saved=None):
-        if self.document.session and not self.document.session.readonly and self.document.pending is None and not self.placement.active:
+        if self.capabilities().can_save:
             def received(session):
                 self.saved(session)
                 if on_saved is not None:

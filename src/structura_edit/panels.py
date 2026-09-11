@@ -224,7 +224,7 @@ class OperationPanel(QWidget):
         field = self.fields[COMMANDS[name].parameters[0]]
         self.setFocusProxy(field.inputs[0] if hasattr(field, "inputs") else field)
         values = self.saved.get(name, COMMANDS[name].defaults()).copy()
-        values["target"] = chosen.label if chosen is not None else target
+        values["target"] = chosen if chosen is not None else target
         self.set_values(values)
         self.info.setText(COMMANDS[name].description)
 

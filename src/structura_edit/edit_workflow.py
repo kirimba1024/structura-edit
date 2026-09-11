@@ -70,9 +70,10 @@ class EditWorkflow:
             return False
         token = self.document.session_token
         def received(result):
-            if token != self.document.session_token:
+            update = self.document.replace(result, token=token)
+            if update is None:
                 return
-            self.updated(self.document.replace(result))
+            self.updated(update)
             callback(result)
         return bool(self.tasks.submit_document(DOCUMENT_COMMANDS[kind](**args), received, session=session))
 

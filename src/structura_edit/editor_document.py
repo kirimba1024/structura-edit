@@ -1,7 +1,16 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from .changes import StaleChangeError
 from .selection import RegionSelection
+
+
+@dataclass(frozen=True)
+class SessionToken:
+    epoch: int
+    document_id: Optional[str]
+    revision: int
+    state_id: Optional[str]
 
 
 @dataclass(frozen=True)
@@ -46,8 +55,10 @@ class EditorDocument:
 
     @property
     def session_token(self):
-        identity = (self.session._id, self.session.revision) if self.session is not None else None
-        return self._epoch, identity
+        session = self.session
+        if session is None:
+            return SessionToken(self._epoch, None, 0, None)
+        return SessionToken(self._epoch, session._id, session.revision, session._state_id)
 
     @property
     def selection_token(self):
@@ -68,7 +79,9 @@ class EditorDocument:
         self.selected.reset(session.size if session is not None else (1, 1, 1))
         self.invalidate()
 
-    def replace(self, session):
+    def replace(self, session, *, token: SessionToken):
+        if token != self.session_token:
+            return None
         if self.session is None or session._id != self.session._id or session.revision < self.session.revision:
             raise StaleChangeError("The document changed; the task result no longer applies")
         update = DocumentUpdate(self.session, session)

@@ -29,7 +29,7 @@ native запуск в разблокированном сеансе. Offscreen 
 работу физического тачпада. Для navigation оставить тестовое окно активным; полёт,
 переключение приложений/меню и возврат фокуса дополнительно проверить руками.
 
-Mypy 1.18.2 проверяет task_protocol/worker_document/worker_delta, импортируемая
+Mypy 1.18.2 проверяет task_protocol/worker_document/worker_delta/action_state, импортируемая
 реализация пропускается. Это не доказательство type completeness всего py.typed API.
 Ruff пока E4/E7/E9/F; расширение format/import rules выполняется отдельно от логики.
 

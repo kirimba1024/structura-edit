@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 from structura_edit.editor_document import EditorDocument
 from structura_edit.exit_ui import ExitController, ExitDialog
 from structura_edit.source_ui import SourceController
+from structura_edit.action_state import editor_capabilities
 
 
 class ExitWindow(QWidget):
@@ -37,7 +38,10 @@ def exit_window(edit, qt_app):
         return True
     window.sources = SourceController(window, window.document, window.tasks, SimpleNamespace(save=save),
                                       SimpleNamespace(active=False), window.placement, opened=lambda _: None,
-                                      saved=lambda _: None)
+                                      saved=lambda _: None,
+                                      capabilities=lambda: editor_capabilities(window.document.session, busy=window.tasks.busy,
+                                        preview=window.document.pending, placing=window.placement.active,
+                                        repeating=window.repeat.active, stroke=window.paint.dragging))
     window.exit = ExitController(window)
     yield window
     window.exit.approved = True

@@ -33,7 +33,7 @@ class DraftController(QObject):
     def save(self):
         window = self.window
         session = window.document.session
-        if session is None or window.tasks.busy:
+        if not window.capabilities.can_save_draft:
             return
         key = session._id, session.revision
         self.last_attempt = monotonic()

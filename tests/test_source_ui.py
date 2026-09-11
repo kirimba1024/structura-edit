@@ -5,6 +5,7 @@ import pytest
 from structura_edit.editor_document import EditorDocument
 from structura_edit.source_loading import SourceVersionRequired
 from structura_edit.source_ui import SourceController
+from structura_edit.action_state import editor_capabilities
 
 
 @pytest.fixture
@@ -15,7 +16,9 @@ def sources(edit):
     tasks = SimpleNamespace(busy=False, submit=lambda kind, callback, **args: requests.append((kind, callback, args)))
     world = SimpleNamespace(active=False, open=worlds.append)
     sources = SourceController(None, document, tasks, None, world, SimpleNamespace(active=False),
-                               opened=opened.append, saved=lambda session: None)
+                               opened=opened.append, saved=lambda session: None,
+                               capabilities=lambda: editor_capabilities(document.session, busy=tasks.busy,
+                                                                        preview=document.pending, world=world.active))
     return sources, requests, opened, worlds
 
 

@@ -23,7 +23,7 @@
 | Карты и срез | `height_slice.py`, `camera_maps.py`, `map_cache.py`, `map_canvas.py`; мировая карта — `world_map.py`, `overview_maps.py` |
 | Ввод и оформление | `navigation.py`, `mouse_look.py`, `cocoa_mouse.py`; общие значения — `appearance.py`, кожа — `theme.py`, `data/editor.qss` |
 | Локальные данные | `local_store.py`, `patch_codec.py`, `drafts.py`, `fragments.py`; диагностика — `action_log.py` |
-| Сборка GUI | `ui.py` связывает компоненты; меню — `menus.py`, семантика Undo — `action_state.py` |
+| Сборка GUI | `ui.py` связывает компоненты; меню — `menus.py`, capabilities и семантика Undo — `action_state.py` |
 
 Core владеет форматами, совместимостью, записью мира и grid/block/entity transforms;
 render — моделями, meshing, проекциями и QEM. Engine/model не импортируют GUI.
@@ -41,6 +41,9 @@ Document хранит исходную структуру; session — overlay �
 снимок не мутируется следующим ответом worker. NBT извлекается независимо, исходные
 records/palettes сохраняются. `stored_positions(selection)` выбирает меньший обход
 базы/overlay или выделения; явный воздух остаётся записью, отсутствие записи — нет.
+Resize без сдвига координат у словарной базы меняет только метаданные размера,
+разделяя неизменяемые контейнеры с предыдущим Document. Публичный snapshot остаётся
+независимым. BlockArray с физическим размером и resize со сдвигом используют полное копирование.
 
 Координаты операций локальны; `origin` переводит их в мир. WorldChanges использует
 `(dimension, x, y, z) → (before, after)`, а WorldView — его текущую проекцию.
@@ -56,12 +59,13 @@ Clipboard сохраняет footprint, исходные позиции и пр�
 
 ## Принятие фонового результата
 
-- EditorDocument владеет epoch; открытие и принятая замена меняют его. Session token
-  относится к документу, input token дополнительно к selection и параметрам. Изменение
-  формы не должно отменять уже запущенный Save/Apply.
-- EditWorkflow и PlacementReview проверяют захваченный token до `replace`. Первый
-  ответ инвалидирует второй ответ от того же исходного состояния даже без serial worker.
-  Сам replace пока проверяет ID и monotonic revision; не обходить проверку исходного token.
+- EditorDocument владеет epoch; открытие и принятая замена меняют его. Неизменяемый
+  SessionToken содержит epoch, document ID, revision и state ID; input token дополнительно
+  учитывает selection и параметры. Изменение формы не отменяет уже запущенный Save/Apply.
+- `replace(session, token=...)` требует token, захваченный до задачи. Несовпадение
+  возвращает None до изменения сессии, selection или preview. Первый принятый ответ
+  исключает повторный и конкурирующий ответ от той же базы. EditWorkflow и PlacementReview
+  используют этот контракт; загрузка области placement дополнительно проверяет input/placement token.
 - Worker-протокол несёт task ID во всех progress/result/failure. DocumentToken различает
   snapshot ID, document ID, revision и state ID: одинаковая revision после Reload
   недостаточна. Клиент также проверяет идентичность сессии и базового Document.
@@ -113,9 +117,15 @@ VTK-overlay используется вместо прозрачного QWidget
 
 ## Изменения и проверки
 
-Меню и handler истории читают один history_action; общая матрица остальных capabilities
-ещё не сведена. Расширять существующие правила по конкретному сценарию, а не создавать
-ещё одно изменяемое состояние. Новые абстракции требуют существующего владельца и задачи.
+`history_action` определяет подпись и семантику Undo/Cancel. `editor_capabilities`
+вычисляет чистый снимок доступности из существующих владельцев: Save/Apply/Discard,
+selection/operations, inspect/export/copy/place, history seek и draft. Меню, основные
+кнопки и соответствующие handlers используют эти правила; protected task запрещает
+Discard, Apply ждёт показанную сцену. Специальные правила world/overview, ресурсных
+и модальных контроллеров остаются у них; объединять их только по проверенному сценарию.
+Занятость worker блокирует новый выбор, но сохраняет режим Connected Select до завершения поиска.
+Выбор материала разрешён при готовом preview и инвалидирует его; просмотр объектов требует
+завершить preview. OperationPanel хранит Mix/Condition как значения, сохраняя Mix при смене операции.
 
 Структурные решения хранить здесь, текущую очередь — в плане, измерения — в архиве.
 Не дублировать текущие лимиты/CLI во всех отчётах. Проверки engine сравнивают данные,

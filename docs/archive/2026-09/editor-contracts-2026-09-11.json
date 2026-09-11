@@ -1,0 +1,168 @@
+{
+  "date": "2026-09-11",
+  "baseline_edit": "121c879c9e443adec5ad44cc9a0dc763f63aa65b",
+  "changes": [
+    "Model replacement requires captured epoch/document/revision/state token; stale replies leave all state unchanged.",
+    "Derived capabilities align critical menus, controls and handlers; no additional mutable state or production modules.",
+    "Zero-offset resize of dictionary storage shares immutable base containers; shifted/BlockArray resize retains full path.",
+    "Operation switching preserves Mix and per-operation Conditions; preview and applied states match."
+  ],
+  "checks": {
+    "fast": {
+      "tests": 1066,
+      "summary": "1066 passed, 21 warnings in 51.50s",
+      "ruff": "passed",
+      "mypy": "4 boundary modules passed",
+      "active_docs": "13 passed"
+    },
+    "native": [
+      "building_workflow",
+      "placement_tools",
+      "object_search",
+      "nbt_batch",
+      "world_edit",
+      "camera_maps",
+      "height_slice",
+      "overview",
+      "connected",
+      "placement_boundary"
+    ],
+    "navigation": "deferred: locked macOS session; user authorized delivery without focus test",
+    "full": "incomplete; no full-gate success claimed",
+    "package": {
+      "installation": "passed: bundled demo, NBT batch, Apply, Save/reopen, Undo, world overview",
+      "signing": "Ad hoc; not notarized",
+      "archive": "Structura-Edit-macOS-arm64.zip",
+      "sha256": "6f89cdc77b940f997e05bd7bfae05612e095e32cb239636a248400c411ebc9e1",
+      "versions": {
+        "structura-edit": "0.1.0a1",
+        "structura-core": "0.6.1",
+        "structura-render": "0.8.1",
+        "PySide6-Essentials": "6.10.2",
+        "vtk": "9.5.2",
+        "meshoptimizer": "0.2.30a0"
+      }
+    }
+  },
+  "regressions": [
+    "Same-revision sibling replies in both orders, duplicate reply, reopen/close, changed state ID, preserved selection.",
+    "Protected Apply blocks Discard/Save; placement waits for model and displayed scene; repeat/stroke block ordinary edits.",
+    "Connected mode stays active while its worker runs; material picker can invalidate a ready preview without editing history.",
+    "NoScan storage catches resize traversal; snapshot/fork independence, NBT/entities, Save/reopen and mixed-direction Undo/Redo."
+  ],
+  "zero_offset_resize": {
+    "method": "Median of 5; Python 3.9.6, arm64. Dictionary base (1000,1,N/1000), one-block paste at (1000,0,0). Branch fork and gc before timing; in-memory branch history.",
+    "excluded": "GUI, IPC, fork cost, persistent history, BlockArray and negative-offset resize; this is not an end-to-end latency guarantee.",
+    "results": [
+      {
+        "cells": 10000,
+        "before_ms": {
+          "resize": 3.8723,
+          "apply": 4.1317,
+          "undo": 3.9707,
+          "redo": 3.8925
+        },
+        "after_ms": {
+          "resize": 0.0049,
+          "apply": 0.0927,
+          "undo": 0.0175,
+          "redo": 0.0113
+        }
+      },
+      {
+        "cells": 100000,
+        "before_ms": {
+          "resize": 33.2659,
+          "apply": 33.3793,
+          "undo": 34.4958,
+          "redo": 34.4577
+        },
+        "after_ms": {
+          "resize": 0.0191,
+          "apply": 0.2205,
+          "undo": 0.0382,
+          "redo": 0.0238
+        }
+      },
+      {
+        "cells": 500000,
+        "before_ms": {
+          "resize": 170.2053,
+          "apply": 169.5738,
+          "undo": 182.0751,
+          "redo": 180.8953
+        },
+        "after_ms": {
+          "resize": 0.0043,
+          "apply": 0.0668,
+          "undo": 0.0155,
+          "redo": 0.0097
+        }
+      }
+    ]
+  },
+  "native_workflow": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1652.32,
+        "gui_timer_max_gap_ms": 75.83,
+        "timer_samples": 95
+      },
+      "take_start": {
+        "elapsed_ms": 314.15,
+        "gui_timer_max_gap_ms": 62.91,
+        "timer_samples": 14
+      },
+      "take_review": {
+        "elapsed_ms": 2702.38,
+        "gui_timer_max_gap_ms": 408.56,
+        "timer_samples": 125
+      },
+      "take_apply": {
+        "elapsed_ms": 1929.55,
+        "gui_timer_max_gap_ms": 222.12,
+        "timer_samples": 68
+      },
+      "save": {
+        "elapsed_ms": 1118.81,
+        "gui_timer_max_gap_ms": 172.2,
+        "timer_samples": 48
+      },
+      "undo_take": {
+        "elapsed_ms": 1188.11,
+        "gui_timer_max_gap_ms": 81.0,
+        "timer_samples": 59
+      },
+      "redo_take": {
+        "elapsed_ms": 1098.14,
+        "gui_timer_max_gap_ms": 117.08,
+        "timer_samples": 53
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1345.08,
+    "rss_samples": 251,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "traced": false,
+    "resident_document": true,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "verification_notes": [
+    "Connected smoke previously sent two rapid Escape presses and waited in ExitDialog (Python stack confirmed). Separate cancellations now wait beyond the existing double-Escape interval; product navigation is unchanged.",
+    "Source and package logs are in the isolated temporary run directory; required commands and scenarios remain in tools/check_edit.py.",
+    "Large negative-offset Take remains a performance issue; the 408.56 ms GUI gap was not improved by this fast path."
+  ]
+}

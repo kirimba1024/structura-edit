@@ -48,6 +48,12 @@ def resize_document(session, resize, *, reverse=False):
     size = resize.before if reverse else resize.after
     offset = tuple(-v for v in resize.offset) if reverse else resize.offset
     document = copy(session._document)
+    if offset == (0, 0, 0) and isinstance(document.source.present, dict):
+        document.source = copy(document.source)
+        document.source.size = size
+        document.source.source_origin = document.origin
+        session._document = document
+        return
     source = copy_structure(document.source)
     def shifted(position):
         return tuple(p + d for p, d in zip(position, offset))

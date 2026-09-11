@@ -43,6 +43,7 @@ from .view_pipeline import ViewPipeline
 from .workbench import EditorPanels, Workbench
 from .world_ui import WorldController
 from .overview_ui import OverviewController
+from .action_state import editor_capabilities
 
 
 class EditorWindow(QMainWindow):
@@ -79,11 +80,9 @@ class EditorWindow(QMainWindow):
         self.panels = EditorPanels(self)
         self.panels.history.audit = self.audit
         self.selection_actions = SelectionActions(self.document.selected, self.panels.selection, self.plotter.camera,
-                                                  available=lambda: self.document.session is not None and not self.placement.active
-                                                  and not self.repeat.active and not self.tasks.busy)
+                                                  available=lambda: self.capabilities.can_select)
         self.connected = ConnectedActions(self.document, self.tasks, self.panels.selection,
-                                          available=lambda: self.document.session is not None
-                                          and not self.placement.active and not self.repeat.active)
+                                          available=lambda: self.capabilities.can_keep_selecting)
         self.operation = self.panels.operation
         self.placement = PlacementController(self.scene, self.navigation, self.tasks.submit, self.edits.commit)
         self.placement_review = PlacementReview(self.placement, self.document, self.edits, self.tasks, self.views)
@@ -108,11 +107,10 @@ class EditorWindow(QMainWindow):
         if world_radius is not None:
             self.world.radius = world_radius
         self.sources = SourceController(self, self.document, self.tasks, self.edits, self.world, self.placement,
-                                         opened=self._opened, saved=self._saved)
+                                         opened=self._opened, saved=self._saved, capabilities=lambda: self.capabilities)
         self.exit = ExitController(self)
         self.materials = MaterialController(self.panels, self.navigation, show_operation=self.show_operation,
-                                            available=lambda: self.document.session is not None and not self.tasks.busy
-                                            and not self.placement.active and not self.repeat.active)
+                                            available=lambda: self.capabilities.can_choose_material)
         self.overview = OverviewController(self)
         self.views.prepare_scene = self.overview.prepare_document
         self.views.present_scene = self.overview.present_document
@@ -130,8 +128,18 @@ class EditorWindow(QMainWindow):
                                                        source_data_version=source_data_version))
 
     def _objects_available(self):
-        return (self.document.session is not None and not self.tasks.busy and self.document.pending is None
-                and not self.placement.active and not self.repeat.active)
+        return self.capabilities.can_inspect
+
+    @property
+    def capabilities(self):
+        model, plan = self.placement.model, self.placement_review.plan
+        placement_ready = (self.document.session is not None and model is not None and not model.reason(self.document.session)
+                           and (plan is None or bool(plan.change)))
+        return editor_capabilities(self.document.session, busy=self.tasks.busy, protected=self.tasks.protected,
+                                   selected=self.document.selected.current is not None, preview=self.document.pending,
+                                   scene_ready=self.views.ready, placing=self.placement.active,
+                                   repeating=self.repeat.active, stroke=self.paint.dragging, world=self.world.active,
+                                   placement_ready=placement_ready)
 
     def _create_menus(self):
         self.menus = EditorMenus(self, {
@@ -284,24 +292,23 @@ class EditorWindow(QMainWindow):
     def _sync(self):
         session, pending = self.document.session, self.document.pending
         selection = self.document.selected.current
-        ready = session is not None and not self.tasks.busy
-        editable = ready and not session.readonly
+        caps = self.capabilities
         selected = selection is not None
-        preview_ready = bool(pending) and self.views.ready
         placing = self.placement.active or self.repeat.active or self.paint.dragging
         self.connected.sync()
         self.changes_ctrl.refresh()
-        self.menus.sync(session, busy=self.tasks.busy, selected=selected,
-                        preview=pending is not None, preview_ready=preview_ready, world_active=self.world.active,
-                        placing=placing, repeating=self.repeat.active, clipboard=self.placement.clipboard is not None,
+        self.menus.sync(session, caps, busy=self.tasks.busy, selected=selected,
+                        preview=pending is not None, world_active=self.world.active,
+                        placing=placing, clipboard=self.placement.clipboard is not None,
                         object_count=len(self.objects.keys), single_block=selected and selection.volume == 1,
                         connected=self.connected.active, changes=self.changes_ctrl.active, stroke=self.paint.dragging)
         self.placement.set_context(session, selection, self.assets,
                                     busy=self.tasks.busy or (self.placement.active and not self.views.ready and self.placement_review.plan is None),
-                                    available=ready and pending is None and self.views.ready and not self.repeat.active,
+                                    available=caps.can_inspect and self.views.ready,
                                     visible=session is not None and not self.minimap.large and not self.repeat.active
                                     and (pending is None or self.placement_review.plan is not None),
                                     scene_ready=self.views.ready, review=self.placement_review.plan)
+        self.placement.bar.apply.setEnabled(caps.can_apply)
         self._show_selection(selection)
         self.inspection.set_context(session, selection, self.objects.keys, self.assets,
                                     visible=not placing and not self.minimap.large and pending is None)
@@ -312,15 +319,16 @@ class EditorWindow(QMainWindow):
                           and (not self.tasks.busy or self.tasks.kind in ("render", "render_preview", "map")))
         self.menus.actions["height"].setEnabled(self.slicing.button.isEnabled())
         self.repeat.sync(placing=self.placement.active, large=self.minimap.large, scene_ready=self.views.ready)
+        self.repeat.bar.apply.setEnabled(caps.can_apply)
         self.panels.selection.setEnabled(self.selection_actions.available())
-        self.panels.materials.setEnabled(ready and not placing)
+        self.panels.materials.setEnabled(caps.can_choose_material)
         self.operation.setEnabled(session is not None and not session.readonly and not placing)
-        self.operation.preview.setEnabled(editable and selected)
-        self.operation.apply.setEnabled(editable and preview_ready)
-        self.operation.discard.setEnabled(pending is not None)
-        self.panels.recipe.preview.setEnabled(editable and selected and not placing)
-        self.panels.recipe.apply.setEnabled(editable and preview_ready)
-        self.panels.recipe.discard.setEnabled(pending is not None)
+        self.operation.preview.setEnabled(caps.can_operate)
+        self.operation.apply.setEnabled(caps.can_apply)
+        self.operation.discard.setEnabled(caps.can_discard)
+        self.panels.recipe.preview.setEnabled(caps.can_operate)
+        self.panels.recipe.apply.setEnabled(caps.can_apply)
+        self.panels.recipe.discard.setEnabled(caps.can_discard)
         self.refresh_button.setVisible(self.world.active)
         self.minimap.load_here.setEnabled(self.menus.actions["refresh"].isEnabled())
         self.fly_button.setVisible(session is not None)
@@ -366,7 +374,7 @@ class EditorWindow(QMainWindow):
 
     def revert_all(self):
         session = self.document.session
-        if session is None or not session.can_undo or self.tasks.busy or self.document.pending is not None:
+        if not self.capabilities.can_seek_history or not session.can_undo:
             return
         answer = QMessageBox.question(self, "Revert to opened", "Undo every change made in this session?")
         if answer != QMessageBox.StandardButton.Yes:
@@ -595,7 +603,7 @@ class EditorWindow(QMainWindow):
         self.minimap.set_selection(bounds)
 
     def show_operation(self, mode):
-        if not self.document.session or self.document.session.readonly or self.document.selected.current is None:
+        if not self.capabilities.can_operate:
             return
         self.navigation.stop()
         self.operation.mode.setCurrentText(mode)
@@ -631,15 +639,17 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def preview_operation(self):
-        if not self.placement.active and self.operation.validate_inputs():
+        if self.capabilities.can_operate and self.operation.validate_inputs():
             self.edits.prepare("operation", mode=self.operation.current, values=self.operation.values())
 
     def show_recipe(self):
+        if not self.capabilities.can_operate:
+            return
         self.navigation.stop()
         self.panels.show("recipe")
 
     def preview_recipe(self):
-        if not self.placement.active:
+        if self.capabilities.can_operate:
             self.edits.prepare("recipe", code=self.panels.recipe.code.toPlainText())
 
     def _previewed(self, preview):
@@ -710,10 +720,10 @@ class EditorWindow(QMainWindow):
             self.camera.frame(self.document.session.size)
 
     def apply_pending(self):
+        if not self.capabilities.can_apply:
+            return
         if self.placement.active:
             self.placement_review.apply()
-            return
-        if not self.document.pending or self.tasks.busy or not self.views.ready:
             return
         preview = self.document.preview
         request = self.views.current
@@ -729,6 +739,8 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def discard_pending(self):
+        if not self.capabilities.can_discard:
+            return
         if self.paint.dragging:
             self.paint.cancel()
             self._sync()
@@ -738,8 +750,6 @@ class EditorWindow(QMainWindow):
             return
         if self.placement.active:
             self.escape()
-            return
-        if self.tasks.kind == "apply":
             return
         self._invalidate()
         self.operation.info.setText("Preview discarded")
@@ -811,7 +821,7 @@ class EditorWindow(QMainWindow):
         self.seek_history(self.document.session.history.cursor + (-1 if direction == "undo" else 1))
 
     def seek_history(self, index):
-        if not self.placement.active:
+        if self.capabilities.can_seek_history:
             self.edits.seek_history(index, lambda session: self.render_scene())
 
     def choose_assets(self):
