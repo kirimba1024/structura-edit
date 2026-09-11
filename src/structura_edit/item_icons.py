@@ -52,14 +52,15 @@ class ItemIcons(QObject):
         self.pending = self.pending | requested
 
         def received(icons):
-            self.icons.update(icons)
+            self.icons.update({identifier: icons.get(identifier) for identifier in requested})
             self.pending = self.pending - requested
             if len(self.icons) > 512:
                 for stale in list(self.icons)[:len(self.icons) - 512]:
                     del self.icons[stale]
             self.updated.emit()
 
-        self.submit("item_icons", received, ids=tuple(missing), assets=self.assets())
+        if not self.submit("item_icons", received, ids=tuple(missing), assets=self.assets()):
+            self.pending = self.pending - requested
 
     def forget(self):
         self.icons.clear()

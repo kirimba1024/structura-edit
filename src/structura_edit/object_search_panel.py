@@ -42,6 +42,7 @@ class ObjectSearchPanel(QWidget):
     requested = Signal(str)
     page_requested = Signal(int)
     dismissed = Signal()
+    batch_requested = Signal()
 
     def __init__(self, plotter):
         super().__init__(plotter)
@@ -94,6 +95,8 @@ class ObjectSearchPanel(QWidget):
         for button in self.actions.values():
             actions.addWidget(button)
         layout.addLayout(actions)
+        self.batch = self.button("Edit field in all results…", self.batch_requested.emit)
+        layout.addWidget(self.batch)
         pages = QHBoxLayout()
         pages.setSpacing(GRID)
         self.previous = self.button("‹", lambda: self.page_requested.emit(-1))

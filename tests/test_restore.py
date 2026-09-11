@@ -3,7 +3,8 @@ from structura_edit.changes_view import summary, unsaved_changes
 
 def test_unsaved_changes_kinds(edit):
     result = unsaved_changes(edit)
-    assert result == {"changed": (), "added": (), "removed": (), "outlined": True}
+    assert result["counts"] == {"changed": 0, "added": 0, "removed": 0}
+    assert result["outlined"] and summary(result) == "0 unsaved changes"
     edit.apply(edit.set_block((0, 0, 0), "minecraft:gold_block"))
     edit.apply(edit.set_block((0, 1, 0), "minecraft:torch"))
     edit.apply(edit.set_block((1, 0, 0), "minecraft:air"))

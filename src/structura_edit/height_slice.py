@@ -14,7 +14,7 @@ class HeightSlice:
 
     @property
     def label(self):
-        return "All Y" if self.mode == "all" else f"Y {'≤' if self.mode == 'below' else '='} {self.y}"
+        return "All heights" if self.mode == "all" else f"Hide above {self.y}" if self.mode == "below" else f"Layer {self.y} only"
 
     def interval(self, session):
         height = session.size[1]

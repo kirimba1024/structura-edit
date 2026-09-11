@@ -27,7 +27,7 @@ def render_camera_maps(request, cut, large, previous, cache_path):
     images = renderer.images(cut=cut, max_pixels=budget)
     atlas, notice = None, ""
     if large and request.height.mode == "all":
-        atlas = map_spec(request.state, resolve_assets(request.assets), cache_path, cut=cut)
+        atlas = map_spec(request.state, resolve_assets(request.assets), cache_path, cut=cut, preview=bool(request.change))
         if atlas is not None:
             try:
                 images, atlas = store_maps(atlas, images)
@@ -44,6 +44,7 @@ class CameraMaps(QObject):
         self.canvas, self.cache = canvas, cache
         self.context = self.previous = self.future = self.shown = None
         self.active = True
+        self.sliced = False
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="camera-maps")
         self.timer = QTimer(self)
         self.timer.setInterval(80)
@@ -52,7 +53,8 @@ class CameraMaps(QObject):
     def target(self):
         if self.context is None:
             return None
-        return context_key(self.context), camera_cut(self.canvas.position, self.context.state.size), self.canvas.layout.large
+        cut = camera_cut(self.canvas.position, self.context.state.size) if self.sliced else None
+        return context_key(self.context), cut, self.canvas.layout.large
 
     @property
     def busy(self):
@@ -77,7 +79,7 @@ class CameraMaps(QObject):
                 previous, images, atlas, notice = future.result()
                 if self.context is not None and target[0] == context_key(self.context):
                     self.previous = previous
-                    if self.active and target[2] == self.canvas.layout.large:
+                    if self.active and target[2] == self.canvas.layout.large and (target[1] is not None) == self.sliced:
                         self.canvas.set_images(images)
                         self.canvas.map_cut = target[1]
                         self.cache.set_source(atlas)

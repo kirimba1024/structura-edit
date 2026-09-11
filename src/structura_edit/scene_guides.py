@@ -4,7 +4,7 @@ from math import ceil
 import numpy as np
 import pyvista as pv
 
-from .appearance import CHUNK_LINE_OPACITY, CHUNK_LINE_WIDTH, GUIDE
+from .appearance import CHUNK_LINE_OPACITY, CHUNK_LINE_WIDTH, GUIDE, LOADED_LINE, LOADED_LINE_WIDTH, LOADED_LINE_OPACITY
 
 
 def box_edges(lower, upper):
@@ -39,8 +39,8 @@ class SceneGuides:
         self.actors = []
         self.current = None
 
-    def update(self, session, *, bounds=True, chunks=False):
-        key = (session.size, session.origin, bounds, chunks) if session is not None else None
+    def update(self, session, *, bounds=True, chunks=False, sections=False):
+        key = (session.size, session.origin, bounds, chunks, sections) if session is not None else None
         if key == self.current:
             return
         self.current = key
@@ -50,22 +50,23 @@ class SceneGuides:
         if session is None:
             return
         if bounds:
-            self._add(line_mesh(box_edges((0, 0, 0), session.size), dashed=True), 0.24)
-        if chunks:
+            self._add(line_mesh(box_edges((0, 0, 0), session.size), dashed=True), LOADED_LINE_OPACITY, LOADED_LINE_WIDTH, LOADED_LINE)
+        if chunks or sections:
             sx, sy, sz = session.size
-            ox, _, oz = session.origin
+            ox, oy, oz = session.origin
             xs = chunk_lines(ox, sx, self.plotter.camera.position[0])
             zs = chunk_lines(oz, sz, self.plotter.camera.position[2])
-            edges = [((x, y, 0), (x, y, sz)) for x in xs for y in (0, sy)]
-            edges.extend(((0, y, z), (sx, y, z)) for z in zs for y in (0, sy))
+            ys = sorted({0, sy, *chunk_lines(oy, sy, self.plotter.camera.position[1])}) if sections else (0, sy)
+            edges = [((x, y, 0), (x, y, sz)) for x in xs for y in ys]
+            edges.extend(((0, y, z), (sx, y, z)) for z in zs for y in ys)
             edges.extend(((x, 0, z), (x, sy, z)) for x in xs for z in zs)
             self._add(line_mesh(edges), CHUNK_LINE_OPACITY, CHUNK_LINE_WIDTH)
         self.plotter.render()
 
-    def _add(self, mesh, opacity, width=1):
+    def _add(self, mesh, opacity, width=1, color=GUIDE):
         if mesh is None:
             return
-        actor = self.plotter.add_mesh(mesh, color=GUIDE, opacity=opacity, line_width=width,
+        actor = self.plotter.add_mesh(mesh, color=color, opacity=opacity, line_width=width,
                                       lighting=False, pickable=False, reset_camera=False, render=False)
         actor.SetUseBounds(False)
         self.actors.append(actor)

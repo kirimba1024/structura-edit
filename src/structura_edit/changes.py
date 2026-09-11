@@ -92,6 +92,7 @@ class ChangeSet:
     changes: Tuple[_Delta, ...]
     entities: Tuple[EntityDelta, ...] = ()
     resize: object = None
+    report: object = None
 
     def __len__(self):
         return len(self.changes) + len(self.entities) + bool(self.resize)

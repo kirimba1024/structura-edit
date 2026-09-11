@@ -5,6 +5,10 @@ import numpy as np
 
 from .loading import MAX_GEOMETRY_BYTES, check_preview_budget, geometry_bytes
 from .resources import texture_bank
+from .section_cache import SectionCache
+
+
+_sections = SectionCache()
 
 
 def build_preview(session, change=None, assets=None, include_entities=True):
@@ -13,7 +17,7 @@ def build_preview(session, change=None, assets=None, include_entities=True):
     return build_geometry(source, assets)
 
 
-def build_geometry(source, assets=None, emit_bounds=None):
+def build_geometry(source, assets=None, emit_bounds=None, *, bank=None):
     from structura_render.mesh import build_textured_geometry, flat_block_groups, flat_entity_groups, voxel_state
 
     start = perf_counter()
@@ -21,7 +25,7 @@ def build_geometry(source, assets=None, emit_bounds=None):
         warnings.simplefilter("always")
         state, solid, names, properties = voxel_state(source)
         emit_mask = getattr(source, "emit_mask", None)
-        bank = texture_bank(assets)
+        bank = bank if bank is not None else texture_bank(assets)
         textured = bank.available()
         meshes, entities, indices, occluder = [], [], set(), solid
         if textured:
@@ -53,6 +57,17 @@ def build_sections(sections, *, reset, assets=None, ghosts=None, progress=None):
     results, notices = {}, []
     total = 0
     for index, (key, (source, origin, bounds)) in enumerate(sections.items()):
+        signature = _sections.key(source, origin, bounds, texture_bank(assets)) if not ghosts else None
+        cached = _sections.get(signature) if signature is not None else None
+        if cached is not None:
+            results[key] = cached
+            notices.extend(cached["warnings"])
+            total += cached["geometry_bytes"]
+            if total > MAX_GEOMETRY_BYTES:
+                raise ValueError("Scene geometry exceeds 192 MiB; reduce the loaded area or schematic size")
+            if progress:
+                progress("Sections", index + 1, len(sections))
+            continue
         data = build_geometry(source, assets, bounds)
         if hasattr(source, "entity_keys"):
             from .entity_picking import entity_bounds
@@ -72,6 +87,9 @@ def build_sections(sections, *, reset, assets=None, ghosts=None, progress=None):
             notices.extend(layer["warnings"])
             total += layer["geometry_bytes"]
         data["geometry_bytes"] = sum(layer["geometry_bytes"] for layer in layers)
+        data["signature"] = signature
+        if signature is not None:
+            _sections.put(signature, data)
         results[key] = data
         if total > MAX_GEOMETRY_BYTES:
             raise ValueError("Scene geometry exceeds 192 MiB; reduce the loaded area or schematic size")

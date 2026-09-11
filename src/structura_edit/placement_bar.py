@@ -1,12 +1,12 @@
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QSizePolicy, QSpinBox, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QMenu, QSizePolicy, QSpinBox, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import GRID
-from .controls import CellCheckBox, CellLabel
-from .selection_stats_ui import SelectionStats
+from .controls import CellCheckBox, CellLabel, MessageLabel
 from .overlay_bar import OverlayBar
 from .destination_ui import DestinationButton
 from .clipboard_content_ui import ClipboardContent
+from .tool_icons import tool_icon
 
 
 class PlacementBar(OverlayBar):
@@ -16,27 +16,27 @@ class PlacementBar(OverlayBar):
     repeat_changed = Signal(bool)
     apply_requested = Signal()
     cancel_requested = Signal()
-    transform_requested = Signal(int, object)
+    transform_requested = Signal(int, object, str)
     adjust_requested = Signal()
+    preview_requested = Signal()
 
     def __init__(self, plotter):
         super().__init__(plotter)
         self.narrow = None
         self.setObjectName("placementBar")
         self.selection = QWidget()
-        self.actions = QHBoxLayout(self.selection)
+        self.actions = QVBoxLayout(self.selection)
+        self.action_widgets = []
         self.actions.setContentsMargins(0, 0, 0, 0)
         self.actions.setSpacing(GRID)
         self.size_label = CellLabel()
         self.size_label.setMinimumWidth(GRID * 20)
-        self.actions.addWidget(self.size_label, 1)
-        self.stats = SelectionStats()
+        self.size_label.hide()
         self._create_placement()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(GRID, GRID, GRID, GRID)
         layout.setSpacing(0)
         layout.addWidget(self.selection)
-        layout.addWidget(self.stats)
         layout.addWidget(self.placement)
 
     def _create_placement(self):
@@ -46,8 +46,13 @@ class PlacementBar(OverlayBar):
         layout.setSpacing(GRID)
         for column in range(12):
             layout.setColumnStretch(column, 1)
+        header = QWidget()
+        top = QHBoxLayout(header)
+        top.setContentsMargins(0, 0, 0, 0)
+        top.setSpacing(GRID)
+        layout.addWidget(header, 0, 0, 1, 12)
         self.info = CellLabel()
-        layout.addWidget(self.info, 0, 0, 1, 4)
+        top.addWidget(self.info, 1)
         self.follow = CellCheckBox("Follow cursor", toolTip="Follow the cursor · click in the scene to pin the preview",
                                    accessibleName="Follow cursor", focusPolicy=Qt.FocusPolicy.NoFocus)
         self.follow.toggled.connect(self.follow_changed)
@@ -58,20 +63,19 @@ class PlacementBar(OverlayBar):
                                    toolTip="Keep this copy ready after placing; each placement can be undone",
                                    focusPolicy=Qt.FocusPolicy.NoFocus)
         self.repeat.toggled.connect(self.repeat_changed)
-        layout.addWidget(self.follow, 0, 4, 1, 3)
+        top.addWidget(self.follow, 1)
         self.adjust = self._button("Adjust", self.adjust_requested)
         self.adjust.setMinimumWidth(self.follow.sizeHint().width())
-        layout.addWidget(self.adjust, 0, 4, 1, 3)
+        top.addWidget(self.adjust, 1)
         self.adjust.hide()
-        layout.addWidget(self.repeat, 0, 7, 1, 3)
         self.apply = self._button("Place", lambda: self._submit(self.apply_requested))
-        self.apply.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        self.apply.setMinimumWidth(GRID * 32)
+        self.apply.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.apply.setFixedWidth(GRID * 24)
         self.apply.setToolTip("Apply locally (Enter)")
         self.cancel = self._button("Cancel", self.cancel_requested)
         self.cancel.setToolTip("Cancel placement (Escape)")
-        layout.addWidget(self.apply, 0, 10)
-        layout.addWidget(self.cancel, 0, 11)
+        top.addWidget(self.apply)
+        top.addWidget(self.cancel)
         self._create_options(layout)
 
     def _create_options(self, layout):
@@ -92,46 +96,42 @@ class PlacementBar(OverlayBar):
         keys.setToolTip("Left / Right: X · Up / Down: Z · Shift + Up / Down: Y")
         details.addWidget(self.air, 0, 3)
         details.addWidget(keys, 1, 2, 1, 2)
-        self.hint = CellLabel()
+        self.hint = MessageLabel()
         self.transforms = []
-        for text, turns, flip in (("−90°", -1, None), ("+90°", 1, None), ("Flip X", 0, "x"), ("Flip Z", 0, "z")):
-            button = self._button(text, lambda checked=False, t=turns, f=flip: self._submit(self.transform_requested, t, f))
-            button.setToolTip(f"Mirror on {flip.upper()}" if flip else f"Rotate {turns * 90:+}° around Y · + is clockwise from above")
-            self.transforms.append(button)
-            if flip:
-                details.addWidget(button, 1, len(self.transforms) - 3)
-            else:
-                layout.addWidget(button, 1, (len(self.transforms) - 1) * 2, 1, 2)
+        self.transform_grid = QWidget()
+        grid = QGridLayout(self.transform_grid)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(GRID)
+        for row, axis in enumerate("XYZ"):
+            grid.addWidget(CellLabel(axis, width=GRID * 7), row, 0)
+            for column, (text, turns, flip) in enumerate((("−90°", -1, None), ("+90°", 1, None), ("Mirror", 0, axis.lower())), 1):
+                button = self._button(text, lambda checked=False, t=turns, f=flip, a=axis.lower(): self._submit(self.transform_requested, t, f, a))
+                button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+                button.setToolTip(f"Mirror {axis}" if flip else f"Rotate {turns * 90:+}° around {axis} · + is clockwise when looking from +{axis} toward the origin")
+                button.setAccessibleName(button.toolTip())
+                self.transforms.append(button)
+                grid.addWidget(button, row, column)
+        layout.addWidget(self.transform_grid, 1, 0, 3, 4, Qt.AlignmentFlag.AlignLeft)
         self.more = self._button("Options…", lambda: None)
-        self.more.setToolTip("Exact X / Y / Z, Flip X / Z and Copy air")
+        self.more.setToolTip("Exact position, Copy air and repeated placement")
         self.more.setCheckable(True)
         self.more.toggled.connect(self.details.setVisible)
         self.destination = DestinationButton()
         layout.addWidget(self.more, 1, 4, 1, 2)
-        layout.addWidget(self.destination, 1, 6, 1, 3)
-        layout.addWidget(self.hint, 1, 9, 1, 3)
+        layout.addWidget(self.destination, 1, 6, 1, 6)
+        layout.addWidget(self.hint, 2, 4, 2, 8)
         self.details.hide()
         self.content = ClipboardContent()
-        layout.addWidget(self.content, 2, 0, 1, 12)
-        layout.addWidget(self.details, 3, 0, 1, 12)
+        layout.addWidget(self.content, 4, 0, 1, 12)
+        layout.addWidget(self.details, 5, 0, 1, 12)
+        self.preview = self._button("Preview changes", self.preview_requested)
+        details.addWidget(self.repeat, 1, 0, 1, 2)
+        details.addWidget(self.preview, 2, 0, 1, 4)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        narrow = self.width() < GRID * 224
-        if not hasattr(self, "destination") or narrow == self.narrow:
-            return
-        self.narrow = narrow
-        positions = ((0, 0, 4), (0, 4, 4), (0, 4, 4), (0, 8, 4), (2, 6, 3), (2, 9, 3),
-                     (1, 4, 3), (1, 7, 5), (2, 0, 6)) if narrow else (
-                     (0, 0, 4), (0, 4, 3), (0, 4, 3), (0, 7, 3), (0, 10, 1), (0, 11, 1),
-                     (1, 4, 2), (1, 6, 3), (1, 9, 3))
-        widgets = (self.info, self.follow, self.adjust, self.repeat, self.apply, self.cancel,
-                   self.more, self.destination, self.hint)
-        layout = self.placement.layout()
-        for widget, (row, column, span) in zip(widgets, positions):
-            layout.addWidget(widget, row, column, 1, span)
-        layout.addWidget(self.content, 3 if narrow else 2, 0, 1, 12)
-        layout.addWidget(self.details, 4 if narrow else 3, 0, 1, 12)
+        if hasattr(self, "action_widgets"):
+            self._layout_actions()
 
     def _button(self, text, signal):
         button = QToolButton(text=text)
@@ -141,14 +141,48 @@ class PlacementBar(OverlayBar):
         return button
 
     def bind_actions(self, actions):
-        for name in ("copy", "take", "duplicate", "paste", "repeat", "export", "entity_all", "inspect"):
+        for name in ("select_tool", "take", "duplicate", "Fill", "Replace", "Erase", "paste", "inspect"):
             button = QToolButton()
-            actions[name].setIconText({"entity_all": "Entities", "inspect": "Inspect"}.get(name, name.capitalize()))
+            actions[name].setIconText({"select_tool": "Select", "inspect": "Inspect", "take": "Move"}.get(name, name.capitalize()))
+            actions[name].setIcon(tool_icon(name))
             button.setDefaultAction(actions[name])
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            button.setIconSize(QSize(16, 16))
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-            self.actions.addWidget(button)
-        self.actions.addWidget(self.stats.toggle)
+            self.action_widgets.append(button)
+        more = QToolButton(text="More…")
+        more.setToolTip("Copy to clipboard, repeated copies, export and selection details")
+        more.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(more)
+        menu.setToolTipsVisible(True)
+        for name in ("copy", "repeat", "export", "entity_all", "coordinates", "materials"):
+            menu.addAction(actions[name])
+        more.setMenu(menu)
+        self.action_widgets.append(more)
+        self._layout_actions()
+
+    def _layout_actions(self):
+        while self.actions.count():
+            row = self.actions.takeAt(0).layout()
+            while row.count():
+                row.takeAt(0)
+            row.deleteLater()
+        available = max(1, self.width() - GRID * 2)
+        row, used = None, 0
+        for widget in self.action_widgets:
+            width = widget.sizeHint().width()
+            if row is None or used + width + GRID > available:
+                if row is not None:
+                    row.addStretch()
+                row = QHBoxLayout()
+                row.setSpacing(GRID)
+                self.actions.addLayout(row)
+                used = 0
+            row.addWidget(widget)
+            used += width + GRID
+        if row is not None:
+            row.addStretch()
 
     def _coordinates_changed(self):
         self.position_changed.emit(tuple(field.value() for field in self.coordinates))
@@ -159,7 +193,7 @@ class PlacementBar(OverlayBar):
         signal.emit(*args)
 
     def update_state(self, model, session, selection, *, busy, visible, review=None, review_ready=False):
-        self.setVisible(visible and (model is not None or selection is not None))
+        self.setVisible(visible and session is not None)
         self.selection.setVisible(model is None)
         self.placement.setVisible(model is not None)
         if model is None:
@@ -169,16 +203,18 @@ class PlacementBar(OverlayBar):
             locked = busy or review is not None
             reason = model.reason(session)
             size = "×".join(map(str, model.clipboard.size))
-            self.info.setText(f"{'Take' if model.take else 'Paste'} · {size}")
-            self.info.setToolTip(self.info.text())
+            self.info.setText(f"{'Move' if model.take else 'Copy'} · {size}")
+            self.info.setToolTip(self.info.text() + "\n" + ("Original will be removed after Place" if model.take else "Original will stay after Place"))
             self.content.set_clipboard(model.clipboard)
             self.content.set_values(model.include_blocks, model.include_entities)
+            self.content.set_rule(model.destination)
             self.content.setEnabled(not locked)
             for widget, value in ((self.follow, model.following), (self.air, model.include_air), (self.repeat, model.keep_placing)):
                 widget.blockSignals(True)
                 widget.setChecked(value)
                 widget.blockSignals(False)
                 widget.setEnabled(not locked)
+            self.repeat.setVisible(not model.take)
             self.air.setEnabled(not locked and model.include_blocks)
             for field, value in zip(self.coordinates, model.position):
                 field.blockSignals(True)
@@ -191,13 +227,13 @@ class PlacementBar(OverlayBar):
             self.follow.setVisible(review is None)
             self.adjust.setVisible(review is not None)
             self.adjust.setEnabled(not busy)
-            self.apply.setText("Preview" if model.destination.mode != "all" and review is None else "Place")
-            self.apply.setToolTip("Build a filtered preview (Enter)" if model.destination.mode != "all" and review is None
-                                 else "Place the preview locally (Enter)")
+            self.apply.setText("Place")
+            self.apply.setToolTip("Place here (Enter). Undo removes this placement.")
+            self.preview.setEnabled(not locked and not reason)
             self.apply.setEnabled(not busy and not reason and (review is None or (review_ready and bool(review.change))))
             for button in self.transforms:
                 button.setEnabled(not locked)
-            self.hint.setText(reason or (review.summary if review else "Click a spot · Preview" if model.destination.mode != "all"
-                                        else "Click a spot, then Place" if model.following else "Drag X / Y / Z to move"))
+            self.hint.setText(reason or (review.summary if review else "Click to fix the position, then Place."
+                                        if model.following else "Drag an axis or enter a position in Options, then Place."))
             self.hint.setToolTip(self.hint.text())
         self.reposition()

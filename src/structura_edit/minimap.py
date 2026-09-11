@@ -1,16 +1,18 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
-from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import MAP_HEADER_HEIGHT
 from .map_canvas import MapCanvas
 from .map_cache_ui import MapCacheView
 from .camera_maps import CameraMaps
 from .navigation_keys import control_key
+from .world_map import WorldMap
 
 
 class MiniMap(QWidget):
     navigate = Signal(object)
+    load_requested = Signal()
     expanded_changed = Signal(bool)
     large_changed = Signal(bool)
 
@@ -22,24 +24,38 @@ class MiniMap(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_LayoutOnEntireRect)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.canvas = MapCanvas()
+        self.world_map = WorldMap()
+        self.map_stack = QStackedWidget()
+        self.map_stack.addWidget(self.canvas)
+        self.map_stack.addWidget(self.world_map)
         self.cache = MapCacheView(self.canvas, cache_dir)
         self.maps = CameraMaps(self.canvas, self.cache)
         self.canvas.navigate.connect(self._navigate)
         self.header = self._button("", "Map projections", self._header_clicked)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.center = self._button("F · Center", "Center the map on the camera (F)", self.recenter)
+        self.mode = self._button("Surface", "Surface: outer faces of the loaded area. Click for slices at the camera.", self.toggle_mode)
         self.expand = self._button("M +", "Expand map (M)", self.toggle_large)
         self.expand.setObjectName("mapExpand")
+        self.world_mode = self._button("World", "Show the prepared world map", self._world_toggled)
+        self.world_mode.setCheckable(True)
+        self.world_mode.hide()
         row = QHBoxLayout()
         row.setSpacing(0)
         row.addWidget(self.header, 1)
         row.addWidget(self.center)
+        row.addWidget(self.mode)
+        row.addWidget(self.world_mode)
         row.addWidget(self.expand)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addLayout(row)
-        layout.addWidget(self.canvas)
+        layout.addWidget(self.map_stack)
+        self.load_here = self._button("Load here · F5", "Load a fresh area around the camera (F5). Your edits stay. Hatched map areas have no map data.", self.load_requested)
+        self.load_here.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.load_here.hide()
+        layout.addWidget(self.load_here)
         self.shortcut = QShortcut(QKeySequence("M"), parent)
         self.shortcut.setKeys([QKeySequence("M"), QKeySequence("Ь")])
         self.shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -82,6 +98,13 @@ class MiniMap(QWidget):
         if self.isVisible():
             self.set_large(not self.large)
 
+    def toggle_mode(self):
+        self.maps.sliced = not self.maps.sliced
+        self.mode.setText("Slices" if self.maps.sliced else "Surface")
+        self.mode.setToolTip("Slices: cut through the camera position. Click for the surface." if self.maps.sliced
+                             else "Surface: outer faces of the loaded area. Click for slices at the camera.")
+        self.maps.update()
+
     def set_large(self, large):
         if large == self.large:
             return
@@ -94,20 +117,36 @@ class MiniMap(QWidget):
         self.canvas.view_changed.emit()
 
     def _update_layout(self):
-        self.canvas.setVisible(not self.collapsed)
-        self.header.setText("Camera slices" if self.large else "MAP +" if self.collapsed else "MAP −")
+        self.map_stack.setVisible(not self.collapsed)
+        self.load_here.setVisible(not self.collapsed and bool(self.canvas.dimension))
+        self.header.setText("Map" if self.large else "MAP +" if self.collapsed else "MAP −")
         self.expand.setText("M ×" if self.large else "M +")
         self.expand.setToolTip("Close map (M / Escape)" if self.large else "Expand map (M)")
         self.center.setVisible(self.large)
-        self.maps.active = not self.collapsed
+        self.maps.active = not self.collapsed and not self.world_mode.isChecked()
         self.maps.update()
         self.reposition()
         self.expanded_changed.emit(not self.collapsed)
+
+    def set_overview(self, snapshot):
+        active = self.world_mode.isChecked() if self.world_map.snapshot is not None else snapshot is not None
+        self.world_map.set_snapshot(snapshot)
+        self.world_mode.setVisible(snapshot is not None)
+        self.world_mode.setChecked(snapshot is not None and active)
+        self._world_toggled()
+
+    def _world_toggled(self):
+        active = self.world_mode.isChecked()
+        self.map_stack.setCurrentWidget(self.world_map if active else self.canvas)
+        self.mode.setVisible(not active)
+        self._update_layout()
 
     def reposition(self):
         parent = self.parentWidget()
         width = parent.width() if self.large else min(parent.width(), 288)
         height = parent.height() if self.large else MAP_HEADER_HEIGHT + (0 if self.collapsed else 2 * width // 3)
+        if not self.large and not self.collapsed and self.canvas.dimension:
+            height += MAP_HEADER_HEIGHT
         self.setFixedSize(width, height)
         self.move(parent.width() - width, 0)
         self.raise_()
@@ -135,6 +174,13 @@ class MiniMap(QWidget):
 
     def set_camera(self, position, direction):
         self.canvas.position, self.canvas.direction = tuple(position), tuple(direction)
+        self.world_map.set_camera(tuple(p + o for p, o in zip(position, self.canvas.origin)), direction)
+        outside = any(p < 0 or p >= size for p, size in zip(position, self.canvas.size_blocks))
+        text = "Outside · Load here" if outside else "Load here · F5"
+        if self.load_here.text() != text:
+            self.load_here.setText(text)
+        self.load_here.setToolTip(("Camera is outside the loaded area. " if outside else "") +
+                                 "Click or press F5 to load around the camera. Your edits stay. Hatched areas have no map data.")
         self.maps.update()
         self.canvas.update()
 
@@ -150,6 +196,9 @@ class MiniMap(QWidget):
             self.header.setToolTip(notice)
 
     def recenter(self):
+        if self.world_mode.isChecked():
+            self.world_map.recenter()
+            return
         self.canvas.layout.recenter()
         self.canvas.view_changed.emit()
         self.canvas.update()

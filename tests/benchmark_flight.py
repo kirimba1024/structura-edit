@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QEvent, QPointF, QTimer, Qt
+from PySide6.QtCore import QEvent, QEventLoop, QPointF, QTimer, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -15,13 +15,14 @@ from structura_edit.ui import EditorWindow
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("path")
+    parser.add_argument("--world-radius", type=int, default=1)
     parser.add_argument("--close", action="store_true")
     parser.add_argument("--ghost", action="store_true")
     parser.add_argument("--visible", action="store_true")
     parser.add_argument("--output", default="/private/tmp/structura-flight.json")
     args = parser.parse_args()
     app = QApplication([])
-    window = EditorWindow(off_screen=not args.visible, cache_dir=Path(args.output).with_suffix(".cache"))
+    window = EditorWindow(off_screen=not args.visible, cache_dir=Path(args.output).with_suffix(".cache"), world_radius=args.world_radius)
     window.navigation.mouse_look.capture = False
     window.show()
     try:
@@ -64,7 +65,9 @@ def main():
             window.navigation.mouse_look.pending += QPointF(1.5, 0.1)
         motion.timeout.connect(move)
         motion.start(16)
-        QTest.qWait(5000)
+        loop = QEventLoop()
+        QTimer.singleShot(5000, loop.quit)
+        loop.exec()
         motion.stop()
         window.navigation.stop()
         intervals = np.diff(frames)

@@ -74,7 +74,6 @@ class PlacementController(QObject):
         token = self.token
         self.preparing = mode != "copy"
         initial = self.selection.lower if self.selection else (0, 0, 0)
-        self.navigation.stop()
         self.scene.plotter.setFocus()
         self._load(token, mode, initial, path=path)
         self.changed.emit()
@@ -121,7 +120,7 @@ class PlacementController(QObject):
                               review=self.review, review_ready=self.review_ready)
 
     def hover(self, point):
-        if self.model is not None and self.review is None and not self.busy and point is not None and not self.navigation.looking:
+        if self.model is not None and self.review is None and not self.busy and point is not None:
             ray = self.scene.ray_at(point)
             if self.model.follow(*ray, self.scene.hit_at(self.session, point)):
                 self.refresh()
@@ -154,7 +153,7 @@ class PlacementController(QObject):
 
     def set_repeat(self, enabled):
         if self.model is not None and not self.busy:
-            self.model.keep_placing = enabled
+            self.model.keep_placing = enabled and not self.model.take
             self.refresh()
 
     def set_destination(self, rule):
@@ -169,12 +168,12 @@ class PlacementController(QObject):
             self.model.include_entities = values["include_entities"]
             self.refresh()
 
-    def transform(self, turns, flip):
+    def transform(self, turns, flip=None, axis="y"):
         if self.model is None or self.busy:
             return
         token = self.token
         if self.submit("clipboard", lambda result: self._transformed(token, result), session=None,
-                       clipboard=self.model.clipboard, transform=dict(turns=turns, flip=flip), assets=self.assets,
+                       clipboard=self.model.clipboard, transform=dict(turns=turns, axis=axis, flip=flip), assets=self.assets,
                        scene_bytes=sum(self.scene.section_bytes.values())):
             self.message.emit("Rotating preview…" if turns else "Mirroring preview…")
 
@@ -216,7 +215,7 @@ class PlacementController(QObject):
 
     def _applied(self, session, data, bounds, count):
         self.committing = False
-        if self.model.keep_placing:
+        if self.model.keep_placing and not self.model.take:
             self.model = replace(self.model, position=bounds[0], take=False, following=True)
         else:
             self.model = None

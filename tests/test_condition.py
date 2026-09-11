@@ -13,7 +13,7 @@ def test_air_and_non_air_match_states():
 def test_materials_union_and_exact_states():
     mixed = Condition("materials", ("minecraft:stone", "minecraft:oak_stairs[facing=north]"))
     assert mixed.matches("minecraft:stone")
-    assert mixed.matches("minecraft:stone[custom=nah]") is False or True
+    assert mixed.matches("minecraft:stone[custom=nah]")
     assert mixed.matches("minecraft:oak_stairs[facing=north]")
     assert not mixed.matches("minecraft:oak_stairs[facing=south]")
     assert not mixed.matches("minecraft:dirt") and not mixed.matches(None)

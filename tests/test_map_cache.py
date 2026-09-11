@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from structura_edit.map_cache import connect, fingerprint, map_spec, read_tiles, store_maps
+from structura_edit.map_cache import connect, fingerprint, known_pixels, map_spec, read_tiles, store_maps
 from structura_edit.map_projection import VIEWS, plane_size
 
 
@@ -146,3 +146,68 @@ def test_cache_preserves_texture_pixels_at_global_projection_coordinates(tmp_pat
                               (left - x) * 16:(left - x + 16) * 16, :3], pixels)
     overview = next(iter(read_tiles(spec, areas).values()))
     assert overview.shape == (TILE_SIZE, TILE_SIZE, 4)
+
+
+@pytest.mark.parametrize('view', ['north', 'south', 'west', 'east'])
+@pytest.mark.parametrize('origin', [(0, 0, 0), (-32, -16, -48)])
+@pytest.mark.parametrize('missing_inside', [False, True])
+def test_side_cut_ignores_missing_chunks_outside_slab_and_preserves_axis_direction(tmp_path, view, origin, missing_inside):
+    depth = 1 if view in ('north', 'west') else 0
+    local_chunks = {(x, depth) for x in range(2)} if view in ('north', 'south') else {(depth, z) for z in range(2)}
+    if missing_inside:
+        local_chunks.remove((1, depth) if view in ('north', 'south') else (depth, 1))
+    loaded = {(cx + origin[0] // 16, cz + origin[2] // 16) for cx, cz in local_chunks}
+    loaded.add((origin[0] // 16 - 3, origin[2] // 16 - 3))
+    session = SimpleNamespace(map_identity=('cut-test', 'overworld'), origin=origin, size=(32, 4, 32),
+                              loaded_chunks=loaded, map_stamps={}, dirty=False)
+    cut = (16, 1, 16) if depth else (15, 1, 15)
+    spec = map_spec(session, None, tmp_path / 'cut.sqlite', cut=cut)
+    assert spec['bounds'][view] == (depth * 16, (depth + 1) * 16)
+    expected = np.ones((4, 32), dtype=bool)
+    if missing_inside:
+        expected[:, 16:] = False
+        if view in ('south', 'east'):
+            expected = expected[:, ::-1]
+    assert np.array_equal(known_pixels(spec, view), expected)
+    whole = map_spec(session, None, tmp_path / 'cut.sqlite')
+    assert not known_pixels(whole, view).any()
+    visible, _ = store_maps(spec, {view: images(spec, (10, 20, 30))[view]})
+    assert np.array_equal(visible[view][:, :, 3], expected * 255)
+    from structura_edit.map_projection import project
+
+    first = project(origin, (0, 0, 0), view)
+    last = project(tuple(p + s for p, s in zip(origin, session.size)), (0, 0, 0), view)
+    left, top = min(first[0], last[0]), min(first[1], last[1])
+    tiles = read_tiles(spec, {view: (left, top, left + 32, top + 4)})
+    restored = np.zeros((4, 32), dtype=np.uint8)
+    for (_, x, y), tile in tiles.items():
+        lo_x, hi_x = max(left, x), min(left + 32, x + tile.shape[1])
+        lo_y, hi_y = max(top, y), min(top + 4, y + tile.shape[0])
+        restored[lo_y - top:hi_y - top, lo_x - left:hi_x - left] = tile[lo_y - y:hi_y - y, lo_x - x:hi_x - x, 3]
+    assert np.array_equal(restored, expected * 255)
+
+
+@pytest.mark.parametrize('view', VIEWS)
+def test_empty_slab_is_not_cached_as_known_air(tmp_path, view):
+    session = SimpleNamespace(map_identity=('empty', 'overworld'), origin=(0, 0, 0), size=(16, 16, 16),
+                              loaded_chunks={(0, 0)}, map_stamps={}, dirty=False)
+    cut = (-1, -1, -1) if view in ('top', 'south', 'east') else (16, 16, 16)
+    spec = map_spec(session, None, tmp_path / 'empty.sqlite', cut=cut)
+    assert not known_pixels(spec, view).any()
+    store_maps(spec, {view: images(spec, (30, 40, 50))[view]})
+    assert not read_tiles(spec, {view: (-16, -16, 16, 16)})
+
+
+def test_chunks_entirely_outside_negative_origin_cannot_mark_unknown_pixels(tmp_path):
+    spec = snapshot(tmp_path, (-16, 0, -16), loaded={(-3, -1), (-1, -3), (2, 2)})
+    assert not any(known_pixels(spec, view).any() for view in VIEWS)
+
+
+def test_old_coverage_version_does_not_reuse_incorrect_alpha(tmp_path, monkeypatch):
+    with monkeypatch.context() as old:
+        old.setattr('structura_edit.map_cache.MAP_COVERAGE_VERSION', 0)
+        previous = snapshot(tmp_path)
+        store_maps(previous, images(previous, (100, 0, 0)))
+    current = snapshot(tmp_path)
+    assert previous['space'] != current['space']
+    assert pixel(current, 0, 0)[3] == 0

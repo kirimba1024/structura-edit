@@ -8,17 +8,19 @@ version = "0.1.0a1"
 description = "Transactional Minecraft schematic editing with an optional desktop workbench"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["structura-core>=0.6,<0.7", "PyMCTranslate>=1.2.38,<2"]
+dependencies = ["structura-core>=0.6,<0.7", "structura-render>=0.8.1,<0.9", "PyMCTranslate>=1.2.38,<2"]
 
 [project.optional-dependencies]
 world = ["structura-core[world]>=0.6,<0.7"]
 gui = [
   "structura-core[world,legacy,bedrock]>=0.6,<0.7",
-  "structura-render[hero]>=0.8,<0.9",
-  "PySide6-Essentials>=6.8,<6.9",
+  "structura-render[hero,overview]>=0.8,<0.9",
+  "PySide6-Essentials>=6.10.2,<6.11; sys_platform == 'darwin'",
+  "PySide6-Essentials>=6.8,<6.9; sys_platform != 'darwin'",
   "pyvistaqt>=0.11,<0.12",
 ]
 test = ["pytest>=8,<9"]
+typing = ["mypy==1.18.2"]
 
 [project.scripts]
 structura-edit = "structura_edit.__main__:main"
@@ -31,7 +33,7 @@ Issues = "https://github.com/kirimba1024/structura-edit/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-structura_edit = ["py.typed", "data/*.qss", "data/*.svg", "data/fonts/*"]
+structura_edit = ["py.typed", "data/*.qss", "data/*.svg", "data/tools/*.svg", "data/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -41,3 +43,8 @@ target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+files = ["src/structura_edit/task_protocol.py", "src/structura_edit/worker_document.py", "src/structura_edit/worker_delta.py"]
+strict = true
+follow_imports = "skip"

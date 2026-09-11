@@ -2,7 +2,8 @@ from dataclasses import replace
 
 from .changes import EntityDelta
 from .entity_data import EntityData, entity_key
-from .entity_transform import new_identity, transform_record
+from .entity_transform import new_identity
+from structura_core.entity_grid_transform import transform_entity
 
 
 def capture_entities(edit, selection):
@@ -19,14 +20,9 @@ def capture_entities(edit, selection):
     return tuple(entities), players
 
 
-def transform_entities(entities, size, turns, flip):
-    center = tuple(v / 2 for v in size)
-    offset = ((size[2] - size[0]) / 2, 0, (size[0] - size[2]) / 2) if turns % 2 else (0, 0, 0)
-    result = []
-    for key, data in entities:
-        record = transform_record(data.unpack(), angle=turns * 90, center=center, offset=offset, flip=flip)
-        result.append((key, replace(data, record=record.to_snbt())))
-    return tuple(result)
+def transform_entities(entities, size, transform):
+    return tuple((key, replace(data, record=transform_entity(data.unpack(), size, transform).to_snbt()))
+                 for key, data in entities)
 
 
 def place_entities(edit, clipboard, positions, *, take):

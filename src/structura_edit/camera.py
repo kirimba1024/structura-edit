@@ -1,4 +1,5 @@
 import math
+from itertools import product
 
 import numpy as np
 
@@ -61,11 +62,22 @@ class FreeCamera:
         if length:
             self.translate(delta * speed * elapsed / length)
 
-    def frame(self, size):
+    def frame(self, size, origin=(0, 0, 0)):
         camera = self.plotter.camera
         center = np.asarray(size) / 2
-        camera.position = center + np.array((0.8, 0.65, 1.0)) * max(size) * 1.8
-        camera.focal_point = center
+        outward = np.array((0.8, 0.65, 1.0))
+        outward /= np.linalg.norm(outward)
+        right = np.cross(-outward, (0, 1, 0))
+        right /= np.linalg.norm(right)
+        up = np.cross(right, -outward)
+        width, height = getattr(self.plotter, "window_size", (1380, 880))
+        tangent = math.tan(math.radians(camera.view_angle) / 2)
+        aspect = max(.1, width / max(1, height))
+        corners = [np.asarray(corner) - center for corner in product(*((0, v) for v in size))]
+        distance = max(float(point @ outward) + max(abs(point @ up) / tangent,
+                       abs(point @ right) / (tangent * aspect)) for point in corners)
+        camera.position = center + origin + outward * max(3, distance * 1.2)
+        camera.focal_point = center + origin
         camera.up = (0, 1, 0)
         self.needs_render = True
         self.render()

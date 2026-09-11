@@ -53,6 +53,7 @@ class RepeatBar(OverlayBar):
             setattr(self, name, button)
         self.content = ClipboardContent()
         self.content.changed.connect(self.changed)
+        self.destination.changed.connect(self.content.set_rule)
         layout.addWidget(self.content, 2, 0, 1, 7)
         self.inputs = (self.copies, self.direction, self.gap, self.air, self.destination, self.content)
         self.copies.valueChanged.connect(self.changed)

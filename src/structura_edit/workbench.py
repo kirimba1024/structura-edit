@@ -56,7 +56,7 @@ class RecipePanel(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
-        hint = QLabel("Local Python · edit and selection are available · Preview, then Apply")
+        hint = QLabel("Local Python · full access to your files.\nCancel stops the worker; external side effects remain.\nUse edit and selection · Preview, then Apply")
         hint.setWordWrap(True)
         layout.addWidget(hint)
         self.code = QPlainTextEdit('edit.apply(edit.fill(selection, "minecraft:stone"))')

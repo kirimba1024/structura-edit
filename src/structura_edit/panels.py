@@ -8,7 +8,7 @@ from .commands import COMMANDS, PARAMETERS, REGION_COMMANDS, UI_COMMANDS
 from .appearance import GRID
 from .condition import Condition
 from .condition_ui import choose_condition
-from .controls import CellCheckBox, CellLabel
+from .controls import CellCheckBox, CellLabel, MessageLabel
 from .mix import Mix
 from .mix_ui import choose_mix
 
@@ -39,6 +39,9 @@ class OperationPanel(QWidget):
         self._create_form(layout)
         self.info = CellLabel()
         layout.addWidget(self.info)
+        self.validation = MessageLabel()
+        self.validation.hide()
+        layout.addWidget(self.validation)
         self.preview = QPushButton("Preview")
         self.preview.clicked.connect(self.preview_requested)
         layout.addWidget(self.preview)
@@ -65,7 +68,8 @@ class OperationPanel(QWidget):
         self.mode = QComboBox()
         self.mode.addItems(UI_COMMANDS)
         self.mode.insertSeparator(len(REGION_COMMANDS))
-        labels = ["Action", *(parameter.label + "…" for parameter in PARAMETERS.values() if isinstance(parameter.default, str))]
+        labels = ["Action", *(parameter.label + ("…" if isinstance(parameter.default, str) else "")
+                              for parameter in PARAMETERS.values() if not isinstance(parameter.default, (bool, tuple)))]
         label_width = max(self.fontMetrics().horizontalAdvance(label) for label in labels) + GRID * 4
         label_width = (label_width + GRID - 1) // GRID * GRID
         self.form.addRow(CellLabel("Action", width=label_width), self.mode)
@@ -74,6 +78,8 @@ class OperationPanel(QWidget):
             self.fields[key] = field
             if isinstance(parameter.default, (bool, tuple)):
                 self.form.addRow(field)
+            elif isinstance(parameter.default, int):
+                self.form.addRow(CellLabel(parameter.label, width=label_width), field)
             else:
                 button = QPushButton(parameter.label + "…")
                 button.setFixedWidth(label_width)
@@ -97,8 +103,10 @@ class OperationPanel(QWidget):
             axes.setContentsMargins(0, 0, 0, 0)
             field.inputs = []
             for axis in "XYZ":
-                number = QSpinBox(minimum=-30_000_000, maximum=30_000_000, keyboardTracking=False, prefix=axis + " ",
-                                  accessibleName=f"Offset {axis}")
+                normal = parameter.name == "normal"
+                number = QSpinBox(minimum=-1 if normal else -30_000_000, maximum=1 if normal else 30_000_000,
+                                  keyboardTracking=False, prefix=("Normal " if normal else "") + axis + " ",
+                                  accessibleName=f"{parameter.name.title()} {axis}")
                 number.valueChanged.connect(self.changed)
                 field.inputs.append(number)
                 axes.addWidget(number)
@@ -162,6 +170,21 @@ class OperationPanel(QWidget):
             else:
                 result[key] = tuple(f.value() for f in field.inputs)
         return result
+
+    def validate_inputs(self):
+        from structura_core import parse_state
+
+        errors = []
+        for key, value in self.values().items():
+            if key not in ("source", "target", "mask") or not isinstance(value, str) or key == "mask" and not value:
+                continue
+            try:
+                parse_state(value)
+            except ValueError:
+                errors.append(f"{PARAMETERS[key].label}: invalid block ID {value!r}. Use a name such as minecraft:stone.")
+        self.validation.setText("\n".join(errors))
+        self.validation.setVisible(bool(errors))
+        return not errors
 
     def set_values(self, values):
         self.blockSignals(True)

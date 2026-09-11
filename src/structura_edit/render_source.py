@@ -1,17 +1,25 @@
 from itertools import product
 from types import SimpleNamespace
 
+import numpy as np
+
 from structura_core import parse_state
+from structura_core.block_array import BlockArray
 
 from .cell_data import cell_payload
 from .height_slice import HeightSlice
+from .loading import CHUNK_SIZE
 
 
 def preview_session(session, change=None):
     if change is None:
         return session
     branch = session.fork()
-    branch.apply(change)
+    if branch.readonly:
+        raise ValueError("This source is view-only in this release")
+    branch._check_change(change)
+    if change:
+        branch._apply_cells(change)
     return branch
 
 
@@ -23,6 +31,49 @@ class RenderSource:
         self.palette_raw = list(self.base.palette_raw)
         self.literals = {}
         self.palette = [str(state["Name"]) for state in self.palette_raw]
+        self.grid = None
+
+    def prepare_grid(self):
+        size = self.session.size
+        if isinstance(self.base.present, BlockArray):
+            self.grid = self.base.present.array.copy()
+        else:
+            self.grid = np.full(size, -1, dtype=np.int32)
+            sy, sz = size[1:]
+            indices = np.fromiter((x * sy * sz + y * sz + z for x, y, z in self.base.present), dtype=np.int64, count=len(self.base.present))
+            self.grid.ravel()[indices] = np.fromiter(self.base.present.values(), dtype=np.int32, count=len(self.base.present))
+        for position, cell in self.session._cells.items():
+            if cell is not None:
+                self.grid[position] = self._index(cell)
+        payloads = self.base.block_nbt.copy()
+        for position, cell in self.session._cells.items():
+            if cell is not None:
+                payload = cell_payload(self.base, cell, position)
+                if payload is None:
+                    payloads.pop(position, None)
+                else:
+                    payloads[position] = payload
+        self.grid_nbt = {}
+        for position, payload in payloads.items():
+            key = tuple(v // CHUNK_SIZE for v in position)
+            self.grid_nbt.setdefault(key, {})[position] = payload
+        low, high = self.height.interval(self.session)
+        self.grid[:, :low, :] = -1
+        self.grid[:, high:, :] = -1
+
+    def _grid_region(self, lower, upper, include_nbt):
+        grid = self.grid[tuple(slice(lo, hi) for lo, hi in zip(lower, upper))]
+        present = BlockArray(grid.copy())
+        block_nbt = {}
+        if include_nbt:
+            keys = product(*(range(lo // CHUNK_SIZE, (hi - 1) // CHUNK_SIZE + 1) for lo, hi in zip(lower, upper)))
+            for key in keys:
+                for position, payload in self.grid_nbt.get(key, {}).items():
+                    local = tuple(p - lo for p, lo in zip(position, lower))
+                    if local in present:
+                        block_nbt[local] = payload
+        return SimpleNamespace(size=grid.shape, palette_raw=self.palette_raw, palette=self.palette,
+                               present=present, block_nbt=block_nbt, entities=[])
 
     def entity_records(self):
         result = {}
@@ -42,6 +93,13 @@ class RenderSource:
         return self.literals[cell.state]
 
     def region(self, lower=None, upper=None, *, include_entities=False, include_nbt=True):
+        if lower is None and isinstance(self.base.present, BlockArray) and self.grid is None:
+            self.prepare_grid()
+        if self.grid is not None:
+            source = self._grid_region(lower or (0, 0, 0), upper or self.session.size, include_nbt)
+            if include_entities:
+                source.entities = list(self.entity_records().values())
+            return source
         whole = lower is None
         lower = (0, 0, 0) if whole else lower
         upper = self.session.size if upper is None else upper

@@ -20,21 +20,24 @@ from .loading import MAP_TILE_SIZE as TILE_SIZE, MAX_MAP_VISIBLE_TILES as MAX_VI
 MAX_DISK_BYTES = 48 * 1024**2
 MAX_TILES = 4096
 MAX_READ_PIXELS = 16_777_216
+MAP_COVERAGE_VERSION = 1
 
 
-def map_spec(session, assets, path, *, cut=None):
+def map_spec(session, assets, path, *, cut=None, preview=False):
     if path is None or not hasattr(session, "map_identity"):
         return None
     resource = (str(Path(assets).resolve()), resource_stamp(assets)) if assets else None
-    identity = json.dumps((session.map_identity, resource, MAP_BACKGROUND, MAP_RENDER_VERSION), sort_keys=True)
+    identity = json.dumps((session.map_identity, resource, MAP_BACKGROUND, MAP_RENDER_VERSION, MAP_COVERAGE_VERSION), sort_keys=True)
     space = hashlib.sha256(identity.encode()).hexdigest()
     slabs = {}
+    bounds = {}
     for view in VIEWS:
         axis = depth_axis(view)
         lower, upper = slice_bounds(session.size, cut, view)
+        bounds[view] = lower, upper
         slabs[view] = f"{view}:{session.origin[axis] + lower}:{session.origin[axis] + upper}"
-    return dict(path=str(path), space=space, slabs=slabs, origin=session.origin, size=session.size,
-                loaded=session.loaded_chunks, stamps=session.map_stamps, volatile=session.dirty)
+    return dict(path=str(path), space=space, slabs=slabs, bounds=bounds, origin=session.origin, size=session.size,
+                loaded=session.loaded_chunks, stamps=session.map_stamps, volatile=session.dirty or preview)
 
 
 @contextmanager
@@ -76,13 +79,19 @@ def invalidate(db, space):
 def known_pixels(spec, view):
     x, _, z = spec["origin"]
     sx, sy, sz = spec["size"]
+    lower, upper = spec["bounds"][view]
+    if lower == upper:
+        return np.zeros(tuple(reversed(plane_size(spec["size"], view))), dtype=bool)
     columns = np.zeros((sz, sx), dtype=bool)
     for cx, cz in spec["loaded"]:
         left, top = cx * 16 - x, cz * 16 - z
-        columns[max(0, top):min(sz, top + 16), max(0, left):min(sx, left + 16)] = True
+        lo_x, hi_x = max(0, left), min(sx, left + 16)
+        lo_z, hi_z = max(0, top), min(sz, top + 16)
+        if lo_x < hi_x and lo_z < hi_z:
+            columns[lo_z:hi_z, lo_x:hi_x] = True
     if view in ("top", "bottom"):
         return columns
-    horizontal = columns.all(axis=0 if view in ("north", "south") else 1)
+    horizontal = columns[lower:upper, :].all(axis=0) if view in ("north", "south") else columns[:, lower:upper].all(axis=1)
     if view in ("south", "east"):
         horizontal = horizontal[::-1]
     return np.broadcast_to(horizontal, (sy, len(horizontal)))

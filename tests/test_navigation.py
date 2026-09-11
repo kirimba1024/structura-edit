@@ -129,17 +129,19 @@ def test_release_in_other_widget_cancels_temporary_selection(navigation):
     assert field.text() == "wasd" and not navigation.keys
 
 
-def test_escape_discards_pending_mouse_delta(navigation):
+def test_escape_cancels_tool_without_interrupting_mouse_delta(navigation):
     look = navigation.mouse_look
-    look.start(QPoint(100, 100))
+    look.start(QPoint(100, 100), latched=True)
+    cancelled = []
+    navigation.cancel_requested.connect(lambda: cancelled.append(True))
     look.move(QPoint(200, 130))
     QTest.keyPress(navigation.view, Qt.Key.Key_Escape)
     navigation.tick(0.1)
-    assert not navigation.looking
-    assert np.allclose(navigation.camera.plotter.camera.direction, (0, 0, -1))
+    assert navigation.looking and cancelled == [True]
+    assert not np.allclose(navigation.camera.plotter.camera.direction, (0, 0, -1))
 
 
-def test_freelook_click_selects_without_losing_camera_and_escape_releases(navigation):
+def test_freelook_click_and_escape_preserve_rotation_and_movement(navigation):
     view = navigation.view
     selected, extended = [], []
     navigation.selected.connect(lambda *args: selected.append(args))
@@ -152,14 +154,16 @@ def test_freelook_click_selects_without_losing_camera_and_escape_releases(naviga
     QTest.keyPress(view, Qt.Key.Key_Shift)
     QTest.keyPress(view, Qt.Key.Key_W)
     navigation.tick(0.1)
-    assert extended[-1] is False
+    assert extended[-1] is True
     QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=QPoint(50, 50))
     assert navigation.looking and navigation.keys and selected == [(view.rect().center(), False)]
     QTest.keyClick(view, Qt.Key.Key_Escape)
-    stopped = navigation.camera.plotter.camera.position
+    position = navigation.camera.plotter.camera.position
     navigation.tick(0.1)
-    assert not navigation.looking and not navigation.keys
-    assert navigation.camera.plotter.camera.position == stopped
+    assert navigation.looking and navigation.keys
+    assert navigation.camera.plotter.camera.position != position
+    QTest.keyRelease(view, Qt.Key.Key_W)
+    QTest.keyRelease(view, Qt.Key.Key_Shift)
     navigation.start_fly()
     QApplication.sendEvent(view, QFocusEvent(QEvent.Type.FocusOut))
     assert not navigation.looking
@@ -264,7 +268,7 @@ def test_captured_mouse_does_not_repeat_rotation_and_restores_cursor(navigation,
     assert not navigation.looking
 
 
-def test_freelook_resumes_after_focus_returns_but_not_after_escape(navigation, monkeypatch):
+def test_freelook_resumes_after_focus_returns_and_escape_keeps_it(navigation, monkeypatch):
     view = navigation.view
     focused = {"value": True}
     monkeypatch.setattr(view, "hasFocus", lambda: focused["value"])
@@ -279,18 +283,18 @@ def test_freelook_resumes_after_focus_returns_but_not_after_escape(navigation, m
     position, direction = camera.position, camera.direction
     for _ in range(10):
         navigation.tick(1 / 60)
-    assert not navigation.looking and navigation.resume_look and not navigation.keys
+    assert not navigation.looking and not navigation.keys
     assert camera.position == position and camera.direction == direction
     focused["value"] = True
     navigation.tick(1 / 60)
-    assert navigation.looking and not navigation.resume_look
+    assert navigation.looking
     assert camera.position == position and camera.direction == direction
     navigation.mouse_look.move(navigation.mouse_look.anchor + QPoint(20, 10))
     navigation.tick(1 / 60)
     assert camera.position == position and camera.direction != direction
     QTest.keyClick(view, Qt.Key.Key_Escape)
     navigation.tick(1 / 60)
-    assert not navigation.looking and not navigation.resume_look
+    assert navigation.looking
 
 
 def test_disabled_map_view_preserves_freelook_until_return(navigation, monkeypatch):
@@ -303,7 +307,154 @@ def test_disabled_map_view_preserves_freelook_until_return(navigation, monkeypat
     navigation.enabled = False
     for _ in range(10):
         navigation.tick(1 / 60)
-    assert not navigation.looking and navigation.resume_look
+    assert not navigation.looking
     navigation.enabled = True
     navigation.tick(1 / 60)
-    assert navigation.looking and not navigation.resume_look
+    assert navigation.looking
+
+
+def test_tab_cursor_choice_survives_focus_loss_and_button_actions(navigation, monkeypatch):
+    view = navigation.view
+    monkeypatch.setattr(view, "hasFocus", lambda: True)
+    monkeypatch.setattr(view, "isVisible", lambda: True)
+    monkeypatch.setattr(view, "isActiveWindow", lambda: True)
+    navigation.start_fly()
+    QTest.keyClick(view, Qt.Key.Key_Tab)
+    assert not navigation.looking and not navigation.freelook
+    navigation.suspend()
+    navigation.tick(0.1)
+    assert not navigation.looking and not navigation.freelook
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    navigation.tick(0.1)
+    assert navigation.looking and navigation.freelook
+    QTest.keyClick(view, Qt.Key.Key_Tab)
+    assert not navigation.looking and not navigation.freelook
+    key(view, QEvent.Type.KeyPress, Qt.Key.Key_Tab, repeat=True)
+    assert not navigation.looking
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    assert navigation.looking and navigation.freelook
+    navigation.stop()
+    navigation.tick(0.1)
+    assert navigation.looking and navigation.freelook
+
+
+def test_tab_in_text_field_keeps_normal_focus_navigation(navigation):
+    navigation.start_fly()
+    QTest.keyClick(navigation.view, Qt.Key.Key_Tab)
+    field = QLineEdit(navigation.view)
+    QTest.keyClick(field, Qt.Key.Key_Tab)
+    assert not navigation.freelook and not navigation.looking
+
+
+def test_shift_mouse_click_in_latched_flight_extends_at_crosshair(navigation):
+    selected = []
+    navigation.selected.connect(lambda *args: selected.append(args))
+    navigation.mouse_look.start(QPoint(100, 100), latched=True)
+    QTest.mouseClick(navigation.view, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, QPoint(100, 100))
+    assert selected == [(navigation.view.rect().center(), True)]
+    navigation.stop()
+    QTest.mouseClick(navigation.view, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, QPoint(100, 100))
+    assert selected[-1][1] is True
+
+
+@pytest.mark.parametrize("modifier", [Qt.KeyboardModifier.ControlModifier, Qt.KeyboardModifier.MetaModifier,
+                                     Qt.KeyboardModifier.AltModifier])
+def test_app_switch_shortcut_preserves_freelook_without_recapturing_held_command(navigation, monkeypatch, modifier):
+    view = navigation.view
+    state = {"active": True, "modifiers": modifier}
+    monkeypatch.setattr(view, "hasFocus", lambda: True)
+    monkeypatch.setattr(view, "isVisible", lambda: True)
+    monkeypatch.setattr(view, "isActiveWindow", lambda: state["active"])
+    monkeypatch.setattr(QApplication, "queryKeyboardModifiers", lambda: state["modifiers"])
+    navigation.start_fly()
+    QTest.keyPress(view, Qt.Key.Key_W)
+    key(view, QEvent.Type.KeyPress, Qt.Key.Key_Tab, modifiers=modifier)
+    position = navigation.camera.plotter.camera.position
+    navigation.tick(1 / 60)
+    assert not navigation.looking and not navigation.keys
+    state["active"] = False
+    QApplication.sendEvent(view, QEvent(QEvent.Type.WindowDeactivate))
+    QApplication.sendEvent(QApplication.instance(), QEvent(QEvent.Type.ApplicationDeactivate))
+    state["modifiers"] = Qt.KeyboardModifier.NoModifier
+    navigation.tick(1 / 60)
+    assert not navigation.looking
+    state["active"] = True
+    navigation.tick(1 / 60)
+    assert navigation.looking
+    assert navigation.camera.plotter.camera.position == position
+
+
+def test_shift_region_preview_follows_crosshair_and_release_cancels(navigation):
+    from structura_edit.selection import RegionSelection
+
+    selection = RegionSelection()
+    selection.reset((10, 10, 10))
+    selection.select_block((1, 1, 1))
+    navigation.extend_changed.connect(selection.set_extending)
+    points = []
+    def hover(point):
+        if point is not None:
+            points.append(point)
+            selection.hover_block((3, 4, 5))
+    navigation.hovered.connect(hover)
+    navigation.start_fly()
+    QTest.keyPress(navigation.view, Qt.Key.Key_Shift)
+    navigation.tick(0.05)
+    assert points == [navigation.view.rect().center()]
+    assert selection.preview is not None and selection.preview.upper == (4, 5, 6)
+    assert selection.region.volume == 1 and navigation.looking
+    QTest.keyRelease(navigation.view, Qt.Key.Key_Shift)
+    assert selection.preview is None and selection.region.volume == 1 and navigation.looking
+
+
+def test_placement_and_temporary_rmb_look_do_not_preview_region(navigation):
+    navigation.mouse_look.start(QPoint(100, 100))
+    assert not navigation.extending(Qt.KeyboardModifier.ShiftModifier)
+    navigation.stop()
+    navigation.start_fly()
+    navigation.placing = True
+    assert not navigation.extending(Qt.KeyboardModifier.ShiftModifier)
+
+
+def test_double_escape_requests_exit_once_and_ignores_repeat(navigation):
+    events = []
+    navigation.cancel_requested.connect(lambda: events.append("cancel"))
+    navigation.exit_requested.connect(lambda: events.append("exit"))
+    view = navigation.view
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    key(view, QEvent.Type.KeyPress, Qt.Key.Key_Escape, repeat=True)
+    assert events == ["cancel"]
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    assert events == ["cancel", "exit"]
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    assert events == ["cancel", "exit", "cancel"]
+
+
+@pytest.mark.parametrize("interruption", ["key", "click", "focus", "timeout"])
+def test_interrupted_escape_sequence_does_not_request_exit(navigation, interruption):
+    from structura_edit.navigation import DOUBLE_ESCAPE_MS
+
+    exits = []
+    navigation.exit_requested.connect(lambda: exits.append(True))
+    view = navigation.view
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    if interruption == "key":
+        QTest.keyClick(view, Qt.Key.Key_X)
+    elif interruption == "click":
+        QTest.mouseClick(view, Qt.MouseButton.LeftButton)
+    elif interruption == "focus":
+        QApplication.sendEvent(view, QFocusEvent(QEvent.Type.FocusOut))
+    else:
+        QTest.qWait(DOUBLE_ESCAPE_MS + 20)
+    QTest.keyClick(view, Qt.Key.Key_Escape)
+    assert not exits
+
+
+def test_double_escape_in_text_field_does_not_request_exit(navigation, monkeypatch):
+    exits = []
+    navigation.exit_requested.connect(lambda: exits.append(True))
+    field = QLineEdit(navigation.view)
+    monkeypatch.setattr(QApplication, "focusWidget", lambda: field)
+    QTest.keyClick(field, Qt.Key.Key_Escape)
+    QTest.keyClick(field, Qt.Key.Key_Escape)
+    assert not exits

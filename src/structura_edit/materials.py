@@ -1,10 +1,12 @@
 from collections import Counter
 
-from PySide6.QtCore import QEvent, QSortFilterProxyModel, Qt, Signal
-from PySide6.QtGui import QStandardItem, QStandardItemModel, QTextOption
-from PySide6.QtWidgets import QHeaderView, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QPoint, QSettings, QSortFilterProxyModel, Qt, Signal
+from PySide6.QtGui import QIcon, QTextOption
+from PySide6.QtWidgets import QComboBox, QHeaderView, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget
 
-from .appearance import CONTROL_HEIGHT
+from .appearance import CONTROL_HEIGHT, GRID
+from .material_model import MaterialModel
+from .local_store import storage_root
 
 
 RECENT_LIMIT = 12
@@ -17,17 +19,25 @@ class MaterialsPanel(QWidget):
     def __init__(self):
         super().__init__()
         self.counts = Counter()
-        self.recent = []
+        self.settings = QSettings(str(storage_root() / "preferences.ini"), QSettings.Format.IniFormat)
+        self.recent = self.settings.value("materials/recent", [], type=list)[:RECENT_LIMIT]
+        self.catalog = {}
+        self.icons = None
+        self.catalog_request = lambda: None
         layout = QVBoxLayout(self)
+        self.scope = QComboBox()
+        self.scope.addItems(["Catalog", "In build", "Recent"])
+        self.scope.currentIndexChanged.connect(self.reload)
+        layout.addWidget(self.scope)
         self.search = QLineEdit()
         self.search.setPlaceholderText("Find material…")
         self.setFocusProxy(self.search)
         layout.addWidget(self.search)
-        self.model = QStandardItemModel(self)
+        self.model = MaterialModel(self)
         self.filtered = QSortFilterProxyModel(self)
         self.filtered.setSourceModel(self.model)
         self.filtered.setFilterKeyColumn(0)
-        self.filtered.setFilterRole(Qt.ItemDataRole.UserRole)
+        self.filtered.setFilterRole(Qt.ItemDataRole.UserRole + 1)
         self.filtered.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.table = QTreeView()
         self.table.setModel(self.filtered)
@@ -48,7 +58,8 @@ class MaterialsPanel(QWidget):
         self.use = QPushButton("Use material")
         self.use.clicked.connect(self._choose)
         layout.addWidget(self.use)
-        hint = QLabel("Recent first · Loaded counts\nI / middle click: pick To")
+        hint = QLabel("Catalog uses the chosen resources.\nI / middle click: pick To")
+        self.hint = hint
         hint.setWordWrap(True)
         layout.addWidget(hint)
         self.search.textChanged.connect(self._filter)
@@ -59,12 +70,21 @@ class MaterialsPanel(QWidget):
 
     @property
     def states(self):
-        return list(dict.fromkeys((*self.recent, *self.counts)))
+        return list(dict.fromkeys((*self.recent, *self.counts, *self.catalog)))
 
     def remember(self, state):
         self.recent = [state, *(value for value in self.recent if value != state)][:RECENT_LIMIT]
+        self.settings.setValue("materials/recent", self.recent)
         if self.isVisible():
             self.reload()
+
+    def set_catalog(self, result, version):
+        self.catalog = result["rows"]
+        actual = result["version"]
+        self.hint.setText("Choose a material, then preview the change.")
+        self.hint.setToolTip(result["source"] + f"\nResources DV {actual or 'unknown'} · Document DV {version}"
+                             + ("\nResource version differs; IDs are not converted." if actual and actual != version else ""))
+        self.reload()
 
     def set_counts(self, counts):
         self.counts = counts
@@ -73,18 +93,12 @@ class MaterialsPanel(QWidget):
 
     def reload(self):
         selected = self.table.currentIndex().siblingAtColumn(0).data(Qt.ItemDataRole.UserRole)
-        self.model.clear()
-        self.model.setHorizontalHeaderLabels(["Material", "Loaded"])
-        states = dict.fromkeys((*self.recent, *(state for state, count in self.counts.most_common())))
-        for state in states:
-            item = QStandardItem(state.removeprefix("minecraft:"))
-            item.setData(state, Qt.ItemDataRole.UserRole)
-            item.setToolTip(state)
-            count = QStandardItem(f"{self.counts[state]:,}" if self.counts[state] else "—")
-            count.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.model.appendRow([item, count])
+        states = self.states if self.scope.currentIndex() == 0 else self.counts if self.scope.currentIndex() == 1 else self.recent
+        self.model.set_rows([(state, self.catalog.get(state.split("[", 1)[0], state.removeprefix("minecraft:")), self.counts[state]) for state in states])
         self.table.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.header().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        widest = f"{max(self.counts.values(), default=0):,}"
+        self.table.header().resizeSection(1, max(self.fontMetrics().horizontalAdvance(widest), self.fontMetrics().horizontalAdvance("Loaded")) + GRID * 5)
         self._filter(self.search.text())
         matches = self.model.match(self.model.index(0, 0), Qt.ItemDataRole.UserRole, selected, 1,
                                    Qt.MatchFlag.MatchExactly) if selected else []
@@ -97,6 +111,21 @@ class MaterialsPanel(QWidget):
         self.filtered.setFilterFixedString(text.strip())
         self.table.setCurrentIndex(self.filtered.index(0, 0))
         self._describe()
+
+    def request_icons(self):
+        if self.icons is None or not self.isVisible():
+            return
+        first = max(0, self.table.indexAt(QPoint(1, 1)).row())
+        identifiers = []
+        for row in range(first, min(first + 24, self.filtered.rowCount())):
+            index = self.filtered.index(row, 0)
+            identifier = index.data(Qt.ItemDataRole.UserRole).split("[", 1)[0]
+            identifiers.append(identifier)
+            if identifier not in self.model.icons:
+                pixmap = self.icons.pixmap(identifier)
+                if pixmap is not None:
+                    self.model.set_icon(self.filtered.mapToSource(index), identifier, QIcon(pixmap))
+        self.icons.request(identifiers)
 
     def _describe(self, *args):
         state = self.table.currentIndex().siblingAtColumn(0).data(Qt.ItemDataRole.UserRole)

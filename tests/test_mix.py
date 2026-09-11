@@ -47,7 +47,7 @@ def test_mix_validation_and_canonicalization():
     with pytest.raises(ValueError):
         Mix((("minecraft:stone", 1),), seed=-1)
     assert Mix((("minecraft:oak_stairs[facing=north]", 2),)).items == (("minecraft:oak_stairs[facing=north]", 2),)
-    assert Mix((("minecraft:stone", 1),)).label == "1 materials · seed 0"
+    assert Mix((("minecraft:stone", 1),)).label == "1 materials · seed 0 · local"
 
 
 def test_replace_with_mix_preserves_properties(edit):

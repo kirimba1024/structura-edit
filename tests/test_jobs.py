@@ -3,6 +3,7 @@ import time
 import pytest
 
 from structura_edit.jobs import Worker
+from structura_edit.task_protocol import TaskSuccess
 from structura_edit.tasks import execute
 
 
@@ -14,6 +15,13 @@ def wait(worker, timeout=20):
             return result
         time.sleep(0.01)
     raise AssertionError("Worker did not finish")
+
+
+def wait_stopped(worker):
+    end = time.monotonic() + 5
+    while worker.stopping and time.monotonic() < end:
+        time.sleep(0.001)
+    assert not worker.stopping
 
 
 def test_recipe_failure_is_atomic(edit):
@@ -62,10 +70,12 @@ def test_worker_cancel_and_recover(edit):
         with pytest.raises(RuntimeError):
             worker.submit("recipe")
         worker.close()
+        wait_stopped(worker)
         assert not edit.dirty
         worker.submit("recipe", session=edit.fork(), selection=edit.select(), code='edit.apply(edit.set_block((0, 0, 0), "minecraft:glass"))\nprint("done")')
-        success, result = wait(worker)
-        assert success, result
+        reply = wait(worker)
+        assert isinstance(reply, TaskSuccess), reply
+        result = reply.payload
         change, output = result
         assert output == "done\n"
         edit.apply(change)
@@ -93,13 +103,22 @@ def test_worker_search_returns_pages_and_observes_edits_after_cache_reuse(edit):
     try:
         for query, count in (({"kind": "all", "limit": 1}, 3), ({"text": "chest"}, 1)):
             worker.submit("object_search", session=edit.fork(), query=query)
-            success, page = wait(worker)
-            assert success, page
+            reply = wait(worker)
+            assert isinstance(reply, TaskSuccess), reply
+            page = reply.payload
             assert page.total == count and len(page.rows) == 1
         edit.apply(edit.set_block((1, 0, 0), "minecraft:air"))
         worker.submit("object_search", session=edit.fork(), query={"text": "chest"})
-        success, page = wait(worker)
-        assert success, page
+        reply = wait(worker)
+        assert isinstance(reply, TaskSuccess), reply
+        page = reply.payload
         assert page.total == 0
     finally:
         worker.close()
+
+
+def test_unknown_task_does_not_spawn_a_process():
+    worker = Worker()
+    with pytest.raises(ValueError, match='Unknown task'):
+        worker.submit('unknown')
+    assert worker._process is None and not worker.busy

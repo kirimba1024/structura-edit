@@ -14,22 +14,22 @@ class HeightSliceController(QObject):
         self.document, self.views, self.navigation = document, views, navigation
         self.plotter = navigation.camera.plotter
         self.value = HeightSlice()
-        self.button = QToolButton(text=self.value.label, toolTip="Height slice · show interiors without changing blocks",
+        self.button = QToolButton(text=self.value.label, toolTip="Show or hide layers of the world to see underground or inside buildings. No blocks are deleted. Click to choose a height.",
                                   focusPolicy=Qt.FocusPolicy.NoFocus)
         self.button.clicked.connect(self.show)
         self.dialog = QDialog(self.plotter.window(), Qt.WindowType.Tool)
-        self.dialog.setWindowTitle("Height slice")
+        self.dialog.setWindowTitle("Visible heights")
         form = QFormLayout(self.dialog)
         self.mode = QComboBox()
-        for label, mode in (("All layers", "all"), ("Up to Y", "below"), ("Single layer", "layer")):
+        for label, mode in (("Show all heights", "all"), ("Hide above a height", "below"), ("Show one layer only", "layer")):
             self.mode.addItem(label, mode)
         self.y = QSpinBox(minimum=-30_000_000, maximum=30_000_000, keyboardTracking=False)
         self.at_camera = QPushButton("Use camera height")
         self.at_camera.clicked.connect(self.use_camera)
         form.addRow("Show", self.mode)
-        form.addRow("World Y", self.y)
+        form.addRow("Height · blocks", self.y)
         form.addRow(self.at_camera)
-        note = QLabel("Changes the view only. Editing uses the full selection.")
+        note = QLabel("Hide higher blocks to see underground or inside buildings.\nNo blocks are deleted. Editing still affects your whole selection, including hidden blocks.")
         note.setWordWrap(True)
         form.addRow(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Reset | QDialogButtonBox.StandardButton.Close)
@@ -46,7 +46,7 @@ class HeightSliceController(QObject):
             self.mode.setCurrentIndex(0)
             self.y.setValue(session.origin[1] + session.size[1] // 2)
         self.value = HeightSlice()
-        self.button.setText(self.value.label)
+        self._update_button()
         self.dialog.hide()
 
     def sync(self, *, available):
@@ -76,8 +76,16 @@ class HeightSliceController(QObject):
         if value == self.value:
             return
         self.value = value
-        self.button.setText(value.label)
+        self._update_button()
         self.changed.emit()
+
+    def _update_button(self):
+        value = self.value
+        self.button.setText(value.label)
+        detail = ("All loaded heights are visible." if value.mode == "all" else
+                  f"Blocks above height {value.y} are hidden; this height and everything below remain visible." if value.mode == "below" else
+                  f"Only the block layer at height {value.y} is visible.")
+        self.button.setToolTip(detail + "\nClick to change visible heights or show all again. No blocks are deleted.")
 
     def reveal(self, positions):
         low, high = self.value.interval(self.document.session)

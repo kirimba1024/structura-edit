@@ -62,5 +62,6 @@ class PlacementView:
             actor.SetVisibility(visible and self.include_blocks)
         for actor in self.entity_actors:
             actor.SetVisibility(visible and self.include_entities)
-        for actor in self.bounds.actors + self.anchor.actors + self.source.actors:
-            actor.SetVisibility(visible)
+        for marker in (self.bounds, self.anchor, self.source):
+            for actor in marker.actors:
+                actor.SetVisibility(visible and marker.bounds is not None)

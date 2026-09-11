@@ -64,6 +64,7 @@ class SourceController(QObject):
         self.document, self.tasks, self.edits = document, tasks, edits
         self.world, self.placement = world, placement
         self.opened, self.saved = opened, saved
+        self.demo_path = None
 
     def _received(self, session):
         if isinstance(session, SourceVersionRequired):
@@ -75,12 +76,14 @@ class SourceController(QObject):
         else:
             self.opened(session)
 
-    def confirm_discard(self):
+    def confirm_discard(self, continuation=None):
         if not self.document.session or not self.document.session.dirty:
             return True
-        answer = QMessageBox.question(self.parent(), "Unsaved changes", "Discard unsaved changes?",
-                                      QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+        answer = QMessageBox.question(self.parent(), "Unsaved changes", "Save changes before continuing?",
+                                      QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
                                       QMessageBox.StandardButton.Cancel)
+        if answer == QMessageBox.StandardButton.Save:
+            self.save_dialog(on_saved=continuation)
         return answer == QMessageBox.StandardButton.Discard
 
     def open_dialog(self):
@@ -91,12 +94,17 @@ class SourceController(QObject):
     def open_demo(self):
         from importlib.resources import files
 
-        self.open_path(str(files("structura_render").joinpath("data/examples/demo.nbt")))
+        self.demo_path = Path(str(files("structura_render").joinpath("data/examples/demo.nbt")))
+        self.open_path(self.demo_path)
 
     def open_path(self, path, region=None, *, palette_index=0, source_data_version=None):
-        if self.tasks.busy or not self.confirm_discard():
+        if self.tasks.busy:
             return
         path = Path(path).expanduser()
+        def proceed():
+            self.open_path(path, region, palette_index=palette_index, source_data_version=source_data_version)
+        if not self.confirm_discard(proceed):
+            return
         self.opening.emit()
         if path.is_dir() or path.name == "level.dat":
             self.world.open(path if path.is_dir() else path.parent)
@@ -114,27 +122,53 @@ class SourceController(QObject):
     def export_dialog(self):
         if not self.document.session or self.tasks.busy or self.document.pending is not None or self.document.selected.current is None:
             return
-        path, _ = QFileDialog.getSaveFileName(self.parent(), "Export selection as Structure NBT", "selection.nbt",
-                                             "Structure NBT (*.nbt);;Text NBT (*.snbt)")
-        if path:
+        path, _ = QFileDialog.getSaveFileName(self.parent(), "Export selection", "selection.nbt",
+                                             "Structure NBT (*.nbt);;Text NBT (*.snbt);;Sponge (*.schem)")
+        if not path:
+            return
+        token = self.document.input_token
+        session, selection = self.document.session.fork(), self.document.selection()
+        def reviewed(losses):
+            if token != self.document.input_token:
+                return
+            if losses:
+                answer = QMessageBox.question(self.parent(), "Export details",
+                                              "The export uses the selection's lower corner as its anchor.\n\n" + "\n".join(losses) + "\n\nExport with these changes?",
+                                              QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                                              QMessageBox.StandardButton.Cancel)
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
             self.tasks.submit("export", lambda result: self.message.emit(f"Exported {result}"),
-                      session=self.document.session.fork(), selection=self.document.selection(), path=path)
+                              session=session, selection=selection, path=path)
+        self.tasks.submit("export_review", reviewed, session=session, selection=selection, path=path)
 
-    def save_dialog(self):
-        if not self.document.session or self.tasks.busy or self.document.pending is not None:
-            return
+    def save_dialog(self, *, save_as=False, on_saved=None):
+        if not self.document.session or self.tasks.busy or self.document.pending is not None or self.placement.active:
+            self.message.emit("Finish the current operation before saving")
+            return False
         if self.world.active:
-            self.save_path(self.document.session.path)
-            return
+            return self.save_path(self.document.session.path, on_saved=on_saved)
+        target = self.document.session.save_target
+        if target is not None and not save_as:
+            return self.save_path(target, on_saved=on_saved)
         current = self.document.session.path or Path("structure.nbt")
         if current.suffix.lower() == ".schematic":
             current = current.with_suffix(".nbt")
-        proposal = str(current.with_name(f"{current.stem}-edited{current.suffix}"))
-        filters = "Sponge (*.schem)" if current.suffix == ".schem" else "Structure NBT (*.nbt);;Text NBT (*.snbt)"
-        path, _ = QFileDialog.getSaveFileName(self.parent(), "Save edited schematic", proposal, filters)
+        suffix = current.suffix.lower()
+        proposal = current.with_suffix(suffix) if target is not None else current.with_name(f"{current.stem}-edited{suffix}")
+        if self.demo_path is not None and self.document.session.path == self.demo_path:
+            proposal = Path.home() / "Documents" / "structure.nbt"
+        filters = "Sponge (*.schem)" if suffix == ".schem" else "Structure NBT (*.nbt);;Text NBT (*.snbt)"
+        path, _ = QFileDialog.getSaveFileName(self.parent(), "Save edited schematic", str(proposal), filters)
         if path:
-            self.save_path(path)
+            return self.save_path(path, on_saved=on_saved)
+        return False
 
-    def save_path(self, path):
+    def save_path(self, path, *, on_saved=None):
         if self.document.session and not self.document.session.readonly and self.document.pending is None and not self.placement.active:
-            self.edits.save(path, self.saved)
+            def received(session):
+                self.saved(session)
+                if on_saved is not None:
+                    on_saved()
+            return self.edits.save(path, received)
+        return False

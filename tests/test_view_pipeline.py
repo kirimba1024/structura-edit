@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from structura_edit.view_pipeline import ViewPipeline
+from structura_edit.render_source import preview_session
 
 
 def pipeline():
@@ -77,7 +78,7 @@ def test_accepting_preview_updates_display_revision_without_rebuilding(edit):
     change = edit.set_block((0, 0, 0), "minecraft:glass")
     view.request(edit, change, None, True)
     view.flush()
-    calls.pop()[1]("preview")
+    calls.pop()[1]((preview_session(edit, change), "preview"))
     request = view.current
     edit.apply(change)
     assert view.accept(edit, request=request)
@@ -92,13 +93,41 @@ def test_changed_view_during_apply_does_not_mark_old_geometry_current(edit):
     change = edit.set_block((0, 0, 0), "minecraft:glass")
     view.request(edit, change, None, True)
     view.flush()
-    calls.pop()[1]("preview")
+    calls.pop()[1]((preview_session(edit, change), "preview"))
     request, displayed = view.current, view.displayed
     view.request(edit, change, None, False)
     edit.apply(change)
     assert not view.accept(edit, request=request)
     assert view.scene.display_revision == 0 and view.displayed is displayed
     assert view.render_queued
+
+
+@pytest.mark.parametrize('cancel', [False, True])
+def test_worker_preview_does_not_prepare_gui_state_and_discards_stale_results(edit, monkeypatch, cancel):
+    from structura_edit.view_pipeline import ViewRequest
+
+    view, calls, frames, _ = pipeline()
+    change = edit.paste(edit.copy(edit.select()), (-4, -3, -2), take=True)
+    state = preview_session(edit, change)
+    def unexpected(*args, **kwargs):
+        pytest.fail('Preview preparation ran in the GUI')
+    monkeypatch.setattr(ViewRequest, 'geometry_args', unexpected)
+    monkeypatch.setattr('structura_edit.view_pipeline.preview_session', unexpected)
+    view.request(edit, change, None, True)
+    request = view.current
+    view.flush()
+    kind, callback, args = calls.pop()
+    assert kind == 'render_preview' and args['request'] is request and 'prepare_args' not in args
+    assert 'state' not in vars(request)
+    if cancel:
+        view.reset()
+        callback((state, 'cancelled preview'))
+        assert not frames and not view.ready and 'state' not in vars(request)
+    else:
+        callback((state, 'preview'))
+        assert view.ready and view.displayed.state is state
+        assert (view.displayed.state.size, view.displayed.state.origin) == (state.size, state.origin)
+        assert frames == [('preview', edit.revision)]
 
 
 def test_initial_framing_survives_replacing_an_inflight_request(edit):
@@ -154,3 +183,66 @@ def test_clipboard_budget_is_checked_before_creating_preview_actors(edit):
     with pytest.raises(ValueError, match="clipboard"):
         calls.pop()[1]({"reset": True, "sections": {"new": {"geometry_bytes": MAX_GEOMETRY_BYTES}}})
     assert not frames and not view.ready
+
+
+def staged_pipeline(monkeypatch):
+    view, calls, frames, images = pipeline()
+    scheduled, closed, failures = [], [], []
+    ticks = iter(range(100))
+    monkeypatch.setattr('structura_edit.view_pipeline.perf_counter', lambda: next(ticks) / 100)
+    def steps(data, revision):
+        try:
+            yield True
+            yield True
+            if data == 'broken':
+                raise ValueError('Invalid scene')
+            frames.append((data, revision))
+        finally:
+            closed.append(data)
+    view.scene.replace_steps = steps
+    view.schedule, view.failed = scheduled.append, failures.append
+    return view, calls, frames, scheduled, closed, failures
+
+
+def test_staged_scene_yields_before_becoming_ready(edit, monkeypatch):
+    view, calls, frames, scheduled, closed, failures = staged_pipeline(monkeypatch)
+    view.request(edit, None, None, True)
+    view.flush()
+    calls.pop()[1]('scene')
+    for _ in range(2):
+        scheduled.pop(0)()
+        assert not view.ready and view.render_queued and not frames
+        view.flush()
+        assert not calls
+    scheduled.pop(0)()
+    assert view.ready and not view.render_queued and view.map_queued
+    assert frames == [('scene', edit.revision)] and closed == ['scene'] and not failures
+
+
+@pytest.mark.parametrize('reset', [False, True])
+def test_stale_installation_is_closed_without_publishing(edit, monkeypatch, reset):
+    view, calls, frames, scheduled, closed, failures = staged_pipeline(monkeypatch)
+    view.request(edit, None, None, True)
+    view.flush()
+    calls.pop()[1]('old')
+    scheduled.pop(0)()
+    if reset:
+        view.reset()
+    else:
+        view.request(edit, None, None, False)
+    assert closed == ['old']
+    scheduled.pop(0)()
+    assert not frames and not failures and not view.ready
+
+
+def test_staged_scene_errors_leave_pipeline_reusable(edit, monkeypatch):
+    view, calls, frames, scheduled, closed, failures = staged_pipeline(monkeypatch)
+    view.request(edit, None, None, True, data='broken')
+    while scheduled:
+        scheduled.pop(0)()
+    assert not view.ready and not view.render_queued and not view.map_queued
+    assert not frames and closed == ['broken'] and 'Invalid scene' in failures[0]
+    view.request(edit, None, None, True, data='recovered')
+    while scheduled:
+        scheduled.pop(0)()
+    assert view.ready and frames == [('recovered', edit.revision)]

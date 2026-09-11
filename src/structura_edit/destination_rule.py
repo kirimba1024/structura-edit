@@ -26,7 +26,7 @@ class DestinationRule:
             return "Only where " + self.condition.label
         return {"all": "Replace all", "air": "Keep existing", "material": "Only material"}[self.mode]
 
-    def allows(self, state):
+    def allows(self, state, **context):
         state = state or "minecraft:air"
         if self.mode == "all":
             return True
@@ -34,4 +34,4 @@ class DestinationRule:
             return state.split("[", 1)[0] in EMPTY
         if self.mode == "material":
             return (state if "[" in self.material else state.split("[", 1)[0]) == self.material
-        return self.condition.matches(state)
+        return self.condition.matches(state, **context)

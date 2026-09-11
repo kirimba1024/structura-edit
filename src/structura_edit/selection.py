@@ -58,6 +58,9 @@ class RegionSelection:
         self.preview = None
         self.extending = False
 
+    def set_cells(self, cells):
+        self._set_cells(cells)
+
     @property
     def opposite(self):
         if self.region is None or self.anchor is None:

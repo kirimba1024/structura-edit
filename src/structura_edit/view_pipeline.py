@@ -1,10 +1,13 @@
 from dataclasses import dataclass, replace
 from functools import cached_property
+from time import perf_counter
+import traceback
 
 from .render_source import RenderSource, preview_session
 from .sections import prepare_sections
 from .height_slice import HeightSlice
 from .loading import MAX_GEOMETRY_BYTES, replacement_sizes
+from .task_protocol import SubmitResult
 
 
 @dataclass(frozen=True)
@@ -32,12 +35,13 @@ class ViewRequest:
         from .resources import resolve_assets
 
         assets = resolve_assets(self.assets)
-        atlas = map_spec(self.state, assets, cache_path) if self.height.mode == "all" else None
+        atlas = map_spec(self.state, assets, cache_path, preview=bool(self.change)) if self.height.mode == "all" else None
         return dict(source=RenderSource(self.state, self.height).region(include_nbt=False), assets=assets, atlas=atlas)
 
 
 class ViewPipeline:
-    def __init__(self, scene, camera, minimap, submit, on_rendered, *, cache_path=None, retained_geometry=lambda: 0, map_updates=None):
+    def __init__(self, scene, camera, minimap, submit, on_rendered, *, cache_path=None, retained_geometry=lambda: 0,
+                 map_updates=None, schedule=None, failed=None, prepare_scene=None, present_scene=None):
         self.scene = scene
         self.camera = camera
         self.minimap = minimap
@@ -46,9 +50,15 @@ class ViewPipeline:
         self.cache_path = cache_path
         self.retained_geometry = retained_geometry
         self.map_updates = map_updates
+        self.schedule = schedule
+        self.failed = failed
+        self.prepare_scene = prepare_scene
+        self.present_scene = present_scene
+        self._installation = None
         self.reset()
 
     def reset(self):
+        self._cancel_installation()
         self.current = None
         self.ready = False
         self.render_queued = False
@@ -57,6 +67,7 @@ class ViewPipeline:
         self.displayed = None
 
     def request(self, session, change, assets, entities, *, fit=False, data=None, height=HeightSlice()):
+        self._cancel_installation()
         fit = fit or bool(self.current and self.current.fit and not self.ready)
         self.current = ViewRequest(session.fork(), change, assets, entities, fit, height)
         self.ready = False
@@ -84,17 +95,21 @@ class ViewPipeline:
 
     def flush(self):
         request = self.current
-        if request is None:
+        if request is None or self._installation is not None:
             return
         if self.render_queued:
             self.render_queued = False
             previous = self.displayed
             if previous is not None and previous.assets != request.assets:
                 previous = None
-            accepted = self.submit(
-                "render", lambda data: self._rendered(request, data),
-                prepare_args=lambda: request.geometry_args(previous))
-            self.render_queued = not accepted
+            if request.change is not None:
+                accepted = self.submit("render_preview", lambda result: self._preview_rendered(request, result),
+                                       request=request, previous=previous, assets=request.assets)
+            else:
+                accepted = self.submit(
+                    "render", lambda data: self._rendered(request, data),
+                    prepare_args=lambda: request.geometry_args(previous))
+            self.render_queued = not accepted and accepted is not SubmitResult.FAILED_TO_START
         elif self.map_queued and (not self.minimap.collapsed or hasattr(request.session, "map_identity")):
             self.map_queued = False
             if self.map_updates is not None:
@@ -103,16 +118,66 @@ class ViewPipeline:
                 return
             accepted = self.submit(
                 "map", lambda images: self._mapped(request, images), prepare_args=lambda: request.map_args(self.cache_path))
-            self.map_queued = not accepted
+            self.map_queued = not accepted and accepted is not SubmitResult.FAILED_TO_START
+
+    def _preview_rendered(self, request, result):
+        if request is not self.current:
+            return
+        state, data = result
+        object.__setattr__(request, "state", state)
+        self._rendered(request, data)
 
     def _rendered(self, request, data):
+        if request is not self.current:
+            return
+        if self.prepare_scene is not None:
+            self.prepare_scene(request, lambda: self._stage_rendered(request, data))
+        else:
+            self._stage_rendered(request, data)
+
+    def _stage_rendered(self, request, data):
         if request is not self.current:
             return
         retained = self.retained_geometry()
         if retained and sum(replacement_sizes(data, self.scene.section_bytes).values()) + retained > MAX_GEOMETRY_BYTES:
             raise ValueError("Scene and clipboard exceed 192 MiB; use a smaller selection")
-        self.scene.replace(data, request.session.revision)
+        if self.schedule is None:
+            self.scene.replace(data, request.session.revision)
+            self._presented(request, data)
+        else:
+            steps = self.scene.replace_steps(data, request.session.revision)
+            self._installation = steps
+            self.render_queued = True
+            self.schedule(lambda: self._install_next(request, data, steps))
+
+    def _cancel_installation(self):
+        if self._installation is not None:
+            self._installation.close()
+            self._installation = None
+
+    def _install_next(self, request, data, steps):
+        if steps is not self._installation:
+            return
+        try:
+            deadline = perf_counter() + 0.006
+            while True:
+                if not next(steps, False):
+                    self._installation = None
+                    self.render_queued = False
+                    self._presented(request, data)
+                    return
+                if perf_counter() >= deadline:
+                    self.schedule(lambda: self._install_next(request, data, steps))
+                    return
+        except Exception as error:
+            self._cancel_installation()
+            self.render_queued = False
+            self.failed(f"{type(error).__name__}: {error}\n{traceback.format_exc()}")
+
+    def _presented(self, request, data):
         self.scene.height = request.height
+        if self.present_scene is not None:
+            self.present_scene(request)
         if self.displayed is not None and self.displayed.state._id == request.state._id:
             offset = tuple(old - new for old, new in zip(self.displayed.state.origin, request.state.origin))
             if any(offset):

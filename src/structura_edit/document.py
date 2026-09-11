@@ -1,28 +1,47 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 from pathlib import Path
 
+from amulet_nbt import CompoundTag
 from structura_core import load_structure
 from structura_core.export_schematic import schematic_root
 from structura_core.nbt import parse_state, save_structure
 from structura_core.schematic import Schematic
+from structura_core.world_backup import digest
+from structura_core.compatibility import source_capabilities
 
 from .cell_data import cell_payload, cell_record
 from .schematic_objects import updated_block_entities, updated_entities
 
 
 def copy_structure(structure):
-    positions = {id(position): position for position in structure.present}
-    return deepcopy(structure, positions)
+    return deepcopy(structure, {id(structure.present): structure.present.copy()})
+
+
+def compact_structure(structure):
+    source = copy(structure)
+    source._root = CompoundTag({key: value for key, value in structure._root.items() if key not in ("blocks", "entities")})
+    source._block_records = {}
+    for position, record in structure._block_records.items():
+        extra = CompoundTag({key: value for key, value in record.items() if key not in ("pos", "state", "nbt")})
+        if extra:
+            source._block_records[position] = extra
+    return copy_structure(source)
 
 
 class Document:
+    @property
+    def capabilities(self):
+        return source_capabilities(self.source_format, self.source.data_version, schema=getattr(self.native, "version", None))
+
     def __init__(self, structure, *, path=None, native=None, readonly=False):
         structure.validate()
-        self.source = copy_structure(structure)
+        self.source = compact_structure(structure)
         self.path = Path(path) if path is not None else None
         self.native = native
         self.readonly = readonly
         self.origin = tuple(getattr(structure, "source_origin", (0, 0, 0)))
+        self.source_hash = digest(self.path) if self.path is not None and self.path.is_file() else None
+        self.source_format = "world" if self.path is not None and self.path.is_dir() else self.path.suffix.lower() if self.path else ".nbt"
 
     @classmethod
     def open(cls, path, *, region=None, palette_index=0, source_data_version=None, target_version=None, strict=False):

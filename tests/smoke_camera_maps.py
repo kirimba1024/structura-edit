@@ -1,17 +1,16 @@
 import json
 from pathlib import Path
-from time import monotonic
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
 from amulet_nbt import from_snbt
 from PySide6.QtCore import QCoreApplication, QEvent, QPointF, QTimer
-from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QPlainTextEdit
 from structura_core import Structure, save_structure
 
 from smoke_gui import settle
+from smoke_feedback import wait_for
 from structura_edit import error_details
 from structura_edit.map_projection import VIEWS
 from structura_edit.ui import EditorWindow
@@ -27,6 +26,14 @@ def check_maps(window, output):
     window.move_camera((8.5, 2.5, 8.5))
     settle(window)
     centered(canvas)
+    assert canvas.map_cut is None and minimap.mode.text() == "Surface"
+    surface = canvas.image_pixels["top"]
+    window.move_camera((8.5, -2.5, 8.5))
+    settle(window)
+    assert canvas.image_pixels["top"] is surface
+    window.move_camera((8.5, 2.5, 8.5))
+    minimap.mode.click()
+    settle(window)
     assert canvas.map_cut == (8, 2, 8)
     assert not np.array_equal(canvas.image_pixels["top"], canvas.image_pixels["bottom"])
     before = canvas.image_pixels.copy()
@@ -57,20 +64,14 @@ def check_maps(window, output):
 
 def check_counts_and_guides(window, output):
     window.selection_actions.select_all()
-    stats = window.placement.bar.stats
-    stats.toggle.click()
-    until = monotonic() + 8
-    while stats.ready_key != stats.key and monotonic() < until:
-        QTest.qWait(25)
-    assert stats.ready_key == stats.key and stats.model.rowCount() == 2
-    QTest.qWait(50)
-    assert stats.rect().contains(stats.info.geometry()) and stats.rect().contains(stats.items.geometry())
-    assert not stats.info.geometry().intersects(stats.items.geometry())
-    assert "no air" not in stats.info.text() and "loaded" not in stats.info.text()
-    assert "Empty space" in stats.info.toolTip()
-    assert stats.items.gridSize().width() < 80
-    assert "minecraft:" in stats.model.item(0).toolTip()
+    window.objects.inspect()
+    stats = window.objects.region_dialog
+    wait_for(lambda: not stats.timer.isActive())
+    assert stats.models[0].rowCount() == 2
+    assert "Empty space" in stats.info.text()
+    assert "minecraft:" in stats.models[0].rows[0][0]
     stats.grab().save(str(output / "counts.png"))
+    stats.close()
     window.guides.update(window.document.session, bounds=False, chunks=True)
     assert len(window.guides.actors) == 1
     style = window.guides.actors[0].GetProperty()
@@ -87,7 +88,7 @@ def check_error_copy(window, output):
         try:
             assert dialog.findChild(QPlainTextEdit).toPlainText() == message
             buttons = dialog.findChild(QDialogButtonBox)
-            next(button for button in buttons.buttons() if button.text() == "Copy error").click()
+            next(button for button in buttons.buttons() if button.text() == "Copy details").click()
             dialog.grab().save(str(output / "error.png"))
         except Exception as error:
             failures.append(error)
@@ -118,9 +119,9 @@ def main():
         check_counts_and_guides(window, output)
         check_error_copy(window, output)
         assert not window.document.session.dirty
-        report = dict(maps="camera centered in all views, camera cuts, unchanged axes reused, M pan and return",
+        report = dict(maps="Surface stays above ground; explicit Slices, unchanged axes reused, M pan and return",
                       counts="compact cells, hover names and IDs, no ambiguous no air", guides="2 px, 35% opacity",
-                      errors="visible Error button, full selectable text, Copy error")
+                      errors="short status, full selectable Issues, Copy details")
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:

@@ -42,8 +42,8 @@ def choose_rule(button, mode, material="", *, output=None, cancel=False):
 
 def review(window):
     placement = window.placement
-    assert placement.bar.apply.text() == "Preview"
-    placement.bar.apply.click()
+    assert placement.bar.apply.text() == "Place"
+    window.placement_review.preview()
     settle(window)
     assert window.placement_review.plan is not None
     assert not window.document.session.dirty

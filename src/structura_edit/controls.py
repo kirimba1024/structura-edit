@@ -1,7 +1,7 @@
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QCheckBox, QLabel, QSizePolicy
 
-from .appearance import CONTROL_HEIGHT
+from .appearance import CONTROL_HEIGHT, GRID
 
 
 class CellLabel(QLabel):
@@ -39,6 +39,22 @@ class CellLabel(QLabel):
         super().changeEvent(event)
         if event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange, QEvent.Type.ContentsRectChange):
             self._fit_text()
+
+
+class MessageLabel(QLabel):
+    def __init__(self, text=""):
+        super().__init__(text)
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setWordWrap(True)
+        self.setProperty("cell", True)
+        self.setMinimumHeight(CONTROL_HEIGHT)
+        policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        policy.setHeightForWidth(True)
+        self.setSizePolicy(policy)
+
+    def heightForWidth(self, width):
+        height = max(CONTROL_HEIGHT, super().heightForWidth(width))
+        return (height + GRID - 1) // GRID * GRID
 
 
 class CellCheckBox(QCheckBox):

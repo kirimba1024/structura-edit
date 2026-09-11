@@ -4,35 +4,41 @@ from copy import copy
 from functools import lru_cache
 from uuid import uuid4
 
-from amulet_nbt import IntTag
 from structura_core.nbt import parse_state, state_key
 
 from .document import Document
-from .history import History
+from .history import DEFAULT_CACHE_BYTES, History
 from .entity_data import initial_entities, check_entities, write_entities
 from .cell_set import CellSet
 from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
 from .condition import Condition
 from .mix import Mix
 from .cell_data import material_data
+from .saved_changes import SavedChanges
 
 
 class EditSession:
-    def __init__(self, document, *, history_cache_limit=500_000, operation_limit=500_000):
+    def __init__(self, document, *, history_cache_limit=500_000, history_cache_bytes=DEFAULT_CACHE_BYTES, operation_limit=500_000):
         if any(isinstance(v, bool) or not isinstance(v, int) or v <= 0 for v in (history_cache_limit, operation_limit)):
             raise ValueError("History and operation limits must be positive integers")
         self._document = document
         self._id = uuid4().hex
         self._states = tuple(state_key(p) for p in document.source.palette_raw)
-        self._base_counts = Counter(document.source.present.values())
+        from structura_core.block_array import BlockArray
+
+        blocks = document.source.present
+        self._base_counts = Counter(blocks.counts() if isinstance(blocks, BlockArray) else blocks.values())
         self._cells = {}
         self._entities = initial_entities(document.source)
-        self.history = History(history_cache_limit)
+        self.history = History(history_cache_limit, cache_bytes=history_cache_bytes)
         self.operation_limit = operation_limit
         self.revision = 0
         self._state_id = uuid4().hex
         self._saved_state_id = self._state_id
         self._transition = None
+        self._saved_changes = SavedChanges(self.origin, self.size)
+        self.save_target = None
+        self.requires_save_as = False
 
     @classmethod
     def open(cls, path, *, region=None, palette_index=0, source_data_version=None, target_version=None, strict=False, **limits):
@@ -61,7 +67,7 @@ class EditSession:
 
     @property
     def dirty(self):
-        return self._state_id != self._saved_state_id
+        return self._saved_changes.dirty(self)
 
     @property
     def can_undo(self):
@@ -123,6 +129,14 @@ class EditSession:
         yield from self._document.source.present
         yield from (p for p in self._cells if p not in self._document.source.present)
 
+    def stored_positions(self, selection):
+        self._check_selection(selection)
+        base = self._document.source.present
+        if selection.volume < len(base) + len(self._cells):
+            yield from (p for p in selection.positions() if p in base or p in self._cells)
+        else:
+            yield from (p for p in self.positions() if p in selection)
+
     def find_objects(self, text="", **options):
         from .object_search import ObjectSearch
 
@@ -143,10 +157,7 @@ class EditSession:
                 counts[cell.state] += 1
         else:
             base = self._document.source.present
-            if selection.volume < len(base) + len(self._cells):
-                positions = (p for p in selection.positions() if p in base or p in self._cells)
-            else:
-                positions = (p for p in self.positions() if p in selection)
+            positions = self.stored_positions(selection)
             counts = Counter(self._cells[p].state if p in self._cells else self._states[base[p]] for p in positions)
         if by_state:
             return +counts
@@ -159,6 +170,9 @@ class EditSession:
         if self.readonly:
             raise ValueError("This source is view-only in this release")
         resolve = target if callable(target) else lambda position, before: target
+        if isinstance(target, Mix):
+            def resolve(position, before):
+                return target.at(position, self.origin)
         canonical = lru_cache(maxsize=None)(lambda state: state_key(parse_state(state)))
         if not callable(target):
             canonical(target)
@@ -192,12 +206,9 @@ class EditSession:
         if isinstance(source, str) and not source.strip():
             source = Condition("non-air")
         if isinstance(source, Condition):
-            def state_at(position):
-                cell = self._cell(position)
-                return cell.state if cell else None
-            pool = selection.positions() if isinstance(selection, CellSet) else (
-                p for p in self.positions() if p in selection)
-            positions = (p for p in pool if source.matches(state_at(p)))
+            if selection.volume > self.operation_limit:
+                raise ValueError("Condition exceeds the cell budget; select a smaller region")
+            positions = (p for p in selection.positions() if source.at(self, p))
         else:
             source = state_key(parse_state(source))
             exact = exact or "[" in source
@@ -205,7 +216,7 @@ class EditSession:
                 return cell.state == source if exact else cell.state.split("[", 1)[0] == source
             matching_indices = {i for i, state in enumerate(self._states) if matches(_Cell(state))}
             base = self._document.source.present
-            positions = (p for p in self.positions() if p in selection and (
+            positions = (p for p in self.stored_positions(selection) if (
                 matches(self._cells[p]) if p in self._cells else base[p] in matching_indices
             ))
         if preserve_properties:
@@ -213,10 +224,10 @@ class EditSession:
 
             if isinstance(target, Mix):
                 resolve = lru_cache(maxsize=None)(lambda state, picked: replace_material(state, picked))
-                return self._change(positions, lambda position, cell: resolve(cell.state, target(position, cell)),
+                return self._change(positions, lambda position, cell: resolve(cell.state if cell else "minecraft:air", target.at(position, self.origin)),
                                     "Replace")
             resolve = lru_cache(maxsize=None)(lambda state: replace_material(state, target))
-            return self._change(positions, lambda position, cell: resolve(cell.state), "Replace")
+            return self._change(positions, lambda position, cell: resolve(cell.state if cell else "minecraft:air"), "Replace")
         return self._change(positions, target, "Replace")
 
     def erase(self, selection):
@@ -262,24 +273,9 @@ class EditSession:
         return self._change(shape_positions(self, selection, form, mask, surface, thickness), target, form)
 
     def export_selection(self, selection, path):
-        from pathlib import Path
-        from structura_core.nbt import save_structure
+        from .selection_export import export_selection
 
-        self._check_readable(selection)
-        path = Path(path)
-        if path.suffix.lower() not in (".nbt", ".snbt"):
-            raise ValueError("Selection export uses Structure NBT or SNBT")
-        source = self.snapshot()
-        source.present = {p: i for p, i in source.present.items() if p in selection}
-        source.block_nbt = {p: nbt for p, nbt in source.block_nbt.items() if p in selection}
-        source.entities = [e for e in source.entities if tuple(float(v) for v in e["pos"]) in selection]
-        for payload in source.block_nbt.values():
-            for axis, delta in zip("xyz", selection.lower):
-                if axis in payload:
-                    payload[axis] = IntTag(int(payload[axis]) - delta)
-        size = tuple(hi - lo for lo, hi in zip(selection.lower, selection.upper))
-        save_structure(source, path, size, shift=tuple(-v for v in selection.lower))
-        return path
+        return export_selection(self, selection, path)
 
     def _check_change(self, change):
         if change.document_id != self._id or change.base_revision != self.revision:
@@ -330,9 +326,15 @@ class EditSession:
             return 0
         old_id = self._state_id
         new_id = uuid4().hex
+        saved_changes = self._saved_changes.updated(self, change)
         self.history.append(change, old_id, new_id)
-        self._state_id = new_id
-        self._transition = old_id, change
+        self._saved_changes = saved_changes
+        self._apply_cells(change, new_id)
+        return len(change)
+
+    def _apply_cells(self, change, state_id=None):
+        self._transition = self._state_id, change.positions
+        self._state_id = state_id or uuid4().hex
         for delta in change.changes:
             self._write(delta.position, delta.after)
         write_entities(self._entities, change.entities)
@@ -340,7 +342,6 @@ class EditSession:
 
         resize_document(self, change.resize)
         self.revision += 1
-        return len(change)
 
     def undo(self):
         return self._step_history(undo=True)
@@ -355,6 +356,7 @@ class EditSession:
         if not 0 <= index < len(self.history.entries):
             return False
         entry, change = self.history.get(index)
+        saved_changes = self._saved_changes.updated(self, change, reverse=undo)
         if undo:
             resize_document(self, change.resize, reverse=True)
         for delta in change.changes:
@@ -363,16 +365,17 @@ class EditSession:
         if not undo:
             resize_document(self, change.resize)
         self.history.cursor += -1 if undo else 1
-        self._transition = self._state_id, change
+        self._transition = self._state_id, change.positions
         self._state_id = entry.before if undo else entry.after
         self.revision += 1
+        self._saved_changes = saved_changes
         return True
 
     def fork(self):
         branch = copy(self)
         branch._cells = self._cells.copy()
         branch._entities = self._entities.copy()
-        branch.history = History(self.history.cache_limit, persistent=False)
+        branch.history = History(self.history.cache_limit, persistent=False, cache_bytes=self.history.cache_bytes)
         return branch
 
     def diff(self, branch, label="Python recipe"):
@@ -420,11 +423,19 @@ class EditSession:
         return branch._document.snapshot(branch._cells, branch._entities)
 
     def save(self, path=None, force=False):
+        if path is None and self.requires_save_as:
+            raise ValueError("Source changed or is missing; choose an explicit Save as path")
         path = path or self.path
         if path is None:
             raise ValueError("Choose a destination filename")
         result = self._document.save(self.snapshot(), path, self._cells, self._entities)
         self._document = copy(self._document)
         self._document.path = result
+        from structura_core.world_backup import digest
+
+        self._document.source_hash = digest(result)
+        self.save_target = result
+        self.requires_save_as = False
         self._saved_state_id = self._state_id
+        self._saved_changes = SavedChanges(self.origin, self.size)
         return result

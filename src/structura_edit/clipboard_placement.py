@@ -2,6 +2,7 @@ from dataclasses import dataclass, replace
 from itertools import product
 from math import floor, prod
 from numbers import Integral
+from structura_core.compatibility import transfer_reason
 
 from .cell_data import detached_cell
 from .changes import ChangeSet, StaleChangeError, _Cell, _Delta, _position
@@ -34,9 +35,15 @@ class PlacementPlan:
     change: ChangeSet
     matched: int
     skipped: int
+    reasons: tuple = ()
+    entity_rule_notice: bool = False
 
     @property
     def summary(self):
+        if self.change.report is not None:
+            details = " · ".join(f"{count:,} skipped: {reason}" for reason, count in self.reasons if count)
+            summary = self.change.report.summary + (" · " + details if details else "")
+            return summary + (" · Entities are not filtered by block rules" if self.entity_rule_notice else "")
         changed = len(self.change.changes)
         if self.change.entities:
             summary = f"{changed:,} blocks · {len(self.change.entities):,} entities"
@@ -54,9 +61,13 @@ def filter_destinations(edit, targets, rule):
         edit._check_destination(position)
         before = edit._cell(position)
         state = before.state if before else None
-        if state not in allowed_states:
-            allowed_states[state] = rule.allows(state)
-        if allowed_states[state]:
+        if rule.mode == "where":
+            allowed = rule.condition.at(edit, position)
+        else:
+            if state not in allowed_states:
+                allowed_states[state] = rule.allows(state)
+            allowed = allowed_states[state]
+        if allowed:
             accepted[position] = cell
     return accepted, len(targets) - len(accepted)
 
@@ -89,9 +100,15 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
                    destination=DestinationRule(), label="Paste"):
     if edit.readonly:
         raise ValueError("This source is view-only in this release")
+    reason = transfer_reason(clipboard.data_version, edit._document.source.data_version)
+    if reason:
+        raise ValueError(reason)
     if not include_blocks and not include_entities:
         raise ValueError("Choose Blocks or Entities to place")
-    work = (clipboard.footprint.volume if clipboard.footprint is not None else prod(clipboard.size)) if include_blocks else 0
+    work = 0
+    if include_blocks:
+        work = ((clipboard.footprint.volume if clipboard.footprint is not None else prod(clipboard.size))
+                if include_air else clipboard.block_count)
     work += len(clipboard.entities) if include_entities else 0
     if not positions or len(positions) * work > edit.operation_limit:
         raise ValueError("Placement exceeds the object budget")
@@ -110,10 +127,14 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
             targets.update((p, _Cell("minecraft:air")) for p in _air_targets(clipboard, position))
         targets.update((tuple(p + d for p, d in zip(local, position)), cell) for local, cell in cells)
     accepted, skipped = filter_destinations(edit, targets, destination)
+    reasons = [("destination rule", skipped)]
     targets = accepted
     if take:
         targets, protected = take_targets(clipboard, cells, positions[0], accepted)
         skipped += protected
+        reasons.append(("source overlap", protected))
+    if include_entities and clipboard.excluded_players:
+        reasons.append(("players remain in the source", clipboard.excluded_players))
     entities = place_entities(edit, clipboard, positions, take=take) if include_entities else ()
     if entities or destination.mode != "all" or not include_blocks:
         footprint = list(accepted) if destination.mode != "all" or not include_blocks else [lower, tuple(v - 1 for v in upper)]
@@ -128,14 +149,14 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
             changes.append(_Delta(position, before, cell))
     change = ChangeSet(edit._id, edit.revision, label, tuple(changes), entities, resize)
     edit._check_change(change)
-    return PlacementPlan(change, len(accepted), skipped)
+    return PlacementPlan(change, len(accepted), skipped, tuple(reasons), bool(entities and destination.mode != "all"))
 
 
 def plan_stack(edit, selection, copies, step, *, include_air=False, include_blocks=True, include_entities=True, destination=DestinationRule()):
     edit._check_readable(selection)
     if isinstance(copies, bool) or not isinstance(copies, Integral) or copies < 1:
         raise ValueError("Copies must be a positive integer")
-    if include_blocks and copies * selection.volume > edit.operation_limit:
+    if include_blocks and include_air and copies * selection.volume > edit.operation_limit:
         raise ValueError("Stack exceeds the cell budget; reduce copies or selection")
     step = _position(step)
     if not any(step):

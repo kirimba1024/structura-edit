@@ -3,13 +3,16 @@ from numbers import Integral
 from structura_core.nbt import parse_state, state_key
 
 from .editor_document import EditPreview
+from .task_protocol import DOCUMENT_COMMANDS
 
 
 def prepared_preview(kind, result, selection, args):
+    if kind == "paint":
+        return EditPreview(result, kind)
     if kind == "recipe":
         change, output = result
         return EditPreview(change, kind, output=output)
-    if kind in ("repeat", "placement_plan"):
+    if kind in ("repeat", "placement_plan", "nbt_batch"):
         return EditPreview(result.change, kind, plan=result)
     values = args["values"]
     target = values.get("target")
@@ -29,6 +32,7 @@ class EditWorkflow:
         self.tasks = tasks
         self.previewed = previewed
         self.updated = updated
+        self.height = lambda: None
 
     def invalidate(self, kind=None):
         if self.tasks.kind == "apply":
@@ -39,25 +43,26 @@ class EditWorkflow:
         if self.document.invalidate():
             self.previewed(None)
 
-    def prepare(self, kind, **args):
-        if kind not in ("operation", "recipe", "repeat", "placement_plan"):
+    def prepare(self, kind, *, ready=None, **args):
+        if kind not in ("operation", "recipe", "repeat", "placement_plan", "paint", "nbt_batch"):
             raise ValueError(f"Task does not prepare an edit: {kind}")
         session = self.document.session
         if session is None or session.readonly or self.tasks.busy:
             return False
         selection = self.document.selected.current
-        if kind != "placement_plan":
+        if kind not in ("placement_plan", "nbt_batch"):
             if selection is None:
                 return False
             args = dict(args, selection=selection)
         token = self.document.input_token
+        command = DOCUMENT_COMMANDS[kind](height=self.height(), **args)
         def received(result):
             if token != self.document.input_token:
                 return
-            preview = prepared_preview(kind, result, selection, args)
+            preview = prepared_preview(kind, result, selection, vars(command))
             if self.document.show_preview(preview, token=token):
-                self.previewed(preview)
-        return self.tasks.submit(kind, received, session=session.fork(), **args)
+                (ready or self.previewed)(preview)
+        return bool(self.tasks.submit_document(command, received, session=session))
 
     def _replace(self, kind, callback, **args):
         session = self.document.session
@@ -69,7 +74,7 @@ class EditWorkflow:
                 return
             self.updated(self.document.replace(result))
             callback(result)
-        return self.tasks.submit(kind, received, session=session, **args)
+        return bool(self.tasks.submit_document(DOCUMENT_COMMANDS[kind](**args), received, session=session))
 
     def commit(self, change, callback):
         return self._replace("apply", callback, change=change)

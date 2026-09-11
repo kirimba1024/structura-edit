@@ -40,6 +40,11 @@ def sample(name="stone"):
         blocks:[{pos:[15,1,1],state:0},{pos:[16,1,1],state:0},{pos:[34,1,1],state:1}],
         entities:[{pos:[15.75d,1d,1.5d],blockPos:[15,1,1],nbt:{id:"minecraft:tnt"}}]
     }''' % name))
+    if "[" in name:
+        from structura_core import parse_state
+
+        source.palette_raw[0] = parse_state("minecraft:" + name)
+        source.palette[0] = name.split("[", 1)[0]
     if name == "decorated_pot":
         source.block_nbt = {position: from_snbt('{sherds:["minecraft:%s_pottery_sherd","minecraft:%s_pottery_sherd","minecraft:%s_pottery_sherd","minecraft:%s_pottery_sherd"]}' % ((pattern,) * 4))
                             for position, pattern in (((15, 1, 1), "angler"), ((16, 1, 1), "archer"))}
@@ -72,7 +77,34 @@ def combined(sections):
     return sum((surfaces(section) for section in sections.values()), Counter())
 
 
-@pytest.mark.parametrize("name", ["stone", "glass", "water", "oak_fence", "oak_stairs", "decorated_pot"])
+@pytest.mark.parametrize('name', ['stone', 'water', 'kelp', 'oak_slab[waterlogged=true]'])
+@pytest.mark.parametrize('span,size', [(32, (96, 80, 96)), (32, (160, 160, 160))])
+def test_large_render_cells_keep_geometry_and_update_both_sides_of_seam(assets, name, span, size):
+    from structura_core import parse_state
+    from structura_edit.preview import build_preview, build_sections
+
+    source = Structure.from_root(from_snbt('''{DataVersion:3955,size:[160,160,160],
+        palette:[{Name:"minecraft:stone"}],blocks:[],entities:[]}'''))
+    source.size = size
+    source.present = {(span - 1, 1, 1): 0, (span, 1, 1): 0, (span * 2 + 6, 1, 1): 0}
+    source.palette_raw[0] = parse_state('minecraft:' + name)
+    source.palette[0] = 'minecraft:' + name.split('[', 1)[0]
+    edit = EditSession.from_structure(source)
+    prepared = prepare_sections(edit)
+    assert set(prepared['sections']) == {(0, 0, 0), (1, 0, 0), (2, 0, 0), 'entities'}
+    sections = build_sections(**prepared, assets=assets)['sections']
+    assert combined(sections) == pytest.approx(surfaces(build_preview(edit, assets=assets)))
+    before = edit.fork()
+    edit.apply(edit.set_block((span - 1, 1, 1), 'minecraft:air'))
+    changed = prepare_sections(edit, previous=(before, None))
+    assert set(changed['sections']) == {(0, 0, 0), (1, 0, 0)}
+    distant = sections[(2, 0, 0)]
+    sections.update(build_sections(**changed, assets=assets)['sections'])
+    assert sections[(2, 0, 0)] is distant
+    assert combined(sections) == pytest.approx(surfaces(build_preview(edit, assets=assets)))
+
+
+@pytest.mark.parametrize("name", ["stone", "glass", "water", "seagrass", "kelp", "oak_slab[waterlogged=true]", "oak_fence", "oak_stairs", "decorated_pot"])
 def test_section_seams_preserve_surface_area_materials_and_nbt(assets, name):
     from structura_edit.preview import build_preview, build_sections
 
@@ -104,7 +136,7 @@ def test_expanded_placement_and_ghost_keep_all_sections(assets, destination):
     assert prepare_sections(edit, previous=(edit, change))["reset"]
 
 
-@pytest.mark.parametrize("name", ["stone", "glass", "water", "oak_fence", "oak_stairs", "decorated_pot"])
+@pytest.mark.parametrize("name", ["stone", "glass", "water", "seagrass", "kelp", "oak_slab[waterlogged=true]", "oak_fence", "oak_stairs", "decorated_pot"])
 def test_ghost_partition_preserves_final_geometry_and_neighbor_connections(assets, name):
     from structura_edit.preview import build_preview, build_sections
 
@@ -254,3 +286,37 @@ def test_height_slice_applies_to_removed_ghosts_and_expanded_placement(assets):
     assert rendered["reset"]
     expected = build_geometry(RenderSource(preview_session(edit, change), height).region(include_entities=True), assets)
     assert combined(rendered["sections"]) == pytest.approx(surfaces(expected))
+
+
+@pytest.mark.parametrize('sliced', [False, True])
+def test_dense_large_preview_keeps_removed_nbt_ghosts_and_resize(assets, monkeypatch, sliced):
+    from structura_edit.height_slice import HeightSlice
+    from structura_edit.preview import build_sections
+    from structura_edit.render_source import RenderSource
+
+    edit = sample('decorated_pot')
+    edit._document.source.size = (160, 80, 96)
+    edit._document.source.present.update({(x, 1, z): 1 for x in (31, 32, 63, 64, 95, 96, 127, 128) for z in (31, 32)})
+    edit = EditSession.from_structure(edit.snapshot())
+    source = edit.snapshot()
+    change = edit.paste(edit.copy(edit.select(((0, 0, 0), (160, 3, 96)))), (-4, -3, -2), take=True)
+    height = HeightSlice('layer', 1) if sliced else HeightSlice()
+    prepared = []
+    prepare_grid = RenderSource.prepare_grid
+    def dense(source):
+        prepared.append(source)
+        prepare_grid(source)
+    monkeypatch.setattr(RenderSource, 'prepare_grid', dense)
+    actual = build_sections(**prepare_sections(edit, change, ghost=change, height=height), assets=assets)
+    assert len(prepared) == 2
+    monkeypatch.setattr(RenderSource, 'prepare_grid', lambda source: None)
+    expected = build_sections(**prepare_sections(edit, change, ghost=change, height=height), assets=assets)
+    assert actual['reset'] == expected['reset']
+    assert actual['sections'].keys() == expected['sections'].keys()
+    for key, section in actual['sections'].items():
+        assert surfaces(section) == pytest.approx(surfaces(expected['sections'][key]))
+        assert section['layers'].keys() == expected['sections'][key]['layers'].keys()
+        for layer, data in section['layers'].items():
+            assert surfaces(data) == pytest.approx(surfaces(expected['sections'][key]['layers'][layer]))
+    assert any(section['layers'].get('removed') for section in actual['sections'].values())
+    assert edit.snapshot().block_nbt == source.block_nbt and not edit.dirty

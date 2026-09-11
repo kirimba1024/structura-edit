@@ -36,7 +36,8 @@ def _shell(selection, thickness):
 def shape_positions(session, selection, form, mask, surface, thickness=1):
     if form not in ("Box", "Walls", "Shell", "Ellipsoid", "Cylinder", "Top surface", "Hollow", "Overlay surface"):
         raise ValueError(f"Unknown shape: {form}")
-    predicate = mask.matches if isinstance(mask, Condition) else None
+    mask_condition = mask if isinstance(mask, Condition) else None
+    predicate = mask_condition is not None
     mask = None if predicate or not mask else state_key(parse_state(mask))
     lower, upper = selection.lower, selection.upper
     center = tuple((lo + hi) / 2 for lo, hi in zip(lower, upper))
@@ -50,8 +51,8 @@ def shape_positions(session, selection, form, mask, surface, thickness=1):
 
     top = {}
     if form in ("Top surface", "Overlay surface"):
-        for x, y, z in session.positions():
-            if (x, y, z) in selection and not empty((x, y, z)):
+        for x, y, z in session.stored_positions(selection):
+            if not empty((x, y, z)):
                 top[x, z] = max(y, top.get((x, z), y))
     shell = _shell(selection, thickness) if form == "Hollow" else ()
     edges = _boundary(selection)
@@ -61,8 +62,7 @@ def shape_positions(session, selection, form, mask, surface, thickness=1):
             if state is None or (state if "[" in mask else state.split("[", 1)[0]) != mask:
                 continue
         if predicate:
-            state = session.state_at(position)
-            if not predicate(state):
+            if not mask_condition.at(session, position):
                 continue
         if surface and (empty(position) or not any(empty(tuple(v + (d if i == axis else 0) for i, v in enumerate(position))) for axis in range(3) for d in (-1, 1))):
             continue

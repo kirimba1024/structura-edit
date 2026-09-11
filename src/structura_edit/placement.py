@@ -19,6 +19,8 @@ class Placement:
 
     @property
     def anchor(self):
+        if self.clipboard.anchor is not None:
+            return self.clipboard.anchor
         x, _, z = self.clipboard.size
         return x // 2, 0, z // 2
 
@@ -32,19 +34,26 @@ class Placement:
         return plan_placement(session, self.clipboard, (_position(self.position),), take=self.take,
                               include_air=self.include_air, destination=self.destination,
                               include_blocks=self.include_blocks, include_entities=self.include_entities,
-                              label="Take" if self.take else "Paste")
+                              label="Move" if self.take else "Paste")
 
     def reason(self, session):
         if session.readonly:
             return "View-only document"
+        from structura_core.compatibility import transfer_reason
+
+        reason = transfer_reason(self.clipboard.data_version, session._document.source.data_version)
+        if reason:
+            return reason
         if not self.include_blocks and (not self.include_entities or not self.clipboard.entities):
             return "Choose Blocks or Entities to place" if not self.include_entities else "No entities in this copy"
         if self.take and not self.clipboard.can_take_from(session):
-            return "Source changed · take again"
+            return "Source changed · select Move again"
         from .document_resize import placement_extent
+        from .world_placement import placement_area
 
         try:
-            placement_extent(session, self.position, self.clipboard.size)
+            if placement_area(session, self.position, self.clipboard.size) is None:
+                placement_extent(session, self.position, self.clipboard.size)
         except ValueError as error:
             return str(error)
         return ""

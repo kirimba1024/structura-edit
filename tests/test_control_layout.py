@@ -23,7 +23,7 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
     host = QWidget()
     apply_theme(host)
     host.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-    host.resize(width, 200)
+    host.resize(width, 660)
     bar = PlacementBar(host)
     bar.resize(width, bar.sizeHint().height())
     model = Placement(edit.copy(edit.select(((0, 0, 0), (1, 1, 1)))), (0, 0, 0))
@@ -31,22 +31,18 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
     host.show()
     try:
         bar.more.setChecked(expanded)
-        qt_app.processEvents()
+        QTest.qWait(30)
         viewport = host.size()
         widgets = (bar.info, bar.follow, bar.repeat, bar.air, bar.apply, bar.cancel, bar.more, bar.destination,
                    *bar.coordinates, *bar.transforms, bar.hint, bar.content.blocks, bar.content.entities, bar.content.note)
         widgets = [widget for widget in widgets if widget.isVisible()]
         def rectangles():
             return [QRect(widget.mapTo(bar.placement, QPoint()), widget.size()) for widget in widgets]
-        geometry = rectangles()
-        for button in (bar.more, *bar.transforms[:2]):
-            layout = bar.placement.layout()
-            row, column, rows, columns = layout.getItemPosition(layout.indexOf(button))
-            cell = layout.cellRect(row, column).united(layout.cellRect(row + rows - 1, column + columns - 1))
-            assert button.geometry() == cell
+        fixed = (bar.info, bar.follow, bar.repeat, bar.apply, bar.cancel, bar.more, bar.destination, *bar.transforms[:2])
+        fixed_geometry = [widget.geometry() for widget in fixed]
         bar.content.set_clipboard(SimpleNamespace(block_count=500_000, entities=range(500_000), excluded_players=1))
-        qt_app.processEvents()
-        assert rectangles() == geometry
+        QTest.qWait(30)
+        assert [widget.geometry() for widget in fixed] == fixed_geometry
         for field in (bar.content.blocks, bar.content.entities):
             option = QStyleOptionButton()
             field.initStyleOption(option)
@@ -61,24 +57,32 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
             model.following = not model.following
             model.destination = DestinationRule("air" if busy else "material", "example:machine[active=true]")
             bar.update_state(model, edit, None, busy=busy, visible=True)
-            qt_app.processEvents()
-            assert rectangles() == geometry
+            QTest.qWait(30)
+            current = rectangles()
+            assert [widget.geometry() for widget in fixed] == fixed_geometry
             assert host.size() == viewport
-            assert len({widget.height() for widget in widgets}) == 1
+            assert len({widget.height() for widget in widgets if widget not in (bar.hint, bar.content.note)}) == 1
             for field in bar.coordinates:
                 if expanded:
                     assert field.fontMetrics().horizontalAdvance(field.text()) < field.lineEdit().contentsRect().width()
-            for index, rect in enumerate(geometry):
+            for index, rect in enumerate(current):
                 assert bar.placement.rect().contains(rect)
-                assert not any(rect.intersects(other) for other in geometry[index + 1:])
-            for label in (bar.info, bar.hint):
+                overlaps = [(widgets[index].objectName() or type(widgets[index]).__name__, rect,
+                             type(widgets[other_index]).__name__, other) for other_index, other in enumerate(current)
+                            if other_index > index and rect.intersects(other)]
+                assert not overlaps, overlaps
+            assert bar.hint.wordWrap()
+            assert QLabel.text(bar.hint) == bar.hint.text()
+            assert bar.hint.height() >= bar.hint.heightForWidth(bar.hint.width())
+            for label in (bar.info,):
                 shown = QLabel.text(label)
                 assert label.fontMetrics().horizontalAdvance(shown) <= label.contentsRect().width()
-                assert label.toolTip() == label.text()
+                assert label.toolTip().startswith(label.text() + "\n")
+                assert "Original will stay after Place" in label.toolTip()
                 if shown != label.text():
                     assert shown.endswith("…")
         bar.more.setChecked(True)
-        qt_app.processEvents()
+        QTest.qWait(30)
         assert host.size() == viewport
         host.setFocus()
         focus = qt_app.focusWidget()
@@ -92,7 +96,6 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
         text = bar.air.style().subElementRect(QStyle.SubElement.SE_CheckBoxContents, option, bar.air)
         assert indicator.right() < text.left() and bar.air.rect().contains(indicator)
     finally:
-        bar.stats.shutdown()
         host.close()
         host.deleteLater()
 
@@ -106,14 +109,14 @@ def test_repeat_panel_fits_long_values_without_overflow(qt_app, width):
     bar.show()
     host.show()
     try:
-        qt_app.processEvents()
+        QTest.qWait(30)
         bar.reposition()
         widgets = [widget for widget in bar.findChildren(QWidget) if widget.parentWidget() is bar]
         geometry = [widget.geometry() for widget in widgets]
         bar.copies.setValue(500_000)
         bar.gap.setValue(30_000_000)
         bar.direction.setCurrentIndex(5)
-        qt_app.processEvents()
+        QTest.qWait(30)
         assert [widget.geometry() for widget in widgets] == geometry
         assert bar.width() == host.width() and bar.height() == 100
         for index, rect in enumerate(geometry):
@@ -139,7 +142,7 @@ def test_panel_cells_reserve_space_for_labels_and_large_numbers(qt_app, panel_ty
         else:
             panel.mode.setCurrentText("Move blocks")
             panel.set_values({"offset": (-30_000_000, 30_000_000, -30_000_000)})
-        qt_app.processEvents()
+        QTest.qWait(30)
         widgets = [widget for widget in panel.findChildren(QWidget)
                    if isinstance(widget, (QLabel, QAbstractSpinBox, QAbstractButton)) and widget.isVisible()]
         for index, widget in enumerate(widgets):

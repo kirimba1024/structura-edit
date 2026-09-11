@@ -52,8 +52,8 @@ def main():
         point = screen(window, (np.asarray(lower) + upper) / 2)
         assert window.scene.entity_at(window.document.session, point) == key
         QTest.mouseClick(window.plotter, Qt.MouseButton.LeftButton, pos=point)
-        assert window.objects.keys == {key} and window.objects.inspect_button.isEnabled()
-        window.objects.inspect_button.click()
+        assert window.objects.keys == {key} and window.menus.actions["inspect"].isEnabled()
+        window.menus.actions["inspect"].trigger()
         settle(window)
         dialog = window.objects.dialog
         assert dialog is not None and dialog.isVisible()
@@ -113,6 +113,8 @@ def main():
                               inspector="entity and block nested inventories", render="100 requests coalesced",
                               saved=str(saved))), flush=True)
     finally:
+        window.tasks.close()
+        window.exit.approved = True
         window.document.load(None)
         window.close()
         window.deleteLater()

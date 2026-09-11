@@ -24,7 +24,7 @@ def test_open_preserves_document_when_discard_is_declined(sources, tmp_path, wor
     controller, requests, opened, worlds = sources
     original = controller.document.session
     original.apply(original.set_block((0, 0, 0), 'minecraft:gold_block'))
-    controller.confirm_discard = lambda: False
+    controller.confirm_discard = lambda continuation=None: False
     controller.open_path(tmp_path if world else tmp_path / 'new.nbt')
     assert not requests and not opened and not worlds
     assert controller.document.session is original and original.dirty

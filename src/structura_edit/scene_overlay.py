@@ -8,7 +8,7 @@ from vtkmodules.vtkPythonContext2D import vtkPythonItem
 from vtkmodules.vtkRenderingContext2D import vtkPen
 from vtkmodules.vtkRenderingContextOpenGL2 import vtkOpenGLContextActor
 
-from .appearance import ACCENT, CROSSHAIR, CROSSHAIR_EDGE, FONT_SIZE, GRID, HOVER, PANEL_BACKGROUND, SELECTION_FILL, TEMPORARY_FILL, TEXT
+from .appearance import ACCENT, CROSSHAIR, CROSSHAIR_EDGE, FONT_SIZE, GRID, HOVER, PANEL_BACKGROUND, SELECTION, SELECTION_EDGE, SELECTION_WIDTH, SELECTION_FILL, TEMPORARY_FILL, TEXT
 
 class BoundsMarker:
     def __init__(self, plotter, color, *, fill=0, width=1):
@@ -42,10 +42,12 @@ class SceneOverlay:
     def __init__(self, plotter):
         self.plotter = plotter
         self.hover = BoundsMarker(plotter, HOVER)
-        self.selection = BoundsMarker(plotter, ACCENT, fill=SELECTION_FILL, width=2)
+        self.selection = BoundsMarker(plotter, SELECTION, fill=SELECTION_FILL, width=SELECTION_WIDTH)
         self.temporary = BoundsMarker(plotter, ACCENT, fill=TEMPORARY_FILL, width=0)
         self.looking = False
         self.corners = ()
+        self.entity_labels = ()
+        self.block_label = ""
         self.actor = vtkOpenGLContextActor()
         self.actor.SetPickable(False)
         self.actor.SetUseBounds(False)
@@ -57,12 +59,26 @@ class SceneOverlay:
     def Initialize(self, item):
         return True
 
-    def set_selection(self, selection, temporary=None, corners=()):
+    def set_selection(self, selection, temporary=None, corners=(), *, offset=(0, 0, 0)):
+        def shifted(position):
+            return tuple(p + d for p, d in zip(position, offset))
+        def bounds(region):
+            return (shifted(region.lower), shifted(region.upper)) if region else None
         previous = self.corners
-        self.corners = tuple(corner for corner in corners if corner is not None) if selection else ()
-        changed = self.selection.set_bounds((selection.lower, selection.upper) if selection else None)
-        changed |= self.temporary.set_bounds((temporary.lower, temporary.upper) if temporary else None)
+        self.corners = tuple(shifted(corner) for corner in corners if corner is not None) if selection else ()
+        changed = self.selection.set_bounds(bounds(selection))
+        changed |= self.temporary.set_bounds(bounds(temporary))
         if changed or previous != self.corners:
+            self.plotter.render()
+
+    def set_block_label(self, label):
+        if self.block_label != label:
+            self.block_label = label
+            self.plotter.render()
+
+    def set_entity_labels(self, labels):
+        if self.entity_labels != labels:
+            self.entity_labels = labels
             self.plotter.render()
 
     def set_hover(self, position):
@@ -97,9 +113,8 @@ class SceneOverlay:
 
     def _draw_bounds(self, painter, scale):
         pen = painter.GetPen()
-        pen.SetWidth(scale)
         pen.SetLineType(vtkPen.DASH_LINE)
-        for bounds, alpha in ((self.selection.bounds, 110), (self.temporary.bounds, 220)):
+        for bounds, alpha in ((self.selection.bounds, 255), (self.temporary.bounds, 200)):
             if bounds is None:
                 continue
             points = {}
@@ -107,18 +122,24 @@ class SceneOverlay:
                 point = self._project(tuple(bounds[c][axis] for axis, c in enumerate(corner)))
                 if point is not None:
                     points[corner] = point
-            pen.SetColor(*pv.Color(ACCENT).int_rgb, alpha)
-            for corner, point in points.items():
-                for axis in range(3):
-                    if corner[axis] == 0:
-                        other = tuple(1 if i == axis else value for i, value in enumerate(corner))
-                        if other in points:
-                            painter.DrawLine(*point, *points[other])
+            for color, width in ((SELECTION_EDGE, SELECTION_WIDTH + 2), (SELECTION, SELECTION_WIDTH)):
+                pen.SetColor(*pv.Color(color).int_rgb, alpha)
+                pen.SetWidth(width * scale)
+                for corner, point in points.items():
+                    for axis in range(3):
+                        if corner[axis] == 0:
+                            other = tuple(1 if i == axis else value for i, value in enumerate(corner))
+                            if other in points:
+                                painter.DrawLine(*point, *points[other])
 
     def _draw_labels(self, painter, scale):
-        labels = list(zip("AB", self.corners))
+        labels = [(name, tuple(p + 0.5 for p in position)) for name, position in zip("AB", self.corners)]
         if self.corners and self.corners[0] == self.corners[1]:
-            labels = [("A/B", self.corners[0])]
+            labels = [("A/B", tuple(p + 0.5 for p in self.corners[0]))]
+        if self.block_label and self.selection.bounds is not None:
+            position = tuple(p + 0.5 for p in self.selection.bounds[0])
+            labels = [(f"A/B · {self.block_label}" if self.corners else self.block_label, position)]
+        labels.extend(self.entity_labels)
         text = painter.GetTextProp()
         text.SetFontFamily(VTK_FONT_FILE)
         text.SetFontFile(str(Path(__file__).parent / "data/fonts/Monocraft.ttf"))
@@ -131,14 +152,20 @@ class SceneOverlay:
         pen.SetWidth(scale)
         pen.SetColor(*pv.Color(ACCENT).int_rgb)
         painter.GetBrush().SetColor(*pv.Color(PANEL_BACKGROUND).int_rgb)
+        occupied = []
         for label, position in labels:
-            point = self._project(tuple(p + 0.5 for p in position))
+            point = self._project(position)
             if point is None:
                 continue
             bounds = [0.0] * 4
             painter.ComputeStringBounds(label, bounds)
             width, height = bounds[2] + GRID * scale, bounds[3] + GRID * scale
-            painter.DrawRect(point[0] - width / 2, point[1] - height / 2, width, height)
+            left, bottom = point[0] - width / 2, point[1] - height / 2
+            rectangle = left, bottom, left + width, bottom + height
+            if any(rectangle[0] < old[2] and rectangle[2] > old[0] and rectangle[1] < old[3] and rectangle[3] > old[1] for old in occupied):
+                continue
+            occupied.append(rectangle)
+            painter.DrawRect(left, bottom, width, height)
             painter.DrawString(*point, label)
 
     def _project(self, position):

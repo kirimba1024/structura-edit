@@ -7,8 +7,9 @@ from PySide6.QtWidgets import (
 )
 
 from .world_view import WorldView
-from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, check_world_budget
+from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, MAX_RADIUS, region_bounds, check_world_budget
 from .height_slice import HeightSlice
+from .world_preferences import load_distance, save_distance
 
 
 class WorldController(QObject):
@@ -24,8 +25,8 @@ class WorldController(QObject):
         self.path = None
         self.dimension = None
         self.center = None
-        self.radius = DEFAULT_RADIUS
-        self.vertical_radius = DEFAULT_VERTICAL_RADIUS
+        self.radius, self.vertical_radius = load_distance()
+        self.remember_distance = False
         self.queued = None
         self.generation = 0
 
@@ -40,6 +41,7 @@ class WorldController(QObject):
         self.request(preserve_edits=False)
 
     def reset_request(self):
+        self.remember_distance = False
         self.generation += 1
         self.queued = None
         session = self.document.session
@@ -113,6 +115,12 @@ class WorldController(QObject):
         selection = copy(self.document.selected)
         self.opened(session, rendered=rendered, fit=False, preserve_focus=preserve)
         self.path, self.dimension, self.center = str(session.path), session.dimension, session.center
+        if self.remember_distance:
+            self.remember_distance = False
+            try:
+                save_distance(session.radius, session.vertical_radius)
+            except OSError as error:
+                self.message.emit(f"Could not remember view distance: {error}")
         local = tuple(p - o for p, o in zip(camera or session.center, session.origin))
         if preserve:
             self.plotter.camera.position = local
@@ -135,7 +143,7 @@ class WorldController(QObject):
         self.camera.needs_render = True
         self.camera.render()
         self.message.emit(f"{session.world_name} · {session.dimension} · {len(session.loaded_chunks)} chunks · "
-                              f"{len(session.missing_chunks)} absent · {len(session._document.source.entities)} entities · Refresh: F5")
+                              f"{len(session.missing_chunks)} absent · {len(session._document.source.entities)} entities · Load here: F5")
 
     def flush(self):
         if self.queued and not self.tasks.busy:
@@ -147,13 +155,16 @@ class WorldController(QObject):
             self.open_requested.emit()
             return
         self.opening.emit()
-        dialog = WorldSettings(self.plotter.window(), self.document.session, self.camera_position(),
+        center = self.camera_position()
+        dialog = WorldSettings(self.plotter.window(), self.document.session, center,
                                self.dimension, self.radius, self.vertical_radius)
         if dialog.exec():
+            recenter = dialog.dimension.currentText() != self.dimension or tuple(field.value() for field in dialog.coordinates) != tuple(round(v) for v in center)
             self.dimension = dialog.dimension.currentText()
             self.center = tuple(field.value() for field in dialog.coordinates)
             self.radius, self.vertical_radius = dialog.radius.value(), dialog.vertical.value()
-            self.request(recenter=True)
+            self.remember_distance = True
+            self.request(recenter=recenter)
 
 
 class WorldSettings(QDialog):
@@ -172,16 +183,35 @@ class WorldSettings(QDialog):
             self.coordinates.append(field)
             layout.addRow("Center " + axis, field)
         self.radius, self.vertical = QSpinBox(), QSpinBox()
-        self.radius.setRange(0, 4)
+        self.radius.setRange(0, MAX_RADIUS)
         self.radius.setValue(radius)
         self.radius.setToolTip("Square of (2 × radius + 1) chunks; one chunk is 16 × 16 blocks")
         self.vertical.setRange(16, 192)
         self.vertical.setSingleStep(16)
         self.vertical.setValue(vertical)
-        layout.addRow("Radius · chunks", self.radius)
+        layout.addRow("View distance · chunks", self.radius)
         layout.addRow("Vertical radius · blocks", self.vertical)
+        self.extent = QLabel()
+        self.extent.setWordWrap(True)
+        layout.addRow(self.extent)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.RestoreDefaults)
         layout.addRow(buttons)
+        def update_extent():
+            center = tuple(field.value() for field in self.coordinates)
+            lower, upper = region_bounds(center, self.radius.value(), self.vertical.value())
+            sizes = tuple(hi - lo for lo, hi in zip(lower, upper))
+            message = f"{sizes[0]} × {sizes[2]} blocks · {(2 * self.radius.value() + 1) ** 2} chunks · height {sizes[1]}"
+            try:
+                check_world_budget(center, self.radius.value(), self.vertical.value())
+                valid = True
+            except ValueError as error:
+                message += "\n" + str(error)
+                valid = False
+            self.extent.setText(message)
+            buttons.button(QDialogButtonBox.StandardButton.Apply).setEnabled(valid)
+        for field in (*self.coordinates, self.radius, self.vertical):
+            field.valueChanged.connect(update_extent)
+        update_extent()
         def reset():
             self.radius.setValue(DEFAULT_RADIUS)
             self.vertical.setValue(DEFAULT_VERTICAL_RADIUS)

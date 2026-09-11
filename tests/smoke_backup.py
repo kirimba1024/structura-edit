@@ -31,12 +31,13 @@ def create_world(path):
 
 
 def submit_backups(kind, callback, **args):
-    from structura_core.world_staging import list_backups, restore_backup, verify_backup
+    from structura_core.world_staging import list_backups, restore_backup
+    from structura_core.world_backup import inspect_restore
 
     if args.get("restore"):
-        callback({"restored": restore_backup(args["world"], args["backup"])})
+        callback({"restored": restore_backup(args["world"], args["backup"], expected=args.get("expected"))})
     elif args.get("verify"):
-        callback({"verified": verify_backup(args["backup"])})
+        callback(inspect_restore(args["world"], args["backup"]))
     else:
         callback({"backups": list_backups(args["world"])})
     return True

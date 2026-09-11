@@ -57,3 +57,27 @@ def test_diagonal_flight_has_constant_speed_and_is_time_based(camera):
     for _ in range(20):
         camera.step((1, 0, 1), 8, 0.01)
     assert np.allclose(np.asarray(vtk.position) - start, diagonal)
+
+
+@pytest.mark.parametrize('size', [(1, 1, 1), (256, 2, 4), (2, 256, 2), (100, 60, 100)])
+@pytest.mark.parametrize('window_size', [(1104, 600), (600, 1000)])
+def test_frame_moves_distant_camera_and_contains_every_corner(camera, size, window_size):
+    from itertools import product
+    import math
+
+    camera.plotter.window_size = window_size
+    camera.move_to((1_000_000, -50_000, 3_000_000))
+    camera.frame(size)
+    vtk = camera.plotter.camera
+    forward = np.asarray(vtk.direction)
+    right = np.cross(forward, vtk.up)
+    right /= np.linalg.norm(right)
+    up = np.cross(right, forward)
+    tangent = math.tan(math.radians(vtk.view_angle) / 2)
+    assert np.allclose(vtk.focal_point, np.asarray(size) / 2)
+    for corner in product(*((0, value) for value in size)):
+        relative = np.asarray(corner) - vtk.position
+        depth = relative @ forward
+        assert depth > 0
+        assert abs(relative @ up) < depth * tangent
+        assert abs(relative @ right) < depth * tangent * window_size[0] / window_size[1]

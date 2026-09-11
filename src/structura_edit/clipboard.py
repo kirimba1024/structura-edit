@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 
 from structura_core import parse_state
+from structura_core.grid_transform import GridTransform
 
 from .cell_data import cell_payload, detached_cell
 from .cell_set import CellSet
@@ -22,6 +23,9 @@ class Clipboard:
     excluded_players: int = 0
     dimension: object = None
     footprint: object = None
+    anchor: object = None
+    transform_source: object = field(default=None, repr=False, compare=False)
+    orientation: GridTransform = GridTransform()
     block_count: int = field(init=False)
 
     def __post_init__(self):
@@ -34,14 +38,14 @@ class Clipboard:
         from .clipboard_entities import capture_entities
 
         edit._check_readable(selection)
-        if include_blocks and selection.volume > edit.operation_limit:
-            raise ValueError("Clipboard exceeds the cell budget; select a smaller region")
         cells = []
-        for position in selection.positions() if include_blocks else ():
+        for position in edit.stored_positions(selection) if include_blocks else ():
             cell = edit._cell(position)
             if cell is not None:
                 local = tuple(p - lo for p, lo in zip(position, selection.lower))
                 cells.append((local, detached_cell(edit._document.source, cell, position)))
+                if len(cells) > edit.operation_limit:
+                    raise ValueError("Clipboard exceeds the object budget; select a smaller region")
         entities, players = capture_entities(edit, selection) if include_entities else ((), 0)
         if len(cells) + len(entities) > edit.operation_limit:
             raise ValueError("Clipboard exceeds the object budget; select a smaller region")
@@ -55,10 +59,10 @@ class Clipboard:
         return (self.document_id, self.revision, self.origin, self.dimension) == (
             edit._id, edit.revision, edit.origin, getattr(edit, "dimension", None))
 
-    def transformed(self, *, turns=0, flip=None):
+    def transformed(self, *, turns=0, axis="y", flip=None):
         from .clipboard_transform import transform_clipboard
 
-        return transform_clipboard(self, turns=turns, flip=flip)
+        return transform_clipboard(self, turns=turns, axis=axis, flip=flip)
 
     def render_source(self, *, include_blocks=True, include_entities=True):
         states = {}

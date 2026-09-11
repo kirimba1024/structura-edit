@@ -17,6 +17,9 @@ def hashed(seed, x, y, z):
 class Mix:
     items: tuple
     seed: int = 0
+    anchor: str = "local"
+    gradient: tuple = ()
+    algorithm: int = 1
 
     def __post_init__(self):
         if not self.items:
@@ -29,6 +32,13 @@ class Mix:
         if isinstance(self.seed, bool) or not isinstance(self.seed, int) or self.seed < 0:
             raise ValueError("Seed must be a non-negative integer")
         object.__setattr__(self, "items", tuple(canonical))
+        if self.algorithm != 1 or self.anchor not in ("local", "world"):
+            raise ValueError("Unsupported mix algorithm or coordinate anchor")
+        if self.gradient and (len(self.gradient) != 2 or len(self.items) != 2
+                              or any(type(value) is not int for value in self.gradient)
+                              or self.gradient[0] >= self.gradient[1]):
+            raise ValueError("A height gradient needs two materials and increasing integer Y limits")
+        object.__setattr__(self, "gradient", tuple(self.gradient))
 
     @property
     def total(self):
@@ -36,9 +46,16 @@ class Mix:
 
     @property
     def label(self):
-        return f"{len(self.items)} materials · seed {self.seed}"
+        return f"{len(self.items)} materials · seed {self.seed} · {self.anchor}" + (" · Y gradient" if self.gradient else "")
 
-    def at(self, position):
+    def at(self, position, origin=(0, 0, 0)):
+        if self.anchor == "world":
+            position = tuple(p + o for p, o in zip(position, origin))
+        if self.gradient:
+            lo, hi = self.gradient
+            chance = max(0, min(hi - lo, position[1] - lo))
+            index = int(hashed(self.seed, *position) * (hi - lo) < chance * (1 << 64))
+            return self.items[index][0]
         draw = hashed(self.seed, position[0], position[1], position[2]) % self.total
         for state, weight in self.items:
             if draw < weight:
@@ -48,3 +65,13 @@ class Mix:
 
     def __call__(self, position, before):
         return self.at(position)
+
+    def preset(self):
+        return {"schema": 1, "algorithm": self.algorithm, "items": self.items, "seed": self.seed,
+                "anchor": self.anchor, "gradient": self.gradient}
+
+    @classmethod
+    def from_preset(cls, value):
+        if not isinstance(value, dict) or value.get("schema") != 1:
+            raise ValueError("Unsupported mix preset")
+        return cls(**{key: value[key] for key in ("items", "seed", "anchor", "gradient", "algorithm")})

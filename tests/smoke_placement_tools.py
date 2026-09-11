@@ -86,6 +86,9 @@ def check_drag(window, output):
 
 def check_keep_placing(window, source, path, output):
     placement = window.placement
+    placement.cancel()
+    placement.start("duplicate")
+    settle(window)
     actors = tuple(placement.view.actors)
     placement.bar.repeat.click()
     assert placement.model.keep_placing
@@ -95,7 +98,7 @@ def check_keep_placing(window, source, path, output):
     settle(window)
     assert placement.active and not placement.model.take and placement.model.following
     assert window.document.session.origin == (-1, 0, 0)
-    assert window.document.session.state_at((3, 0, 2)) == "minecraft:air"
+    assert window.document.session.state_at((3, 0, 2)) == "minecraft:chest"
     assert window.document.session.state_at((0, 2, 5)) == "minecraft:chest"
     assert np.allclose(np.asarray(window.plotter.camera.position) + window.document.session.origin, camera)
     assert tuple(placement.view.actors) == actors
@@ -208,12 +211,14 @@ def main():
         print("Keep placing passed", flush=True)
         check_repeat(window, source, path, output)
         report = dict(drag="XYZ, snapping, Escape, focus loss, constant handle size, stable camera and viewport",
-                      keep_placing="Take clears source once; two placements, two Undo, mesh reuse, NBT save",
+                      keep_placing="Duplicate preserves source; two placements, two Undo, mesh reuse, NBT save",
                       repeat="slice, negative expansion, preview invalidation, single Undo/Redo, NBT save, cancellation",
                       movement=moves)
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
+        window.tasks.close()
+        window.exit.approved = True
         window.document.load(None)
         window.close()
         window.deleteLater()

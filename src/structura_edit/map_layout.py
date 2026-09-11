@@ -5,6 +5,9 @@ from .appearance import MAP_ICON_SIZE
 from .loading import MAP_TILE_SIZE, MAX_MAP_VISIBLE_TILES
 
 
+COMPACT_SPAN = 64
+
+
 def projection_rect(origin, size, view):
     first = project(origin, (0, 0, 0), view)
     last = project(tuple(p + s for p, s in zip(origin, size)), (0, 0, 0), view)
@@ -48,6 +51,7 @@ class MapLayout:
         tile = self.tile_rect(view)
         if not self.large or self.focused is not None and self.focused != view:
             width, height = plane_size(self.framed_size, view)
+            width, height = min(width, COMPACT_SPAN), min(height, COMPACT_SPAN)
             scale = min(tile.width() / width, tile.height() / height)
             center = self.camera_center(view)
         else:

@@ -111,6 +111,7 @@ def test_camera_requests_run_off_gui_with_one_pending_position_and_reject_old_so
     canvas = MapCanvas()
     cache = MapCacheView(canvas, tmp_path)
     maps = CameraMaps(canvas, cache)
+    maps.sliced = True
     def request(name):
         state = SimpleNamespace(_id=name, _state_id="revision", size=(32, 32, 32), origin=(0, 0, 0))
         return SimpleNamespace(state=state, assets=None, height=None)
@@ -133,3 +134,12 @@ def test_camera_requests_run_off_gui_with_one_pending_position_and_reject_old_so
         maps.close()
         cache.close()
         canvas.deleteLater()
+
+
+@pytest.mark.parametrize('view', VIEWS)
+def test_slice_displays_fully_buried_block_without_exposed_geometry(textures, view):
+    source = layered_source(0)
+    source.present = {p: (2 if p == (1, 1, 1) else 0) for p in product(range(3), repeat=3)}
+    renderer = MapRenderer(source, textures)
+    assert not np.any(np.all(renderer.images()[view] == (0, 0, 200), axis=-1))
+    assert np.any(np.all(renderer.images(cut=(1, 1, 1))[view] == (0, 0, 200), axis=-1))

@@ -5,6 +5,8 @@ import pytest
 from structura_edit.edit_workflow import EditWorkflow
 from structura_edit.editor_document import EditorDocument
 from structura_edit.tasks import execute
+from structura_edit.task_protocol import DocumentRequest
+from structura_edit.worker_document import document_token
 
 
 class DeferredTasks:
@@ -22,9 +24,17 @@ class DeferredTasks:
         self.request = callback, args
         return True
 
+    def submit_document(self, command, callback, *, session):
+        self.kind = command.kind
+        self.request = callback, dict(request=DocumentRequest(document_token(session), deepcopy(command), deepcopy(session)))
+        return True
+
     def complete(self):
         kind, (callback, args) = self.kind, self.request
         self.kind = self.request = None
+        if "request" in args:
+            request = args['request']
+            args = dict(vars(request.command), session=request.snapshot)
         callback(execute(kind, deepcopy(args)))
 
 
@@ -59,6 +69,42 @@ def test_preview_then_commit_replaces_session_once_before_notifying_caller(workf
     edits.tasks.complete()
     assert edits.document.session.state_at((0, 0, 0)) == "minecraft:glass"
     assert not edit.dirty and [kind for kind, value in events] == ["preview", "update", "complete"]
+
+
+@pytest.mark.parametrize('order', [(0, 1), (1, 0)])
+def test_independent_same_revision_replies_accept_only_first_without_worker_serialization(edit, order):
+    from structura_edit.editor_document import EditPreview
+
+    class ConcurrentReplies:
+        busy = False
+        kind = None
+
+        def __init__(self):
+            self.replies = []
+
+        def submit_document(self, command, callback, *, session):
+            branch = session.fork()
+            branch.apply(command.change)
+            self.replies.append((callback, branch))
+            return True
+
+    document = EditorDocument()
+    document.load(edit)
+    tasks = ConcurrentReplies()
+    updates, completed = [], []
+    edits = EditWorkflow(document, tasks, previewed=lambda preview: None, updated=updates.append)
+    for material in ('minecraft:glass', 'minecraft:gold_block'):
+        assert edits.commit(edit.set_block((0, 0, 0), material), completed.append)
+    first, second = (tasks.replies[index] for index in order)
+    assert (first[1]._id, first[1].revision) == (second[1]._id, second[1].revision)
+    assert first[1]._state_id != second[1]._state_id
+    first[0](first[1])
+    preview = EditPreview(document.session.set_block((0, 0, 0), 'minecraft:diamond_block'))
+    assert document.show_preview(preview)
+    second[0](second[1])
+    assert document.session is first[1] and document.preview is preview
+    assert len(updates) == len(completed) == 1
+    assert not edit.dirty and edit.history.cursor == 0
 
 
 @pytest.mark.parametrize("change", ["inputs", "selection", "reopen", "session_revision"])
@@ -166,3 +212,13 @@ def test_non_preview_task_is_rejected_before_submission(workflow, tmp_path):
     with pytest.raises(ValueError, match="does not prepare an edit"):
         edits.prepare("save", path=path)
     assert not path.exists() and not edits.tasks.busy
+
+
+def test_preview_metadata_uses_captured_inputs_even_if_the_caller_mutates_values(workflow):
+    edits, _ = workflow
+    values = {'target': 'minecraft:glass'}
+    edits.prepare('operation', mode='Fill', values=values)
+    values['target'] = 'minecraft:gold_block'
+    edits.tasks.complete()
+    assert edits.document.preview.material == 'minecraft:glass'
+    assert edits.document.pending.changes[0].after.state == 'minecraft:glass'

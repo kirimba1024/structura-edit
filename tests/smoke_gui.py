@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
+from PySide6.QtCore import QEvent, QEventLoop, QPoint, QPointF, QTimer, Qt
 from PySide6.QtGui import QFocusEvent, QMouseEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QComboBox, QPushButton, QToolBar, QToolButton
@@ -13,16 +13,25 @@ from structura_edit.ui import EditorWindow
 
 
 def settle(window, timeout=45):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        QApplication.processEvents()
-        window._tick()
-        if (not window.tasks.busy and window.world.queued is None and not window.views.render_queued
-                and (not window.views.map_queued or window.minimap.collapsed)):
-            if not window.minimap.maps.busy:
-                return
-        QTest.qWait(10)
-    raise AssertionError(f"GUI task timed out: {window.status.text()}")
+    def ready():
+        return (not window.tasks.busy and window.world.queued is None and not window.views.render_queued
+                and (not window.views.map_queued or window.minimap.collapsed) and not window.minimap.maps.busy
+                and window.objects.pending_edit is None)
+    if ready():
+        return
+    loop = QEventLoop()
+    poll = QTimer()
+    poll.timeout.connect(lambda: loop.quit() if ready() else None)
+    poll.start(10)
+    deadline = QTimer()
+    deadline.setSingleShot(True)
+    deadline.timeout.connect(loop.quit)
+    deadline.start(timeout * 1000)
+    while not ready() and deadline.isActive():
+        loop.exec()
+    poll.stop()
+    deadline.stop()
+    assert ready(), f"GUI task timed out: {window.status.text()}"
 
 
 def screen(window, position):
@@ -153,10 +162,12 @@ def check_materials(window, point):
     window.show_operation("Replace")
     window.operation.fields["source"].setText("minecraft:glass")
     window.materials.show("source")
+    settle(window)
     window.panels.materials.search.setText(state)
     QTest.keyClick(window.panels.materials.search, Qt.Key.Key_Return)
     assert window.operation.values()["source"] == state and target.text() == state
     window.materials.show("target")
+    settle(window)
     window.panels.materials.search.setText("no_such_block")
     QTest.keyClick(window.panels.materials.search, Qt.Key.Key_Escape)
     assert window.focusWidget() is target and target.text() == state
@@ -446,19 +457,20 @@ def main():
         window.navigation.tick(1 / 60)
         assert np.allclose(window.plotter.camera.direction, direction)
         QTest.keyClick(window.plotter, Qt.Key.Key_Escape)
-        assert not window.navigation.looking
+        assert window.navigation.freelook
+        QTest.keyClick(window.plotter, Qt.Key.Key_Tab)
         viewport = window.plotter.geometry()
         window.selection_actions.set_bounds((0, 0, 0), (1, 1, 1))
         QApplication.processEvents()
         assert window.placement.bar.isVisible()
         assert window.plotter.geometry() == viewport
-        window.placement.bar.stats.toggle.click()
-        QTest.qWait(300)
+        window.objects.inspect()
+        settle(window)
         assert window.plotter.geometry() == viewport
-        window.placement.bar.stats.toggle.click()
+        window.objects.dialog.close()
         window.selection_actions.clear()
         QApplication.processEvents()
-        assert not window.placement.bar.isVisible()
+        assert window.placement.bar.isVisible()
         assert window.plotter.geometry() == viewport
         check_minimap(window)
         check_navigation(window)

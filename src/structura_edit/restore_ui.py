@@ -15,13 +15,14 @@ class BackupDialog(QDialog):
         self.finished_callback = finished
         self.backups = []
         self.verified = {}
+        self.reviews = {}
         self.setWindowTitle("Restore backup")
         self.setFixedWidth(PANEL_WIDTH * 3 // 2)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(*([GRID * 2] * 4))
         layout.setSpacing(GRID)
-        self.table = QTableWidget(0, 3, accessibleName="World backups")
-        self.table.setHorizontalHeaderLabels(["Backup", "Files", "Installed"])
+        self.table = QTableWidget(0, 4, accessibleName="World backups")
+        self.table.setHorizontalHeaderLabels(["Backup", "Files", "Installed", "Status"])
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -51,7 +52,7 @@ class BackupDialog(QDialog):
         self.backups = result.get("backups", [])
         self.table.setRowCount(len(self.backups))
         for row, backup in enumerate(self.backups):
-            for column, value in enumerate((backup["name"], str(len(backup["files"])), str(backup["installed"]))):
+            for column, value in enumerate((backup["name"], str(len(backup["files"])), str(backup["installed"]), backup.get("phase", "legacy"))):
                 item = QTableWidgetItem(value)
                 item.setData(Qt.ItemDataRole.UserRole, backup)
                 item.setToolTip(backup["path"])
@@ -65,7 +66,7 @@ class BackupDialog(QDialog):
 
     def sync(self):
         backup = self.selected()
-        self.verify.setEnabled(backup is not None and backup["name"] not in self.verified)
+        self.verify.setEnabled(backup is not None and backup.get("phase") != "invalid" and backup["name"] not in self.verified)
         self.restore.setEnabled(backup is not None and self.verified.get(backup["name"]) is True)
 
     def verify_selected(self):
@@ -77,18 +78,25 @@ class BackupDialog(QDialog):
         def received(result):
             ok = result.get("verified")
             self.verified[backup["name"]] = ok
+            self.reviews[backup["name"]] = result
             self.note.setText("Hashes match the manifest." if ok else "Backup files no longer match their hashes.")
+            if result.get("conflicts"):
+                self.note.setText(f"{len(result['conflicts']):,} files changed since the backup. Restore replaces them.")
+                self.note.setToolTip("\n".join(result["conflicts"]))
             self.sync()
 
-        self.submit("backups", received, verify=True, backup=backup["path"])
+        self.submit("backups", received, verify=True, world=self.world, backup=backup["path"])
 
     def restore_selected(self):
         backup = self.selected()
         if backup is None:
             return
+        review = self.reviews.get(backup["name"], {})
+        conflicts = review.get("conflicts", [])
+        detail = "\n\nChanged since this backup:\n" + "\n".join(conflicts[:20]) if conflicts else ""
         answer = QMessageBox.question(self, "Restore backup",
                                       f"Restore {len(backup['files'])} files from {backup['name']}?\n"
-                                      "The current files are saved to a new backup first.")
+                                      "The current files are saved to a new backup first." + detail)
         if answer != QMessageBox.StandardButton.Yes:
             return
 
@@ -97,7 +105,9 @@ class BackupDialog(QDialog):
             self.finished_callback(f"Restored {restored} files · press Refresh (F5) to reload the world")
             self.accept()
 
-        self.submit("backups", received, restore=True, world=self.world, backup=backup["path"])
+        self.verified.pop(backup["name"], None)
+        self.sync()
+        self.submit("restore_backup", received, restore=True, world=self.world, backup=backup["path"], expected=review.get("current"))
 
 
 class ConflictsDialog(QDialog):

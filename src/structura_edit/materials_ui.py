@@ -26,6 +26,8 @@ class MaterialController:
         materials.reload()
         materials.use.setText(f"Use for {PARAMETERS[self.field].label}")
         self.panels.show("materials")
+        if not materials.catalog:
+            materials.catalog_request()
 
     def dismiss(self):
         self.panels.docks["materials"].hide()

@@ -27,7 +27,7 @@ def click(field):
 def check_placement(window, output):
     window.selection_actions.set_bounds((1, 0, 1), (4, 4, 4))
     placement = window.placement
-    placement.start("take")
+    placement.start("duplicate")
     settle(window)
     placement.set_position((6, 0, 5))
     original = window.document.session.snapshot()
@@ -54,12 +54,12 @@ def check_placement(window, output):
     assert window.plotter.geometry() == viewport
     assert tuple(tuple(v) for v in window.plotter.camera_position) == camera
     placement.bar.grab().save(str(output / "placement.png"))
-    placement.bar.transforms[1].click()
+    placement.bar.transforms[4].click()
     settle(window)
     assert len(placement.model.clipboard.entities) == 2
     placement.bar.repeat.click()
     placement.set_destination(DestinationRule("air"))
-    placement.bar.apply.click()
+    placement.bar.preview.click()
     settle(window)
     assert window.document.pending and len(window.document.pending.entities) == 2 and not window.document.session.dirty
     assert not content.isEnabled()
@@ -69,14 +69,14 @@ def check_placement(window, output):
     placement.bar.apply.click()
     settle(window)
     assert placement.active and not placement.model.take and len(window.document.session.history.entries) == 1
-    assert len(window.document.session._entities) == 2
+    assert len(window.document.session._entities) == 4
     unique_ids(window.document.session)
     placement.set_position((6, 0, 1))
-    placement.bar.apply.click()
+    placement.bar.preview.click()
     settle(window)
     placement.bar.apply.click()
     settle(window)
-    assert len(window.document.session.history.entries) == 2 and len(window.document.session._entities) == 4
+    assert len(window.document.session.history.entries) == 2 and len(window.document.session._entities) == 6
     unique_ids(window.document.session)
     placement.bar.cancel.click()
     window.undo()
@@ -143,14 +143,16 @@ def main():
         settle(window)
         window.navigation.stop()
         performance = check_placement(window, output)
-        print("Combined Take, masks, Keep placing, actor reuse and Undo passed", flush=True)
+        print("Combined Duplicate, masks, Keep placing, actor reuse and Undo passed", flush=True)
         check_repeat(window, output)
         assert original == path.read_bytes()
-        report = dict(placement="blocks and entities, toggles, rotation, conditional preview, Take and repeated copies",
+        report = dict(placement="blocks and entities, toggles, rotation, conditional preview, Duplicate and repeated copies",
                       repeat="entities only, preview invalidation, one Undo, NBT save", performance=performance)
         (output / "result.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)
     finally:
+        window.tasks.close()
+        window.exit.approved = True
         window.document.load(None)
         window.close()
         window.deleteLater()

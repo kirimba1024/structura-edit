@@ -1,7 +1,7 @@
 from time import monotonic
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, QSizeF, Qt, Signal
-from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF
+from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QWidget
 
 from .map_layout import MapLayout, projection_rect
@@ -62,6 +62,8 @@ class MapCanvas(QWidget):
             rect = self.tile_rect(view)
             painter.save()
             painter.setClipRect(rect)
+            if self.dimension:
+                painter.fillRect(rect, QBrush(QColor(BORDER), Qt.BrushStyle.BDiagPattern))
             if self.layout.large:
                 for (tile_view, x, y), image in self.tiles.items():
                     if tile_view == view:

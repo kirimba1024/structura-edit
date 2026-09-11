@@ -86,7 +86,7 @@ def main():
             restored = open_source(path, center=(8, 8, 8), radius=0)
             assert restored.state_at(position) in (None, "minecraft:air"), (restored.state_at(position), window.status.text())
             window.document.session.apply(window.document.session.set_block((0, -window.document.session.origin[1], 0), "minecraft:gold_block"))
-            window.sources.confirm_discard = lambda: True
+            window.sources.confirm_discard = lambda continuation=None: True
             window.sources.open_path(path)
             settle(window)
             assert not window.document.session.dirty and not window.document.session.can_undo

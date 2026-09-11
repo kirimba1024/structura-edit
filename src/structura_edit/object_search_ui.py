@@ -2,11 +2,14 @@ from PySide6.QtCore import QObject, QTimer, Qt, Signal
 
 from .object_search import PAGE_SIZE, search_revision
 from .object_search_panel import ObjectSearchPanel
+from .nbt_batch import MAX_BATCH_OBJECTS
+from .task_protocol import ObjectSearchCommand
 
 
 class ObjectFinder(QObject):
     opening = Signal()
     requested = Signal(str, object)
+    batch_requested = Signal(object)
 
     def __init__(self, plotter, document, tasks, *, available):
         super().__init__(plotter)
@@ -16,6 +19,7 @@ class ObjectFinder(QObject):
         self.panel.changed.connect(self.changed)
         self.panel.requested.connect(self.act)
         self.panel.page_requested.connect(self.page)
+        self.panel.batch_requested.connect(self.edit_all)
         self.panel.dismissed.connect(self.close)
         self.panel.results.selectionModel().selectionChanged.connect(self.describe)
         self.timer = QTimer(self)
@@ -93,9 +97,17 @@ class ObjectFinder(QObject):
         token = self.generation, self.revision
         self.pending = False
         self.inflight = token
-        self.tasks.submit("object_search", lambda result: self.received(token, result), session=self.document.session.fork(),
-                    query=dict(text=panel.search.text(), kind=panel.kind.currentData(),
-                               selection=self.document.selected.current if panel.in_selection.isChecked() else None, offset=self.offset))
+        query = self.query()
+        command = ObjectSearchCommand(query['text'], query['kind'], query['selection'], self.offset)
+        self.tasks.submit_document(command, lambda result: self.received(token, result), session=self.document.session)
+
+    def query(self):
+        return dict(text=self.panel.search.text(), kind=self.panel.kind.currentData(),
+                    selection=self.document.selected.current if self.panel.in_selection.isChecked() else None)
+
+    def edit_all(self):
+        if self.panel.batch.isEnabled() and search_revision(self.document.session) == self.revision[0]:
+            self.batch_requested.emit(self.query())
 
     def received(self, token, result):
         self.inflight = None
@@ -118,6 +130,11 @@ class ObjectFinder(QObject):
         for action in panel.actions.values():
             action.setEnabled(ready and compatible)
             action.setToolTip("Choose one block or one or more entities on this page")
+        total = self.result.total if self.result is not None else 0
+        editable = ready and self.document.session is not None and not self.document.session.readonly
+        panel.batch.setEnabled(editable and 0 < total <= min(MAX_BATCH_OBJECTS, self.document.session.operation_limit))
+        panel.batch.setToolTip(f"Edit an existing scalar field across all {total:,} matching objects, including other pages.\n"
+                              f"Preview first; at most {MAX_BATCH_OBJECTS:,} objects per action.")
         panel.previous.setEnabled(ready and self.result is not None and self.offset > 0)
         panel.next.setEnabled(ready and self.result is not None and self.offset + PAGE_SIZE < self.result.total)
         if len(rows) == 1:

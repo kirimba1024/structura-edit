@@ -3,6 +3,9 @@ from copy import copy
 from dataclasses import replace
 
 from structura_core import state_key
+from structura_core.block_array import BlockArray
+from structura_core.compatibility import world_write_reason
+from structura_core.world_backup import pending_backups
 
 from .cell_data import detached_cell
 from .changes import ChangeSet, _Cell, _Delta
@@ -17,7 +20,9 @@ AIR_CELL = _Cell("minecraft:air")
 
 class WorldView(EditSession):
     def __init__(self, world, region, changes=None):
-        super().__init__(Document(region.structure, path=world.path, readonly=region.structure.data_version < 2844))
+        super().__init__(Document(region.structure, path=world.path, readonly=bool(world_write_reason(region.structure.data_version))))
+        self._document.source_format = "world"
+        self.recovery_required = tuple(pending_backups(world.path))
         self.dimension = region.dimension
         self.center = region.center
         self.radius = region.radius
@@ -25,7 +30,8 @@ class WorldView(EditSession):
         self.loaded_chunks = region.loaded
         self.loaded_sections = region.sections
         self.missing_chunks = region.missing
-        self.notices = region.notices
+        self.notices = region.notices + (("Unfinished world save: open Restore backup before saving again.",)
+                                         if self.recovery_required else ())
         self.dimensions = tuple(world.dimensions)
         self.world_name = world.name
         self._base_entities = loaded_entities(self, region.entity_locations)
@@ -60,6 +66,29 @@ class WorldView(EditSession):
                 if (int(x // 16), int(z // 16)) not in self.loaded_chunks:
                     raise ValueError("Entity destination includes absent chunks; select a loaded area")
 
+    def _sync_delta(self, change):
+        state = self.world_changes
+        previous = self._state_id
+        self._id, self.revision, self._state_id = state.document_id, state.revision, state.state_id
+        self.history = state.history
+        positions = []
+        for delta in change.changes:
+            dimension, *world = delta.position
+            if dimension != self.dimension:
+                continue
+            position = tuple(p - o for p, o in zip(world, self.origin))
+            if not all(0 <= p < s for p, s in zip(position, self.size)):
+                continue
+            positions.append(position)
+            pair = state.patch.get(delta.position)
+            if pair is None:
+                self._cells.pop(position, None)
+            else:
+                self._cells[position] = pair[1]
+        if change.entities:
+            self._entities = visible_entities(self)
+        self._transition = previous, tuple(positions)
+
     def _check_destination(self, position):
         x, y, z = (p + o for p, o in zip(position, self.origin))
         if (x // 16, z // 16) not in self.loaded_chunks:
@@ -73,26 +102,32 @@ class WorldView(EditSession):
 
     def apply(self, change):
         if self.readonly:
-            raise ValueError("Editing worlds requires Java 1.18 or newer")
+            raise ValueError(world_write_reason(self._document.source.data_version))
         self._check_change(change)
         changes = tuple(_Delta((self.dimension, *(p + o for p, o in zip(delta.position, self.origin))),
                                self._portable(delta.before, delta.position), self._portable(delta.after, delta.position))
                         for delta in change.changes)
         changes = tuple(delta for delta in changes if delta.before != delta.after)
-        result = self.world_changes.apply(ChangeSet(self._id, self.revision, change.label, changes,
-                                                     portable_entities(self, change.entities)))
-        self._sync_changes()
+        portable = ChangeSet(self._id, self.revision, change.label, changes, portable_entities(self, change.entities))
+        result = self.world_changes.apply(portable)
+        if result:
+            self._sync_delta(portable)
         return result
 
     def _step_history(self, *, undo):
-        result = self.world_changes.step(undo=undo)
-        self._sync_changes()
-        return result
+        if self.revision != self.world_changes.revision:
+            self._sync_changes()
+        change = self.world_changes.step(undo=undo)
+        if change is not None:
+            self._sync_delta(change)
+        return change is not None
 
     def fork(self):
         branch = copy(self)
         branch.world_changes = self.world_changes.fork()
         branch._sync_changes()
+        if branch._state_id == self._state_id:
+            branch._transition = self._transition
         return branch
 
     def save(self, path=None, force=False):
@@ -100,7 +135,7 @@ class WorldView(EditSession):
         from structura_core.world_write import save_world_patch
 
         if self.readonly:
-            raise ValueError("Editing worlds requires Java 1.18 or newer")
+            raise ValueError(world_write_reason(self._document.source.data_version))
         if path is not None and Path(path).resolve() != self.path.resolve():
             raise ValueError("Use Export selection for a schematic; Save world writes to the opened world")
         snapshot = self.snapshot()
@@ -109,7 +144,7 @@ class WorldView(EditSession):
         self.last_backup = save_world_patch(self.path, patch, entities=entity_patches(self.world_changes), force=force)
         self._document = Document(snapshot, path=self.path)
         self._states = tuple(state_key(p) for p in snapshot.palette_raw)
-        self._base_counts = Counter(snapshot.present.values())
+        self._base_counts = Counter(snapshot.present.counts() if isinstance(snapshot.present, BlockArray) else snapshot.present.values())
         self._base_entities = self._entities.copy()
         self.world_changes.patch.clear()
         self.world_changes.entities.clear()
