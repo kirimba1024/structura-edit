@@ -1,0 +1,156 @@
+{
+  "build": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "975ff4579a96920179ea9a5aa3fd071e6ebcfa3fa29be3b4fac883da58d794d2",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "5c64f5cc1fbb56c31a3451bd38640344eca85f413ab12476c3e0614837ac4571",
+      "structura_render-0.8.1-py3-none-any.whl": "54519d3cfeb9aaa88db41e2396db07255f13d847f7950399ac1f064fbc595a10",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "d094d16f05742c7721b5b1d4802455ad7f720fff6f92f30524c92ace21bc9451"
+    }
+  },
+  "source": {
+    "frozen": false,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/.venv-edit/bin/python",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-render/src/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.5447544999999998,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  },
+  "bundled": {
+    "frozen": true,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.6937937919999992,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  },
+  "relocated": {
+    "frozen": true,
+    "executable": "/private/tmp/structura-overview-portable-20260911/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/private/tmp/structura-overview-portable-20260911/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.7166357919999999,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  },
+  "archive_bytes": 159257212,
+  "signature_checks": {
+    "bundled": "passed",
+    "relocated": "passed"
+  },
+  "missing_dependency_replaces_previous_success": "passed"
+}

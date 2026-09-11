@@ -1,0 +1,387 @@
+{
+  "environment": {
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "performance": {
+    "before_staged_installation": [
+      {
+        "stages": {
+          "open": {
+            "elapsed_ms": 4661.78,
+            "gui_timer_max_gap_ms": 126.45,
+            "timer_samples": 270
+          },
+          "take_start": {
+            "elapsed_ms": 2391.44,
+            "gui_timer_max_gap_ms": 89.6,
+            "timer_samples": 138
+          },
+          "take_review": {
+            "elapsed_ms": 8406.97,
+            "gui_timer_max_gap_ms": 322.81,
+            "timer_samples": 394
+          },
+          "take_apply": {
+            "elapsed_ms": 5958.96,
+            "gui_timer_max_gap_ms": 577.86,
+            "timer_samples": 318
+          },
+          "save": {
+            "elapsed_ms": 4018.18,
+            "gui_timer_max_gap_ms": 199.56,
+            "timer_samples": 218
+          },
+          "undo_take": {
+            "elapsed_ms": 8705.65,
+            "gui_timer_max_gap_ms": 534.35,
+            "timer_samples": 472
+          },
+          "redo_take": {
+            "elapsed_ms": 7776.65,
+            "gui_timer_max_gap_ms": 461.42,
+            "timer_samples": 416
+          }
+        },
+        "gui_and_worker_sampled_peak_rss_mib": 1396.39,
+        "rss_samples": 769,
+        "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+        "floors": 24,
+        "source_size": [
+          32,
+          144,
+          24
+        ],
+        "source_blocks": 28800,
+        "changed_cells": 57625,
+        "visible": true,
+        "profiled": false,
+        "viewport": [
+          1104,
+          660
+        ],
+        "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+      },
+      {
+        "stages": {
+          "open": {
+            "elapsed_ms": 4186.65,
+            "gui_timer_max_gap_ms": 142.2,
+            "timer_samples": 243
+          },
+          "take_start": {
+            "elapsed_ms": 2497.23,
+            "gui_timer_max_gap_ms": 77.5,
+            "timer_samples": 142
+          },
+          "take_review": {
+            "elapsed_ms": 9298.08,
+            "gui_timer_max_gap_ms": 337.35,
+            "timer_samples": 437
+          },
+          "take_apply": {
+            "elapsed_ms": 6073.8,
+            "gui_timer_max_gap_ms": 246.71,
+            "timer_samples": 327
+          },
+          "save": {
+            "elapsed_ms": 4049.68,
+            "gui_timer_max_gap_ms": 293.68,
+            "timer_samples": 216
+          },
+          "undo_take": {
+            "elapsed_ms": 8828.19,
+            "gui_timer_max_gap_ms": 508.17,
+            "timer_samples": 475
+          },
+          "redo_take": {
+            "elapsed_ms": 7925.92,
+            "gui_timer_max_gap_ms": 395.63,
+            "timer_samples": 413
+          }
+        },
+        "gui_and_worker_sampled_peak_rss_mib": 1445.36,
+        "rss_samples": 798,
+        "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+        "floors": 24,
+        "source_size": [
+          32,
+          144,
+          24
+        ],
+        "source_blocks": 28800,
+        "changed_cells": 57625,
+        "visible": true,
+        "profiled": false,
+        "viewport": [
+          1104,
+          660
+        ],
+        "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+      }
+    ],
+    "after_staged_installation": {
+      "stages": {
+        "open": {
+          "elapsed_ms": 4655.13,
+          "gui_timer_max_gap_ms": 89.37,
+          "timer_samples": 276
+        },
+        "take_start": {
+          "elapsed_ms": 2651.7,
+          "gui_timer_max_gap_ms": 80.56,
+          "timer_samples": 148
+        },
+        "take_review": {
+          "elapsed_ms": 9849.2,
+          "gui_timer_max_gap_ms": 216.89,
+          "timer_samples": 495
+        },
+        "take_apply": {
+          "elapsed_ms": 6783.65,
+          "gui_timer_max_gap_ms": 567.5,
+          "timer_samples": 365
+        },
+        "save": {
+          "elapsed_ms": 4223.74,
+          "gui_timer_max_gap_ms": 238.45,
+          "timer_samples": 228
+        },
+        "undo_take": {
+          "elapsed_ms": 8843.12,
+          "gui_timer_max_gap_ms": 574.31,
+          "timer_samples": 477
+        },
+        "redo_take": {
+          "elapsed_ms": 8099.38,
+          "gui_timer_max_gap_ms": 429.46,
+          "timer_samples": 431
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1452.77,
+      "rss_samples": 827,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    },
+    "scope": "Synthetic 24-floor fixture; two previous runs and one current run. No statistical latency bound; RSS can count shared pages twice."
+  },
+  "checks": {
+    "pytest": {
+      "passed": 816,
+      "warnings": 19,
+      "seconds": 17.48,
+      "log": "/private/tmp/structura-final-suite.log"
+    },
+    "ruff": "passed",
+    "diff_check": "passed",
+    "nbt_batch": {
+      "objects": 150,
+      "page_size": 64,
+      "preview": "all pages, independent of active page; stale preview invalidated",
+      "apply": "single Undo; types, metadata and saved NBT retained",
+      "cancel": "Escape cancels in-flight calculation"
+    },
+    "nbt_batch_log": "/private/tmp/structura-nbt-batch.log",
+    "nbt_error_recovery": "Protected identity field rejected in dialog; subsequent valid preview/apply succeeds",
+    "object_search_log": "/private/tmp/structura-delivery-search.log",
+    "building_workflow": {
+      "stages": {
+        "open": {
+          "elapsed_ms": 2119.84,
+          "gui_timer_max_gap_ms": 94.69,
+          "timer_samples": 124
+        },
+        "cancel_tools": {
+          "elapsed_ms": 1863.43,
+          "gui_timer_max_gap_ms": 62.57,
+          "timer_samples": 112
+        },
+        "wall_select": {
+          "elapsed_ms": 31.57,
+          "gui_timer_max_gap_ms": 31.54,
+          "timer_samples": 1
+        },
+        "wall_preview": {
+          "elapsed_ms": 785.76,
+          "gui_timer_max_gap_ms": 38.35,
+          "timer_samples": 46
+        },
+        "wall_apply": {
+          "elapsed_ms": 24.61,
+          "gui_timer_max_gap_ms": 20.57,
+          "timer_samples": 1
+        },
+        "floors_preview": {
+          "elapsed_ms": 2034.97,
+          "gui_timer_max_gap_ms": 192.19,
+          "timer_samples": 105
+        },
+        "floors_apply": {
+          "elapsed_ms": 828.4,
+          "gui_timer_max_gap_ms": 57.88,
+          "timer_samples": 46
+        },
+        "take_start": {
+          "elapsed_ms": 584.91,
+          "gui_timer_max_gap_ms": 108.61,
+          "timer_samples": 29
+        },
+        "take_review": {
+          "elapsed_ms": 2383.96,
+          "gui_timer_max_gap_ms": 84.33,
+          "timer_samples": 122
+        },
+        "take_apply": {
+          "elapsed_ms": 2005.52,
+          "gui_timer_max_gap_ms": 114.31,
+          "timer_samples": 111
+        },
+        "save": {
+          "elapsed_ms": 1039.07,
+          "gui_timer_max_gap_ms": 105.45,
+          "timer_samples": 57
+        },
+        "undo_take": {
+          "elapsed_ms": 2520.88,
+          "gui_timer_max_gap_ms": 109.95,
+          "timer_samples": 139
+        },
+        "draft_save": {
+          "elapsed_ms": 247.12,
+          "gui_timer_max_gap_ms": 40.6,
+          "timer_samples": 13
+        },
+        "draft_recover": {
+          "elapsed_ms": 2093.67,
+          "gui_timer_max_gap_ms": 82.92,
+          "timer_samples": 120
+        },
+        "recovered_save": {
+          "elapsed_ms": 363.89,
+          "gui_timer_max_gap_ms": 34.72,
+          "timer_samples": 21
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 909.59,
+      "rss_samples": 372,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "viewport": [
+        1104,
+        660
+      ],
+      "visible": true,
+      "assertions": "Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save"
+    },
+    "building_workflow_log": "/private/tmp/structura-delivery-building.log",
+    "source_installation": {
+      "frozen": false,
+      "executable": "/Users/kirimba/Projects/dev/mc/structura/.venv-edit/bin/python",
+      "versions": {
+        "structura-edit": "0.1.0a1",
+        "structura-core": "0.6.0",
+        "structura-render": "0.8.0",
+        "PySide6-Essentials": "6.8.3",
+        "vtk": "9.5.2"
+      },
+      "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-render/src/structura_render/data/examples/demo.nbt",
+      "objects": 70,
+      "assets": "Empty directory: fallback rendering",
+      "checks": [
+        "Bundled example",
+        "Qt and VTK scene",
+        "Worker spawn",
+        "NBT batch preview",
+        "Apply",
+        "Save and reload",
+        "Undo"
+      ],
+      "status": "passed"
+    },
+    "frozen_installation": {
+      "frozen": true,
+      "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+      "versions": {
+        "structura-edit": "0.1.0a1",
+        "structura-core": "0.6.1",
+        "structura-render": "0.8.1",
+        "PySide6-Essentials": "6.8.3",
+        "vtk": "9.5.2"
+      },
+      "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+      "objects": 70,
+      "assets": "Empty directory: fallback rendering",
+      "checks": [
+        "Bundled example",
+        "Qt and VTK scene",
+        "Worker spawn",
+        "NBT batch preview",
+        "Apply",
+        "Save and reload",
+        "Undo"
+      ],
+      "status": "passed"
+    },
+    "relocated_installation": {
+      "frozen": true,
+      "executable": "/private/tmp/structura-portable-20260911/Structura Edit.app/Contents/MacOS/Structura Edit",
+      "versions": {
+        "structura-edit": "0.1.0a1",
+        "structura-core": "0.6.1",
+        "structura-render": "0.8.1",
+        "PySide6-Essentials": "6.8.3",
+        "vtk": "9.5.2"
+      },
+      "example": "/private/tmp/structura-portable-20260911/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+      "objects": 70,
+      "assets": "Empty directory: fallback rendering",
+      "checks": [
+        "Bundled example",
+        "Qt and VTK scene",
+        "Worker spawn",
+        "NBT batch preview",
+        "Apply",
+        "Save and reload",
+        "Undo"
+      ],
+      "status": "passed"
+    },
+    "relocated_log": "/private/tmp/structura-portable-check.log",
+    "codesign_original_and_relocated": "codesign --verify --deep --strict: passed"
+  },
+  "package": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "fa82ea49f4de47b7c8aeac72482693ded1d95b2b99804c8c1f300c90d5f71c69",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "a840b2510cac9196f03f6c29b22ee6b8ad22dc94789c8d2a854605f279fd84d2",
+      "structura_render-0.8.1-py3-none-any.whl": "6bc6f5ac6718c5db16457f9dc6e5f40708ebcb532d5d312f397b002f54c7c80c",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "e6bd6bdda0f4c607c14ff5586ffade347ab539e7467da1ab10ef73a65647d285"
+    },
+    "archive_bytes": 159238265,
+    "archive_sha256_verified": true
+  },
+  "limitations": [
+    "GIL/IPC pauses remain in large Apply and Undo",
+    "Ad hoc signature; no Developer ID or notarization",
+    "Native platform checks cover current macOS arm64 only",
+    "Installation smoke covers NBT and demo, not every converter or world write"
+  ]
+}

@@ -1,0 +1,700 @@
+{
+  "date": "2026-09-11",
+  "worker": {
+    "rows": [
+      {
+        "rss": {
+          "parent_mib": 35.78125,
+          "worker_mib": 36.234375
+        },
+        "mode": "full_session",
+        "pending": 0,
+        "cold_ms": 129.487791,
+        "stages": {
+          "preview": {
+            "median_ms": 5.617582999999982,
+            "samples_ms": [
+              6.083209000000034,
+              4.835208000000035,
+              5.689500000000014,
+              4.4834169999999895,
+              5.617582999999982
+            ]
+          },
+          "apply": {
+            "median_ms": 6.121000000000043,
+            "samples_ms": [
+              9.081124999999968,
+              6.121000000000043,
+              6.58933300000003,
+              5.52145899999995,
+              4.879833999999972
+            ]
+          },
+          "undo": {
+            "median_ms": 4.560500000000022,
+            "samples_ms": [
+              4.760417000000016,
+              4.473208000000007,
+              6.29687499999998,
+              4.560500000000022,
+              3.420292000000047
+            ]
+          },
+          "redo": {
+            "median_ms": 5.652667,
+            "samples_ms": [
+              4.558333999999997,
+              4.776957999999998,
+              5.984374999999986,
+              5.652667,
+              6.072250000000001
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 2245,
+          "received": 661
+        },
+        "apply_bytes": {
+          "sent": 2807,
+          "received": 2435
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 35.890625,
+          "worker_mib": 35.9375
+        },
+        "mode": "resident",
+        "pending": 0,
+        "cold_ms": 123.20016600000005,
+        "stages": {
+          "preview": {
+            "median_ms": 4.177290999999972,
+            "samples_ms": [
+              4.071374999999988,
+              1.6236670000000508,
+              6.947874999999937,
+              4.177290999999972,
+              5.43108400000003
+            ]
+          },
+          "apply": {
+            "median_ms": 6.421042000000043,
+            "samples_ms": [
+              9.361875000000076,
+              3.6267909999999626,
+              6.421042000000043,
+              6.024958000000025,
+              7.891082999999965
+            ]
+          },
+          "undo": {
+            "median_ms": 6.17820899999999,
+            "samples_ms": [
+              6.581666999999958,
+              3.664875000000012,
+              6.302250000000065,
+              5.991417000000054,
+              6.17820899999999
+            ]
+          },
+          "redo": {
+            "median_ms": 5.589749999999949,
+            "samples_ms": [
+              12.497292000000048,
+              5.486832999999969,
+              5.744042000000005,
+              5.589749999999949,
+              5.437791999999941
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 833
+        },
+        "apply_bytes": {
+          "sent": 909,
+          "received": 1324
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 92.828125,
+          "worker_mib": 81.171875
+        },
+        "mode": "full_session",
+        "pending": 100000,
+        "cold_ms": 213.16445800000005,
+        "stages": {
+          "preview": {
+            "median_ms": 87.09458300000028,
+            "samples_ms": [
+              133.21087500000007,
+              86.29387500000018,
+              88.66774999999993,
+              85.32679200000004,
+              87.09458300000028
+            ]
+          },
+          "apply": {
+            "median_ms": 41.01525000000006,
+            "samples_ms": [
+              64.60141599999992,
+              40.580958999999915,
+              41.06262500000013,
+              41.01525000000006,
+              40.44616699999981
+            ]
+          },
+          "undo": {
+            "median_ms": 39.476499999999916,
+            "samples_ms": [
+              40.83950000000014,
+              39.25066700000013,
+              39.476499999999916,
+              38.39795800000001,
+              39.87254100000026
+            ]
+          },
+          "redo": {
+            "median_ms": 39.7314169999996,
+            "samples_ms": [
+              39.851958000000074,
+              39.599916000000015,
+              40.11824999999991,
+              38.51654199999999,
+              39.7314169999996
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 1471600,
+          "received": 663
+        },
+        "apply_bytes": {
+          "sent": 1472126,
+          "received": 1471644
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 81.953125,
+          "worker_mib": 58.71875
+        },
+        "mode": "resident",
+        "pending": 100000,
+        "cold_ms": 162.40875,
+        "stages": {
+          "preview": {
+            "median_ms": 4.813791000000123,
+            "samples_ms": [
+              6.001957999999696,
+              4.813791000000123,
+              4.794416999999829,
+              4.807250000000263,
+              5.699290999999995
+            ]
+          },
+          "apply": {
+            "median_ms": 6.786459000000189,
+            "samples_ms": [
+              10.67620800000002,
+              6.333667000000265,
+              6.786459000000189,
+              6.596791999999851,
+              6.893124999999944
+            ]
+          },
+          "undo": {
+            "median_ms": 6.707167000000069,
+            "samples_ms": [
+              5.888000000000115,
+              6.707167000000069,
+              6.259208999999988,
+              6.7097910000000205,
+              7.1212909999998075
+            ]
+          },
+          "redo": {
+            "median_ms": 5.2470840000000685,
+            "samples_ms": [
+              5.131041999999919,
+              5.2470840000000685,
+              5.269082999999952,
+              5.104750000000102,
+              5.265500000000145
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 835
+        },
+        "apply_bytes": {
+          "sent": 911,
+          "received": 1324
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 177.65625,
+          "worker_mib": 127.125
+        },
+        "mode": "full_session",
+        "pending": 300000,
+        "cold_ms": 383.61404200000004,
+        "stages": {
+          "preview": {
+            "median_ms": 259.13291700000053,
+            "samples_ms": [
+              303.00008400000024,
+              254.22491700000018,
+              259.13291700000053,
+              260.5152079999993,
+              256.8831669999998
+            ]
+          },
+          "apply": {
+            "median_ms": 115.59387500000007,
+            "samples_ms": [
+              119.53762499999998,
+              115.59387500000007,
+              114.65058400000049,
+              117.23416600000024,
+              115.54574999999988
+            ]
+          },
+          "undo": {
+            "median_ms": 115.11291699999981,
+            "samples_ms": [
+              115.11291699999981,
+              114.16637499999993,
+              118.24387500000012,
+              115.98108400000041,
+              114.29808299999955
+            ]
+          },
+          "redo": {
+            "median_ms": 115.35979100000037,
+            "samples_ms": [
+              114.52125000000012,
+              115.35979100000037,
+              115.90620900000026,
+              115.98287500000026,
+              114.936417
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 4672441,
+          "received": 663
+        },
+        "apply_bytes": {
+          "sent": 4672967,
+          "received": 4672485
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 148.4375,
+          "worker_mib": 99.625
+        },
+        "mode": "resident",
+        "pending": 300000,
+        "cold_ms": 193.96879099999964,
+        "stages": {
+          "preview": {
+            "median_ms": 5.23733400000026,
+            "samples_ms": [
+              6.015999999998911,
+              5.836915999999803,
+              5.23733400000026,
+              4.8855420000002425,
+              3.162249999999034
+            ]
+          },
+          "apply": {
+            "median_ms": 8.097624999999553,
+            "samples_ms": [
+              10.41854200000003,
+              8.097624999999553,
+              9.189082999998988,
+              3.541667000000359,
+              3.5093330000002254
+            ]
+          },
+          "undo": {
+            "median_ms": 5.122208000001294,
+            "samples_ms": [
+              5.122208000001294,
+              8.448665999999605,
+              8.061458000000243,
+              3.5434169999994936,
+              3.532124999999553
+            ]
+          },
+          "redo": {
+            "median_ms": 7.776332999998914,
+            "samples_ms": [
+              8.04937500000058,
+              7.776332999998914,
+              7.8514589999993945,
+              3.5085829999985663,
+              3.5237499999993815
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 835
+        },
+        "apply_bytes": {
+          "sent": 911,
+          "received": 1324
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 312.625,
+          "worker_mib": 182.6875
+        },
+        "mode": "full_session",
+        "pending": 500000,
+        "cold_ms": 551.4058339999988,
+        "stages": {
+          "preview": {
+            "median_ms": 438.5763339999986,
+            "samples_ms": [
+              461.55062499999923,
+              438.5763339999986,
+              449.22645800000004,
+              437.12966700000067,
+              437.6205829999993
+            ]
+          },
+          "apply": {
+            "median_ms": 208.01924999999954,
+            "samples_ms": [
+              212.0195410000001,
+              205.48449999999895,
+              208.01924999999954,
+              203.30991700000033,
+              224.9919589999987
+            ]
+          },
+          "undo": {
+            "median_ms": 204.6169589999991,
+            "samples_ms": [
+              204.19749999999937,
+              203.49066600000043,
+              204.6169589999991,
+              209.61954199999866,
+              208.1234159999994
+            ]
+          },
+          "redo": {
+            "median_ms": 207.89975000000106,
+            "samples_ms": [
+              206.20658400000025,
+              213.2827499999994,
+              207.30366699999968,
+              207.89975000000106,
+              230.3621249999992
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 7873282,
+          "received": 663
+        },
+        "apply_bytes": {
+          "sent": 7873808,
+          "received": 7873326
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 261.859375,
+          "worker_mib": 146.234375
+        },
+        "mode": "resident",
+        "pending": 500000,
+        "cold_ms": 220.92274999999972,
+        "stages": {
+          "preview": {
+            "median_ms": 3.5038329999999007,
+            "samples_ms": [
+              4.879249999998336,
+              4.898000000000735,
+              3.5038329999999007,
+              3.171958999999447,
+              3.1888329999993914
+            ]
+          },
+          "apply": {
+            "median_ms": 7.987749999998073,
+            "samples_ms": [
+              13.047291999999544,
+              11.359500000001077,
+              7.987749999998073,
+              4.44462499999787,
+              4.390915999998413
+            ]
+          },
+          "undo": {
+            "median_ms": 4.90279099999924,
+            "samples_ms": [
+              12.154333000001571,
+              6.213416999997889,
+              4.90279099999924,
+              4.639541999999608,
+              4.572082999999338
+            ]
+          },
+          "redo": {
+            "median_ms": 4.161665999998121,
+            "samples_ms": [
+              10.528832999998627,
+              4.38075000000282,
+              4.0629999999985955,
+              4.161665999998121,
+              4.14837499999976
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 835
+        },
+        "apply_bytes": {
+          "sent": 911,
+          "received": 1324
+        }
+      }
+    ],
+    "repeats": 5,
+    "scenario": "Real spawn/Pipe and SQLite history; synthetic world patch; no GUI or world writes; bytes measured separately from timings"
+  },
+  "search_pages": {
+    "rows": [
+      {
+        "blocks": 100000,
+        "first_query_ms": 0.2633339999999901,
+        "previous_page_ms": 0.19312500000000232,
+        "cached_page_ms": 0.0856669999999976,
+        "previous_query_peak_bytes": 900593,
+        "first_query_peak_bytes": 144684,
+        "cached_page_peak_bytes": 26957,
+        "retained_query_bytes": 100208,
+        "reserved_block_bytes": 1931280
+      },
+      {
+        "blocks": 1000000,
+        "first_query_ms": 1.3448749999999954,
+        "previous_page_ms": 1.2125000000000052,
+        "cached_page_ms": 0.08487499999998427,
+        "previous_query_peak_bytes": 9000593,
+        "first_query_peak_bytes": 1046444,
+        "cached_page_peak_bytes": 17997,
+        "retained_query_bytes": 1001968,
+        "reserved_block_bytes": 18133040
+      },
+      {
+        "blocks": 3000000,
+        "first_query_ms": 3.8463329999999796,
+        "previous_page_ms": 3.4420000000000006,
+        "cached_page_ms": 0.08329199999998482,
+        "previous_query_peak_bytes": 27000593,
+        "first_query_peak_bytes": 3050348,
+        "cached_page_peak_bytes": 27241,
+        "retained_query_bytes": 3005872,
+        "reserved_block_bytes": 54136944
+      }
+    ],
+    "scenario": "Prepared NumPy index; all blocks match minecraft:; offsets 0/64/128/192/last page; no GUI, IPC or index construction. Timings and tracemalloc measured separately."
+  },
+  "worker_search": {
+    "worker_page_ms": [
+      3.2917499999999267,
+      1.6087909999999983,
+      1.5937500000000604,
+      1.618290999999994
+    ],
+    "page_command_bytes": 136,
+    "reserved_search_bytes": 1931504,
+    "blocks": 100000,
+    "objects": 100000,
+    "index_ms": 50.06,
+    "index_array_bytes": 1700000,
+    "cached_query_ms_median": 0.14,
+    "worker_first_ms": 201.0,
+    "worker_query_ms_median": 5.73,
+    "worker_query_ms_max": 6.2
+  },
+  "sparse": {
+    "small_replace": {
+      "document_blocks": 500000,
+      "selection_cells": 10,
+      "previous_ms": 132.28062499999993,
+      "adaptive_ms": 0.03654199999991725
+    },
+    "sparse_copy": {
+      "selection_cells": 1000000,
+      "stored_blocks": 2,
+      "previous_scan_ms": 154.68595899999983,
+      "adaptive_copy_ms": 0.01545800000002373,
+      "operation_limit": 10,
+      "paste_without_air": "accepted"
+    },
+    "scenario": "Python API, five samples, no GUI or IPC. Previous copy enumeration measured without its old volume rejection; identical stored cells asserted."
+  },
+  "native_workflow": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1579.74,
+        "gui_timer_max_gap_ms": 74.52,
+        "timer_samples": 94
+      },
+      "take_start": {
+        "elapsed_ms": 316.9,
+        "gui_timer_max_gap_ms": 68.62,
+        "timer_samples": 14
+      },
+      "take_review": {
+        "elapsed_ms": 2707.13,
+        "gui_timer_max_gap_ms": 411.01,
+        "timer_samples": 127
+      },
+      "take_apply": {
+        "elapsed_ms": 1933.27,
+        "gui_timer_max_gap_ms": 221.93,
+        "timer_samples": 71
+      },
+      "save": {
+        "elapsed_ms": 1085.24,
+        "gui_timer_max_gap_ms": 174.7,
+        "timer_samples": 45
+      },
+      "undo_take": {
+        "elapsed_ms": 1292.08,
+        "gui_timer_max_gap_ms": 77.12,
+        "timer_samples": 74
+      },
+      "redo_take": {
+        "elapsed_ms": 963.11,
+        "gui_timer_max_gap_ms": 113.27,
+        "timer_samples": 45
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1335.81,
+    "rss_samples": 257,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "traced": false,
+    "resident_document": true,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "tests": {
+    "full": "1031 passed, 21 warnings in 48.22s",
+    "log": "/private/tmp/structura-data-path-final-tests.log",
+    "additional": "8 worker-delta tests passed, including two added after the full collection: other dimension and reconstruction failure",
+    "additional_log": "/private/tmp/structura-data-path-extra-tests.log",
+    "ruff": "passed",
+    "mypy": "1.18.2 strict, three boundary files, imported implementation skipped",
+    "diff_check": "passed"
+  },
+  "smoke": {
+    "search": "/private/tmp/structura-data-path-search-smoke.log",
+    "world": "/private/tmp/structura-data-path-world-smoke.log",
+    "workflow": "/private/tmp/structura-data-path-workflow/result.json"
+  },
+  "limitations": [
+    "Full snapshots for Save, resize, entity changes, multi-entry history navigation, custom session subclasses and render remain.",
+    "Parent snapshot reconstruction copies mutable dictionaries in exchange thread; cost remains O(P), and history metadata remains O(H). No persistent-map abstraction introduced.",
+    "64 MiB is a conservative budget for search indices/query buffers/result rows, not process RSS, document memory, NBT decoding or all Python allocator overhead.",
+    "Block ordering remains stable for one index, entities precede blocks; canonical cross-document ordering is not introduced.",
+    "Sparse Condition semantics and the volume scan of general shapes are unchanged; only Top/Overlay source collection uses the adaptive iterator.",
+    "Synthetic patch aliases immutable cells; timings exclude rendering and world writes. RSS readings are post-scenario, not peaks.",
+    "Native GUI checked on this Mac; physical input, minimum macOS, Windows and Linux not reverified."
+  ],
+  "build": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "f78dd33472c078365517a9db52277ca7466b0040d9a4ce4f954438eddf86e53a",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "603b90495f8ecd1e012367f15844e844b0c27d247ef423af4d76bfe28853b588",
+      "structura_render-0.8.1-py3-none-any.whl": "dbd92d2aede88c002c5fe28597b38827b7bb23f1f916b66d1d5855fbc6d43e70",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "5a3cf7bbb5f9fff280957cc513392de49a9996c655b0a01e74aa1ff335b0bd27"
+    }
+  },
+  "installation": {
+    "frozen": true,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.7138416249999988,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  }
+}

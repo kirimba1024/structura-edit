@@ -1,0 +1,507 @@
+{
+  "before": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1556.66,
+        "gui_timer_max_gap_ms": 96.71,
+        "timer_samples": 89
+      },
+      "take_start": {
+        "elapsed_ms": 334.08,
+        "gui_timer_max_gap_ms": 85.72,
+        "timer_samples": 15
+      },
+      "take_review": {
+        "elapsed_ms": 3203.76,
+        "gui_timer_max_gap_ms": 1406.16,
+        "timer_samples": 78
+      },
+      "take_apply": {
+        "elapsed_ms": 2586.06,
+        "gui_timer_max_gap_ms": 635.67,
+        "timer_samples": 82
+      },
+      "save": {
+        "elapsed_ms": 1900.29,
+        "gui_timer_max_gap_ms": 274.76,
+        "timer_samples": 75
+      },
+      "undo_take": {
+        "elapsed_ms": 3523.63,
+        "gui_timer_max_gap_ms": 627.25,
+        "timer_samples": 169
+      },
+      "redo_take": {
+        "elapsed_ms": 2875.44,
+        "gui_timer_max_gap_ms": 479.62,
+        "timer_samples": 128
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1541.11,
+    "rss_samples": 359,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "preview_only": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1561.9,
+        "gui_timer_max_gap_ms": 99.33,
+        "timer_samples": 89
+      },
+      "take_start": {
+        "elapsed_ms": 348.32,
+        "gui_timer_max_gap_ms": 83.04,
+        "timer_samples": 16
+      },
+      "take_review": {
+        "elapsed_ms": 2397.76,
+        "gui_timer_max_gap_ms": 645.98,
+        "timer_samples": 81
+      },
+      "take_apply": {
+        "elapsed_ms": 2483.26,
+        "gui_timer_max_gap_ms": 529.75,
+        "timer_samples": 82
+      },
+      "save": {
+        "elapsed_ms": 2006.99,
+        "gui_timer_max_gap_ms": 374.76,
+        "timer_samples": 76
+      },
+      "undo_take": {
+        "elapsed_ms": 3557.47,
+        "gui_timer_max_gap_ms": 617.02,
+        "timer_samples": 173
+      },
+      "redo_take": {
+        "elapsed_ms": 2834.03,
+        "gui_timer_max_gap_ms": 503.13,
+        "timer_samples": 127
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1567.84,
+    "rss_samples": 343,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "after_1": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1575.06,
+        "gui_timer_max_gap_ms": 96.6,
+        "timer_samples": 91
+      },
+      "take_start": {
+        "elapsed_ms": 327.67,
+        "gui_timer_max_gap_ms": 64.0,
+        "timer_samples": 15
+      },
+      "take_review": {
+        "elapsed_ms": 2430.56,
+        "gui_timer_max_gap_ms": 659.17,
+        "timer_samples": 79
+      },
+      "take_apply": {
+        "elapsed_ms": 1803.14,
+        "gui_timer_max_gap_ms": 191.19,
+        "timer_samples": 66
+      },
+      "save": {
+        "elapsed_ms": 1095.45,
+        "gui_timer_max_gap_ms": 222.6,
+        "timer_samples": 48
+      },
+      "undo_take": {
+        "elapsed_ms": 1904.79,
+        "gui_timer_max_gap_ms": 53.3,
+        "timer_samples": 111
+      },
+      "redo_take": {
+        "elapsed_ms": 1661.32,
+        "gui_timer_max_gap_ms": 157.72,
+        "timer_samples": 85
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1278.69,
+    "rss_samples": 281,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "after_2": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1520.91,
+        "gui_timer_max_gap_ms": 96.85,
+        "timer_samples": 86
+      },
+      "take_start": {
+        "elapsed_ms": 347.57,
+        "gui_timer_max_gap_ms": 65.43,
+        "timer_samples": 16
+      },
+      "take_review": {
+        "elapsed_ms": 2382.29,
+        "gui_timer_max_gap_ms": 640.06,
+        "timer_samples": 78
+      },
+      "take_apply": {
+        "elapsed_ms": 1828.6,
+        "gui_timer_max_gap_ms": 211.06,
+        "timer_samples": 66
+      },
+      "save": {
+        "elapsed_ms": 1094.14,
+        "gui_timer_max_gap_ms": 214.49,
+        "timer_samples": 49
+      },
+      "undo_take": {
+        "elapsed_ms": 1914.42,
+        "gui_timer_max_gap_ms": 61.49,
+        "timer_samples": 108
+      },
+      "redo_take": {
+        "elapsed_ms": 1649.67,
+        "gui_timer_max_gap_ms": 172.99,
+        "timer_samples": 84
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1263.44,
+    "rss_samples": 275,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "profile_before": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1655.71,
+        "gui_timer_max_gap_ms": 96.01,
+        "timer_samples": 95
+      },
+      "take_start": {
+        "elapsed_ms": 333.8,
+        "gui_timer_max_gap_ms": 84.21,
+        "timer_samples": 15
+      },
+      "take_review": {
+        "elapsed_ms": 4410.61,
+        "gui_timer_max_gap_ms": 1805.8,
+        "timer_samples": 91
+      },
+      "take_apply": {
+        "elapsed_ms": 2550.06,
+        "gui_timer_max_gap_ms": 615.19,
+        "timer_samples": 79
+      },
+      "save": {
+        "elapsed_ms": 2054.33,
+        "gui_timer_max_gap_ms": 409.25,
+        "timer_samples": 76
+      },
+      "undo_take": {
+        "elapsed_ms": 3439.51,
+        "gui_timer_max_gap_ms": 407.88,
+        "timer_samples": 175
+      },
+      "redo_take": {
+        "elapsed_ms": 3101.89,
+        "gui_timer_max_gap_ms": 666.0,
+        "timer_samples": 128
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1567.06,
+    "rss_samples": 392,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": true,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "profile_after": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1645.83,
+        "gui_timer_max_gap_ms": 75.33,
+        "timer_samples": 97
+      },
+      "take_start": {
+        "elapsed_ms": 327.23,
+        "gui_timer_max_gap_ms": 77.08,
+        "timer_samples": 15
+      },
+      "take_review": {
+        "elapsed_ms": 3015.97,
+        "gui_timer_max_gap_ms": 1069.07,
+        "timer_samples": 86
+      },
+      "take_apply": {
+        "elapsed_ms": 1774.93,
+        "gui_timer_max_gap_ms": 221.1,
+        "timer_samples": 63
+      },
+      "save": {
+        "elapsed_ms": 1030.73,
+        "gui_timer_max_gap_ms": 170.89,
+        "timer_samples": 43
+      },
+      "undo_take": {
+        "elapsed_ms": 2001.23,
+        "gui_timer_max_gap_ms": 70.31,
+        "timer_samples": 116
+      },
+      "redo_take": {
+        "elapsed_ms": 1851.05,
+        "gui_timer_max_gap_ms": 189.2,
+        "timer_samples": 88
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1261.77,
+    "rss_samples": 298,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": true,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "profiles": {
+    "before": "/private/tmp/structura-workflow-profile-before",
+    "after": "/private/tmp/structura-workflow-profile-after"
+  },
+  "checks": {
+    "core_edit_qem": "946 passed, 21 warnings",
+    "ruff": "passed",
+    "diff_check": "passed",
+    "building_workflow": "passed; off-screen VTK and non-native Qt dialogs",
+    "screen_context": "Computer Use reported locked Mac during final GUI checks"
+  },
+  "building_workflow": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1161.47,
+        "gui_timer_max_gap_ms": 90.05,
+        "timer_samples": 67
+      },
+      "cancel_tools": {
+        "elapsed_ms": 1916.22,
+        "gui_timer_max_gap_ms": 176.01,
+        "timer_samples": 106
+      },
+      "wall_select": {
+        "elapsed_ms": 33.08,
+        "gui_timer_max_gap_ms": 31.03,
+        "timer_samples": 2
+      },
+      "wall_preview": {
+        "elapsed_ms": 267.16,
+        "gui_timer_max_gap_ms": 43.55,
+        "timer_samples": 14
+      },
+      "wall_apply": {
+        "elapsed_ms": 36.42,
+        "gui_timer_max_gap_ms": 19.11,
+        "timer_samples": 1
+      },
+      "floors_preview": {
+        "elapsed_ms": 508.61,
+        "gui_timer_max_gap_ms": 144.62,
+        "timer_samples": 22
+      },
+      "floors_apply": {
+        "elapsed_ms": 259.65,
+        "gui_timer_max_gap_ms": 26.48,
+        "timer_samples": 15
+      },
+      "take_start": {
+        "elapsed_ms": 175.7,
+        "gui_timer_max_gap_ms": 63.26,
+        "timer_samples": 7
+      },
+      "take_review": {
+        "elapsed_ms": 765.95,
+        "gui_timer_max_gap_ms": 172.54,
+        "timer_samples": 29
+      },
+      "take_apply": {
+        "elapsed_ms": 474.6,
+        "gui_timer_max_gap_ms": 49.49,
+        "timer_samples": 28
+      },
+      "save": {
+        "elapsed_ms": 392.87,
+        "gui_timer_max_gap_ms": 53.17,
+        "timer_samples": 21
+      },
+      "undo_take": {
+        "elapsed_ms": 533.4,
+        "gui_timer_max_gap_ms": 46.31,
+        "timer_samples": 31
+      },
+      "draft_save": {
+        "elapsed_ms": 220.1,
+        "gui_timer_max_gap_ms": 18.55,
+        "timer_samples": 13
+      },
+      "draft_recover": {
+        "elapsed_ms": 570.54,
+        "gui_timer_max_gap_ms": 53.46,
+        "timer_samples": 27
+      },
+      "recovered_save": {
+        "elapsed_ms": 261.22,
+        "gui_timer_max_gap_ms": 30.78,
+        "timer_samples": 16
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 820.28,
+    "rss_samples": 200,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "viewport": [
+      1104,
+      628
+    ],
+    "visible": false,
+    "assertions": "Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save"
+  },
+  "build": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "ca3dc1e1f1d3c59dcd026ac6fe776bc8972308796bd1888d601ae1cdded7ff05",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "cbc5fb568b863795f24d1f0f57e9ddd04cf32280369cec098c20a47e01075fea",
+      "structura_render-0.8.1-py3-none-any.whl": "6bfd8d68b238a4a7e826e18b066c0e6e30faa567dcd5ec49efabc61bab91f10d",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "b8429fd27a513ae02c6c3a029d3a1d20d524a1e3f05ac051afcd54af2e8da948"
+    }
+  },
+  "installation_check": {
+    "frozen": true,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.7097835000000003,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  }
+}

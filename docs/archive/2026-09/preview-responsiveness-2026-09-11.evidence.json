@@ -1,0 +1,894 @@
+{
+  "date": "2026-09-11",
+  "scenario": "24 floors, Move to (-40,-3,-32), 28800 blocks, 24 chests, 24 armor stands; temporary files and local storage",
+  "before": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1626.25,
+        "gui_timer_max_gap_ms": 114.68,
+        "timer_samples": 92
+      },
+      "take_start": {
+        "elapsed_ms": 347.5,
+        "gui_timer_max_gap_ms": 76.18,
+        "timer_samples": 16
+      },
+      "take_review": {
+        "elapsed_ms": 2491.96,
+        "gui_timer_max_gap_ms": 676.76,
+        "timer_samples": 81
+      },
+      "take_apply": {
+        "elapsed_ms": 1756.88,
+        "gui_timer_max_gap_ms": 219.93,
+        "timer_samples": 63
+      },
+      "save": {
+        "elapsed_ms": 1075.52,
+        "gui_timer_max_gap_ms": 171.84,
+        "timer_samples": 41
+      },
+      "undo_take": {
+        "elapsed_ms": 1889.82,
+        "gui_timer_max_gap_ms": 58.12,
+        "timer_samples": 110
+      },
+      "redo_take": {
+        "elapsed_ms": 1683.96,
+        "gui_timer_max_gap_ms": 133.93,
+        "timer_samples": 87
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1275.67,
+    "rss_samples": 280,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "after": [
+    {
+      "stages": {
+        "open": {
+          "elapsed_ms": 1552.56,
+          "gui_timer_max_gap_ms": 93.19,
+          "timer_samples": 89
+        },
+        "take_start": {
+          "elapsed_ms": 323.4,
+          "gui_timer_max_gap_ms": 75.12,
+          "timer_samples": 15
+        },
+        "take_review": {
+          "elapsed_ms": 2602.07,
+          "gui_timer_max_gap_ms": 394.24,
+          "timer_samples": 124
+        },
+        "take_apply": {
+          "elapsed_ms": 1920.98,
+          "gui_timer_max_gap_ms": 199.88,
+          "timer_samples": 73
+        },
+        "save": {
+          "elapsed_ms": 1099.08,
+          "gui_timer_max_gap_ms": 175.63,
+          "timer_samples": 42
+        },
+        "undo_take": {
+          "elapsed_ms": 1953.84,
+          "gui_timer_max_gap_ms": 77.43,
+          "timer_samples": 113
+        },
+        "redo_take": {
+          "elapsed_ms": 1573.84,
+          "gui_timer_max_gap_ms": 193.49,
+          "timer_samples": 81
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1270.91,
+      "rss_samples": 283,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "traced": false,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    },
+    {
+      "stages": {
+        "open": {
+          "elapsed_ms": 1587.77,
+          "gui_timer_max_gap_ms": 98.88,
+          "timer_samples": 92
+        },
+        "take_start": {
+          "elapsed_ms": 337.73,
+          "gui_timer_max_gap_ms": 87.63,
+          "timer_samples": 15
+        },
+        "take_review": {
+          "elapsed_ms": 2686.12,
+          "gui_timer_max_gap_ms": 408.21,
+          "timer_samples": 132
+        },
+        "take_apply": {
+          "elapsed_ms": 1916.67,
+          "gui_timer_max_gap_ms": 215.36,
+          "timer_samples": 70
+        },
+        "save": {
+          "elapsed_ms": 1081.24,
+          "gui_timer_max_gap_ms": 157.25,
+          "timer_samples": 43
+        },
+        "undo_take": {
+          "elapsed_ms": 1984.77,
+          "gui_timer_max_gap_ms": 77.74,
+          "timer_samples": 116
+        },
+        "redo_take": {
+          "elapsed_ms": 1584.96,
+          "gui_timer_max_gap_ms": 188.36,
+          "timer_samples": 82
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1289.23,
+      "rss_samples": 289,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "traced": false,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    }
+  ],
+  "trace_before": {
+    "directory": "/private/tmp/structura-preview-trace-before",
+    "result": {
+      "stages": {
+        "open": {
+          "elapsed_ms": 1566.97,
+          "gui_timer_max_gap_ms": 82.33,
+          "timer_samples": 92
+        },
+        "take_start": {
+          "elapsed_ms": 352.25,
+          "gui_timer_max_gap_ms": 65.57,
+          "timer_samples": 16
+        },
+        "take_review": {
+          "elapsed_ms": 2498.96,
+          "gui_timer_max_gap_ms": 665.45,
+          "timer_samples": 81
+        },
+        "take_apply": {
+          "elapsed_ms": 1828.29,
+          "gui_timer_max_gap_ms": 203.57,
+          "timer_samples": 66
+        },
+        "save": {
+          "elapsed_ms": 1097.68,
+          "gui_timer_max_gap_ms": 172.29,
+          "timer_samples": 49
+        },
+        "undo_take": {
+          "elapsed_ms": 1904.58,
+          "gui_timer_max_gap_ms": 64.7,
+          "timer_samples": 109
+        },
+        "redo_take": {
+          "elapsed_ms": 1664.35,
+          "gui_timer_max_gap_ms": 132.53,
+          "timer_samples": 87
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1276.95,
+      "rss_samples": 286,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "traced": true,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    },
+    "review_events_at_least_1ms": [
+      {
+        "name": "gui_gap",
+        "start_ms": 0.0,
+        "elapsed_ms": 44.7341670000001
+      },
+      {
+        "name": "ForkingPickler.dumps",
+        "start_ms": 0.5924580000002955,
+        "elapsed_ms": 25.195999999999774,
+        "cpu_ms": 24.159583,
+        "thread": "Thread-5"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 905.5331670000002,
+        "elapsed_ms": 359.0578750000004
+      },
+      {
+        "name": "ForkingPickler.loads",
+        "start_ms": 911.3436670000001,
+        "elapsed_ms": 222.77741600000044,
+        "cpu_ms": 202.1345,
+        "thread": "Thread-5"
+      },
+      {
+        "name": "gc",
+        "start_ms": 924.4493330000006,
+        "elapsed_ms": 47.11054199999953,
+        "cpu_ms": 40.48012500000001,
+        "thread": "Thread-5",
+        "generation": 2,
+        "collected": 7,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 988.5448330000002,
+        "elapsed_ms": 53.415417000000076,
+        "cpu_ms": 46.865292000000004,
+        "thread": "Thread-5",
+        "generation": 2,
+        "collected": 7,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 1059.2664170000003,
+        "elapsed_ms": 53.685875000000216,
+        "cpu_ms": 53.550792000000015,
+        "thread": "Thread-5",
+        "generation": 2,
+        "collected": 7,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 1125.6436669999998,
+        "elapsed_ms": 1.3414160000007058,
+        "cpu_ms": 1.340916999999997,
+        "thread": "Thread-5",
+        "generation": 0,
+        "collected": 0,
+        "uncollectable": 0
+      },
+      {
+        "name": "EditorDocument.show_preview",
+        "start_ms": 1134.272917,
+        "elapsed_ms": 119.30749999999968,
+        "cpu_ms": 108.01729199999998,
+        "thread": "MainThread"
+      },
+      {
+        "name": "EditSession._check_change",
+        "start_ms": 1134.276167,
+        "elapsed_ms": 119.27924999999995,
+        "cpu_ms": 107.99037499999997,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewRequest.geometry_args",
+        "start_ms": 1256.1541250000005,
+        "elapsed_ms": 655.1090419999994,
+        "cpu_ms": 574.7555,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "EditSession._check_change",
+        "start_ms": 1256.1707920000003,
+        "elapsed_ms": 123.17120799999958,
+        "cpu_ms": 109.284958,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 1264.5910420000007,
+        "elapsed_ms": 665.4506249999991
+      },
+      {
+        "name": "EditSession._apply_cells",
+        "start_ms": 1379.398958,
+        "elapsed_ms": 190.96745900000033,
+        "cpu_ms": 166.18075000000002,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "gc",
+        "start_ms": 1428.633417,
+        "elapsed_ms": 1.9210830000000456,
+        "cpu_ms": 1.9206670000000148,
+        "thread": "Thread-6",
+        "generation": 0,
+        "collected": 0,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 1430.9288749999998,
+        "elapsed_ms": 1.7296670000002123,
+        "cpu_ms": 1.7293750000000052,
+        "thread": "Thread-6",
+        "generation": 1,
+        "collected": 0,
+        "uncollectable": 0
+      },
+      {
+        "name": "ForkingPickler.dumps",
+        "start_ms": 1911.2852080000002,
+        "elapsed_ms": 15.233208999999803,
+        "cpu_ms": 9.504874999999968,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "ForkingPickler.loads",
+        "start_ms": 2057.032,
+        "elapsed_ms": 2.476083000000351,
+        "cpu_ms": 2.4756249999999813,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2072.2778329999996,
+        "elapsed_ms": 6.568042000000496,
+        "cpu_ms": 6.498208000000005,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2085.7682500000005,
+        "elapsed_ms": 8.938541999999217,
+        "cpu_ms": 8.93845800000026,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2101.818083,
+        "elapsed_ms": 16.868084000000394,
+        "cpu_ms": 10.534207999999712,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2126.4704580000002,
+        "elapsed_ms": 8.625249999999696,
+        "cpu_ms": 8.624749999999626,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2142.790667,
+        "elapsed_ms": 8.206165999999904,
+        "cpu_ms": 8.165207999999868,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2167.3172080000004,
+        "elapsed_ms": 7.181624999999414,
+        "cpu_ms": 7.181334000000206,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2181.5195,
+        "elapsed_ms": 7.041333000000094,
+        "cpu_ms": 7.041082999999837,
+        "thread": "MainThread"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 2207.4671670000002,
+        "elapsed_ms": 68.66137499999958
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2207.5061250000003,
+        "elapsed_ms": 14.320582999999942,
+        "cpu_ms": 14.320416999999974,
+        "thread": "MainThread"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 2328.2626250000003,
+        "elapsed_ms": 36.351416999999664
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 2364.6140419999997,
+        "elapsed_ms": 46.01420799999989
+      }
+    ],
+    "gc_totals_by_generation": {
+      "0": {
+        "count": 1260,
+        "elapsed_ms": 20.305449000011855
+      },
+      "1": {
+        "count": 114,
+        "elapsed_ms": 13.33049699999922
+      },
+      "2": {
+        "count": 3,
+        "elapsed_ms": 154.2118339999998
+      }
+    }
+  },
+  "trace_after": {
+    "directory": "/private/tmp/structura-preview-trace-after",
+    "result": {
+      "stages": {
+        "open": {
+          "elapsed_ms": 1562.96,
+          "gui_timer_max_gap_ms": 87.13,
+          "timer_samples": 90
+        },
+        "take_start": {
+          "elapsed_ms": 350.57,
+          "gui_timer_max_gap_ms": 81.06,
+          "timer_samples": 16
+        },
+        "take_review": {
+          "elapsed_ms": 2660.59,
+          "gui_timer_max_gap_ms": 423.7,
+          "timer_samples": 127
+        },
+        "take_apply": {
+          "elapsed_ms": 1915.89,
+          "gui_timer_max_gap_ms": 221.14,
+          "timer_samples": 72
+        },
+        "save": {
+          "elapsed_ms": 1075.59,
+          "gui_timer_max_gap_ms": 180.18,
+          "timer_samples": 40
+        },
+        "undo_take": {
+          "elapsed_ms": 1972.64,
+          "gui_timer_max_gap_ms": 81.67,
+          "timer_samples": 113
+        },
+        "redo_take": {
+          "elapsed_ms": 1591.03,
+          "gui_timer_max_gap_ms": 131.24,
+          "timer_samples": 82
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1273.53,
+      "rss_samples": 294,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "traced": true,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    },
+    "review_events_at_least_1ms": [
+      {
+        "name": "gui_gap",
+        "start_ms": 0.0,
+        "elapsed_ms": 50.471458000000084
+      },
+      {
+        "name": "ForkingPickler.dumps",
+        "start_ms": 0.5515830000000221,
+        "elapsed_ms": 24.311041999999894,
+        "cpu_ms": 23.417624999999997,
+        "thread": "Thread-5"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 908.1356659999997,
+        "elapsed_ms": 416.5463340000004
+      },
+      {
+        "name": "ForkingPickler.loads",
+        "start_ms": 916.8682080000003,
+        "elapsed_ms": 211.40795799999967,
+        "cpu_ms": 196.787291,
+        "thread": "Thread-5"
+      },
+      {
+        "name": "gc",
+        "start_ms": 929.3116660000003,
+        "elapsed_ms": 40.883374999999944,
+        "cpu_ms": 40.627834,
+        "thread": "Thread-5",
+        "generation": 2,
+        "collected": 7,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 994.1721250000004,
+        "elapsed_ms": 47.311915999999954,
+        "cpu_ms": 47.14062500000001,
+        "thread": "Thread-5",
+        "generation": 2,
+        "collected": 7,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 1058.6618330000003,
+        "elapsed_ms": 48.49274999999942,
+        "cpu_ms": 48.431625000000004,
+        "thread": "Thread-5",
+        "generation": 2,
+        "collected": 7,
+        "uncollectable": 0
+      },
+      {
+        "name": "gc",
+        "start_ms": 1120.1720000000003,
+        "elapsed_ms": 1.0292910000000433,
+        "cpu_ms": 1.0292499999999816,
+        "thread": "Thread-5",
+        "generation": 0,
+        "collected": 0,
+        "uncollectable": 0
+      },
+      {
+        "name": "EditorDocument.show_preview",
+        "start_ms": 1129.981666,
+        "elapsed_ms": 121.2544590000002,
+        "cpu_ms": 110.15462499999984,
+        "thread": "MainThread"
+      },
+      {
+        "name": "EditSession._check_change",
+        "start_ms": 1129.9850410000004,
+        "elapsed_ms": 121.22449999999941,
+        "cpu_ms": 110.12554099999994,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ForkingPickler.dumps",
+        "start_ms": 1253.776083,
+        "elapsed_ms": 70.77825000000004,
+        "cpu_ms": 69.863958,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "ForkingPickler.loads",
+        "start_ms": 2187.7369160000003,
+        "elapsed_ms": 39.223541999999334,
+        "cpu_ms": 38.771834000000005,
+        "thread": "Thread-6"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 2207.6736659999997,
+        "elapsed_ms": 35.33987500000002
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2251.6687500000003,
+        "elapsed_ms": 10.286374999999737,
+        "cpu_ms": 10.285416999999963,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2270.1624999999995,
+        "elapsed_ms": 12.729791000000823,
+        "cpu_ms": 6.558916999999997,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2291.672375,
+        "elapsed_ms": 8.653583000000076,
+        "cpu_ms": 8.653500000000314,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2306.0889580000003,
+        "elapsed_ms": 16.63545799999966,
+        "cpu_ms": 10.414749999999806,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2329.0717909999994,
+        "elapsed_ms": 8.310000000000706,
+        "cpu_ms": 8.31012500000039,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2342.8055409999997,
+        "elapsed_ms": 8.08991700000039,
+        "cpu_ms": 8.089916999999947,
+        "thread": "MainThread"
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2363.552791,
+        "elapsed_ms": 7.910333999999963,
+        "cpu_ms": 7.838958999999868,
+        "thread": "MainThread"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 2377.3690409999995,
+        "elapsed_ms": 54.98212500000044
+      },
+      {
+        "name": "ViewPipeline._install_next",
+        "start_ms": 2377.380125,
+        "elapsed_ms": 11.56745800000003,
+        "cpu_ms": 11.567541999999875,
+        "thread": "MainThread"
+      },
+      {
+        "name": "gui_gap",
+        "start_ms": 2497.658208,
+        "elapsed_ms": 59.36420799999986
+      }
+    ],
+    "gc_totals_by_generation": {
+      "0": {
+        "count": 1133,
+        "elapsed_ms": 13.430380999991609
+      },
+      "1": {
+        "count": 103,
+        "elapsed_ms": 12.099127000001708
+      },
+      "2": {
+        "count": 3,
+        "elapsed_ms": 136.68804099999932
+      }
+    }
+  },
+  "cprofile_directory": "/private/tmp/structura-preview-profile-before",
+  "checks": {
+    "pytest_core_edit_qem": "953 passed, 21 warnings, 42.65 s",
+    "ruff": "passed",
+    "diff_check": "passed",
+    "framebuffer": "/private/tmp/structura-preview-after-2/scene.png visually inspected",
+    "visible_building": "Stopped own smoke at draft recovery dialog; Computer Use confirmed locked Mac",
+    "offscreen_building": "passed; Qt dialogs controlled by test, off-screen VTK"
+  },
+  "building": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1188.12,
+        "gui_timer_max_gap_ms": 85.97,
+        "timer_samples": 70
+      },
+      "cancel_tools": {
+        "elapsed_ms": 1929.87,
+        "gui_timer_max_gap_ms": 165.48,
+        "timer_samples": 110
+      },
+      "wall_select": {
+        "elapsed_ms": 21.35,
+        "gui_timer_max_gap_ms": 21.37,
+        "timer_samples": 0
+      },
+      "wall_preview": {
+        "elapsed_ms": 249.74,
+        "gui_timer_max_gap_ms": 29.94,
+        "timer_samples": 15
+      },
+      "wall_apply": {
+        "elapsed_ms": 30.55,
+        "gui_timer_max_gap_ms": 30.35,
+        "timer_samples": 1
+      },
+      "floors_preview": {
+        "elapsed_ms": 602.26,
+        "gui_timer_max_gap_ms": 51.77,
+        "timer_samples": 32
+      },
+      "floors_apply": {
+        "elapsed_ms": 279.03,
+        "gui_timer_max_gap_ms": 25.54,
+        "timer_samples": 16
+      },
+      "take_start": {
+        "elapsed_ms": 190.85,
+        "gui_timer_max_gap_ms": 64.2,
+        "timer_samples": 8
+      },
+      "take_review": {
+        "elapsed_ms": 849.5,
+        "gui_timer_max_gap_ms": 109.59,
+        "timer_samples": 45
+      },
+      "take_apply": {
+        "elapsed_ms": 543.88,
+        "gui_timer_max_gap_ms": 79.31,
+        "timer_samples": 29
+      },
+      "save": {
+        "elapsed_ms": 320.25,
+        "gui_timer_max_gap_ms": 30.52,
+        "timer_samples": 19
+      },
+      "undo_take": {
+        "elapsed_ms": 568.0,
+        "gui_timer_max_gap_ms": 46.4,
+        "timer_samples": 33
+      },
+      "draft_save": {
+        "elapsed_ms": 212.28,
+        "gui_timer_max_gap_ms": 19.42,
+        "timer_samples": 13
+      },
+      "draft_recover": {
+        "elapsed_ms": 590.79,
+        "gui_timer_max_gap_ms": 58.32,
+        "timer_samples": 28
+      },
+      "recovered_save": {
+        "elapsed_ms": 296.82,
+        "gui_timer_max_gap_ms": 53.52,
+        "timer_samples": 16
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 851.66,
+    "rss_samples": 211,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "viewport": [
+      1104,
+      628
+    ],
+    "visible": false,
+    "assertions": "Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save"
+  },
+  "build": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "7358bcd2256ac51e0c6b7bbf7d432b0f37de13cea4c8c2dba6e75a54f43107f8",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "5e3b9e5222052f90b04b7a8dbde2df6b7459d62a52af20d40ffb2bb7ec1461ed",
+      "structura_render-0.8.1-py3-none-any.whl": "c3faf05db2cea1143e920d343f07910fa7d3a11ec5e4351d7df27bfbc2b56a55",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "1b1d611bda916270b0184a3fff838929cd9446ae0e8d728fd4c9b18d01005b5e"
+    }
+  },
+  "installation_check": {
+    "frozen": true,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.7368905000000012,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  },
+  "map_cut_audit": {
+    "origin": [
+      0,
+      0,
+      0
+    ],
+    "size": [
+      16,
+      4,
+      32
+    ],
+    "loaded_chunks": [
+      [
+        0,
+        0
+      ]
+    ],
+    "cut": [
+      15,
+      3,
+      15
+    ],
+    "view": "south",
+    "slab": "south:0:16",
+    "actual_known_pixels": 0,
+    "expected_known_pixels": 64,
+    "status": "reproduced; correction scheduled in next-priorities-2026-09-11.md"
+  }
+}

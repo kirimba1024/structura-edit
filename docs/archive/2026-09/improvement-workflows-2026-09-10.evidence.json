@@ -1,0 +1,191 @@
+{
+  "date": "2026-09-10",
+  "scope": "Wall editing, floor repetition, Take, Save/Undo and local draft recovery",
+  "pytest": {
+    "passed": 782,
+    "warnings": 19,
+    "seconds": 17.83,
+    "paths": [
+      "libs/structura-edit/tests",
+      "libs/structura-core/tests"
+    ]
+  },
+  "ruff": "passed",
+  "diff_check": "passed",
+  "native_runs": [
+    {
+      "name": "smoke_building_workflow",
+      "exit_code": 0,
+      "seconds": 22.29
+    },
+    {
+      "name": "smoke_improvements",
+      "exit_code": 0,
+      "seconds": 8.5
+    },
+    {
+      "name": "smoke_placement_tools",
+      "exit_code": 0,
+      "seconds": 12.25
+    },
+    {
+      "name": "smoke_destination_rules",
+      "exit_code": 0,
+      "seconds": 13.85
+    },
+    {
+      "name": "smoke_world_edit",
+      "exit_code": 0,
+      "seconds": 8.82
+    },
+    {
+      "name": "smoke_backup",
+      "exit_code": 0,
+      "seconds": 5.5
+    }
+  ],
+  "paint_benchmark": {
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "wall": [
+      512,
+      512,
+      1
+    ],
+    "radius": 1,
+    "results": {
+      "bounding_box_before": {
+        "samples": 9,
+        "p50_ms": 529.61,
+        "p95_ms": 537.35,
+        "candidates": 262153,
+        "changed": 1534,
+        "python_retained_mib": 0.91,
+        "python_peak_mib": 1.06
+      },
+      "tube_after": {
+        "samples": 9,
+        "p50_ms": 14.87,
+        "p95_ms": 17.33,
+        "candidates": 2558,
+        "changed": 1534,
+        "python_retained_mib": 0.951,
+        "python_peak_mib": 1.101
+      }
+    },
+    "process_peak_rss_bytes": 105791488,
+    "memory_scope": "Separate tracemalloc pass after fixture creation; excludes native allocations and existing document"
+  },
+  "building_gui": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1970.49,
+        "gui_timer_max_gap_ms": 85.46,
+        "timer_samples": 118
+      },
+      "cancel_tools": {
+        "elapsed_ms": 1873.73,
+        "gui_timer_max_gap_ms": 53.73,
+        "timer_samples": 107
+      },
+      "wall_select": {
+        "elapsed_ms": 27.65,
+        "gui_timer_max_gap_ms": 27.66,
+        "timer_samples": 1
+      },
+      "wall_preview": {
+        "elapsed_ms": 765.25,
+        "gui_timer_max_gap_ms": 44.15,
+        "timer_samples": 43
+      },
+      "wall_apply": {
+        "elapsed_ms": 90.75,
+        "gui_timer_max_gap_ms": 23.98,
+        "timer_samples": 5
+      },
+      "floors_preview": {
+        "elapsed_ms": 2073.26,
+        "gui_timer_max_gap_ms": 65.89,
+        "timer_samples": 110
+      },
+      "floors_apply": {
+        "elapsed_ms": 791.03,
+        "gui_timer_max_gap_ms": 74.83,
+        "timer_samples": 43
+      },
+      "take_start": {
+        "elapsed_ms": 563.08,
+        "gui_timer_max_gap_ms": 60.23,
+        "timer_samples": 31
+      },
+      "take_review": {
+        "elapsed_ms": 2818.93,
+        "gui_timer_max_gap_ms": 104.76,
+        "timer_samples": 140
+      },
+      "take_apply": {
+        "elapsed_ms": 2069.67,
+        "gui_timer_max_gap_ms": 139.0,
+        "timer_samples": 116
+      },
+      "save": {
+        "elapsed_ms": 1048.69,
+        "gui_timer_max_gap_ms": 108.97,
+        "timer_samples": 56
+      },
+      "undo_take": {
+        "elapsed_ms": 2418.51,
+        "gui_timer_max_gap_ms": 104.13,
+        "timer_samples": 137
+      },
+      "draft_save": {
+        "elapsed_ms": 297.53,
+        "gui_timer_max_gap_ms": 45.69,
+        "timer_samples": 16
+      },
+      "draft_recover": {
+        "elapsed_ms": 1843.21,
+        "gui_timer_max_gap_ms": 92.09,
+        "timer_samples": 99
+      },
+      "recovered_save": {
+        "elapsed_ms": 606.28,
+        "gui_timer_max_gap_ms": 69.29,
+        "timer_samples": 33
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 910.33,
+    "rss_samples": 391,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "viewport": [
+      1104,
+      660
+    ],
+    "visible": true,
+    "assertions": "Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save"
+  },
+  "regressions_reproduced_before_fixes": [
+    "Planar exit left the calculation running and accepted its late response",
+    "Paint exit left the calculation running and accepted its late preview",
+    "A thin 256-block diagonal exceeded the sampling budget with only two samples",
+    "Recovered save() silently overwrote a changed source",
+    "Recovered save() silently recreated a missing source"
+  ],
+  "source_sha256": {
+    "src/structura_edit/paint.py": "5efbf14f8ca5f2a6fb8077a7706df3a1c512469d6668d0c9faa8a8282e202836",
+    "src/structura_edit/paint_ui.py": "341811b19efaf7f70f9726a91831a7ef1943730c269a67102f5ec798bb6828b1",
+    "src/structura_edit/planar_ui.py": "4e163bc2b1e3521bc20616c2b8c6d5e66ccc4abbe9aa4542322482c24beddf83",
+    "src/structura_edit/session.py": "84d494e2737a197e72df8e2bb5ab29fb9e747f21284a8687043f638298f10027",
+    "src/structura_edit/drafts.py": "81c8b397efb1a4c2b993bd6603a1cfb2e159be42ad55c1a5f36d31521902beed",
+    "tests/building_fixture.py": "84243157f771b1a3cfe434d5c95672d48963260c735b4f0e82f28a6e642bc109",
+    "tests/benchmark_paint.py": "c86d5b762fc66712438f0b399ec948236232c2166fa8771de391e8e273a93007",
+    "tests/smoke_building_workflow.py": "9a2cbaf6f32619c586dc19073d994d421bcd65f403820bcae748002b3d2ab412"
+  },
+  "data_safety": "Generated schematic fixtures and temporary worlds only; no personal world writes; existing workspace edits preserved",
+  "limitations": [
+    "No physical trackpad check",
+    "Synthetic building rather than a user study",
+    "Sampled RSS sum can double-count shared pages",
+    "GUI event-loop gaps remain; paint timings exclude rendering"
+  ]
+}

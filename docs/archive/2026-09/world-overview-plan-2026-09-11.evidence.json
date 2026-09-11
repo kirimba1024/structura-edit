@@ -1,0 +1,144 @@
+{
+  "date": "2026-09-11",
+  "kind": "current_implementation_baseline_not_lod_results",
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.9.6"
+  },
+  "source": {
+    "structura-core": {
+      "head": "5418cd4e5260bdd7cc4acf17ed54a8f2b9ecb28b",
+      "working_tree_has_preexisting_changes": true,
+      "python_sources_sha256": "84a0eb6cadb52936abde7c23dad8a27f9917c4d7b129074bda3f1c59c3e51d20"
+    },
+    "structura-render": {
+      "head": "abecc09668311dc91b97699911efdc90804f9e5f",
+      "working_tree_has_preexisting_changes": true,
+      "python_sources_sha256": "2aaa4eb4ca3190cf04bac6504d0f46e201c6d20bfeb00c687c67b508d6a4b217"
+    },
+    "structura-edit": {
+      "head": "99d7154497f39afbf927b382855fba9a5c4c1d7a",
+      "working_tree_has_preexisting_changes": true,
+      "python_sources_sha256": "39716bc6731233d82d2c3b2bb176dbf4d5dbdef1b81360890c880beac5ff35d0"
+    }
+  },
+  "method": {
+    "benchmark": "libs/structura-edit/tests/benchmark_world.py",
+    "world_label": "A",
+    "world_used": "temporary_copy",
+    "visible_native_qt": true,
+    "runs_per_radius": 1,
+    "flight_seconds": 3,
+    "profile_enabled": false,
+    "resource_pack_hash_recorded": false,
+    "notes": [
+      "Source was copied before benchmarking; no optimization gains are claimed.",
+      "RSS is GUI plus worker at the end of each stage, not peak unique physical memory.",
+      "fps counts completed renders and does not measure physical display refresh.",
+      "Source files match the saved pre-experiment source snapshot."
+    ]
+  },
+  "inventory": {
+    "dimension": "minecraft:overworld",
+    "method": "region location headers, read only",
+    "region_files": 4,
+    "existing_chunk_columns": 2601,
+    "per_region": {
+      "r.-1.-1.mca": 625,
+      "r.-1.0.mca": 650,
+      "r.0.-1.mca": 650,
+      "r.0.0.mca": 676
+    }
+  },
+  "runs": [
+    {
+      "radius": 6,
+      "visible": true,
+      "stages": {
+        "open": {
+          "seconds": 6.254397917,
+          "heartbeat_ms_p95": 18.396507999999923,
+          "heartbeat_ms_max": 122.87929100000028,
+          "rss_gui_worker_bytes": 1673658368
+        },
+        "refresh": {
+          "seconds": 5.480602917000001,
+          "heartbeat_ms_p95": 19.203287599999815,
+          "heartbeat_ms_max": 116.793165999999,
+          "rss_gui_worker_bytes": 2004205568
+        },
+        "refresh_again": {
+          "seconds": 2.7027618330000003,
+          "heartbeat_ms_p95": 24.184920850000093,
+          "heartbeat_ms_max": 115.5569579999991,
+          "rss_gui_worker_bytes": 2111586304
+        },
+        "save": {
+          "seconds": 1.7740048749999993,
+          "heartbeat_ms_p95": 69.29279199999883,
+          "heartbeat_ms_max": 115.43625000000013,
+          "rss_gui_worker_bytes": 2283225088
+        }
+      },
+      "blocks": 1068043,
+      "flight": {
+        "frames": 271,
+        "fps": 85.9686665619764,
+        "frame_ms_p95": 16.53185829999977,
+        "render_ms_mean": 8.37476631734318,
+        "render_ms_p95": 8.926708499998881,
+        "viewport": [
+          2760,
+          1602
+        ],
+        "actors": 183,
+        "geometry_bytes": 43829819
+      }
+    },
+    {
+      "radius": 8,
+      "visible": true,
+      "stages": {
+        "open": {
+          "seconds": 10.03806475,
+          "heartbeat_ms_p95": 18.699510800000585,
+          "heartbeat_ms_max": 215.28020899999945,
+          "rss_gui_worker_bytes": 2322546688
+        },
+        "refresh": {
+          "seconds": 9.94911125,
+          "heartbeat_ms_p95": 22.7434831999993,
+          "heartbeat_ms_max": 241.28762500000178,
+          "rss_gui_worker_bytes": 2501623808
+        },
+        "refresh_again": {
+          "seconds": 5.031370250000002,
+          "heartbeat_ms_p95": 21.639002650000943,
+          "heartbeat_ms_max": 228.8338749999994,
+          "rss_gui_worker_bytes": 2926755840
+        },
+        "save": {
+          "seconds": 3.3670529160000022,
+          "heartbeat_ms_p95": 70.38120820000047,
+          "heartbeat_ms_max": 263.02120799999784,
+          "rss_gui_worker_bytes": 3191963648
+        }
+      },
+      "blocks": 1887782,
+      "flight": {
+        "frames": 125,
+        "fps": 40.25942981770835,
+        "frame_ms_p95": 82.1858043999967,
+        "render_ms_mean": 14.740982039999977,
+        "render_ms_p95": 43.14978300000334,
+        "viewport": [
+          2760,
+          1602
+        ],
+        "actors": 310,
+        "geometry_bytes": 73446471
+      }
+    }
+  ]
+}

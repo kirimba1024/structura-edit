@@ -1,0 +1,198 @@
+{
+  "gui-before-event-r3": {
+    "radius": 3,
+    "seconds": {
+      "open": 7.056819083000001,
+      "refresh": 4.960181875,
+      "refresh_again": 4.9758250419999985,
+      "save": 2.1654509579999974
+    },
+    "blocks": 323779
+  },
+  "gui-after-event-r3": {
+    "radius": 3,
+    "seconds": {
+      "open": 6.220251125,
+      "refresh": 4.145443334000001,
+      "refresh_again": 4.0483435839999995,
+      "save": 0.8404115829999981
+    },
+    "blocks": 323779
+  },
+  "final-r6": {
+    "radius": 6,
+    "visible": true,
+    "stages": {
+      "open": {
+        "seconds": 9.499816583000001,
+        "heartbeat_ms_p95": 21.05039180000041,
+        "heartbeat_ms_max": 128.6991670000006,
+        "rss_gui_worker_bytes": 1870430208
+      },
+      "refresh": {
+        "seconds": 14.466557333,
+        "heartbeat_ms_p95": 29.644333000000422,
+        "heartbeat_ms_max": 237.82733299999848,
+        "rss_gui_worker_bytes": 1988902912
+      },
+      "refresh_again": {
+        "seconds": 2.932221833,
+        "heartbeat_ms_p95": 26.886533450000783,
+        "heartbeat_ms_max": 138.57683299999835,
+        "rss_gui_worker_bytes": 2216837120
+      },
+      "save": {
+        "seconds": 1.893641542000001,
+        "heartbeat_ms_p95": 75.11260624999838,
+        "heartbeat_ms_max": 120.72441699999814,
+        "rss_gui_worker_bytes": 2373042176
+      }
+    },
+    "blocks": 1068043,
+    "flight": {
+      "frames": 75,
+      "fps": 23.594965323007152,
+      "frame_ms_p95": 132.06787729999832,
+      "render_ms_mean": 30.49517336000013,
+      "render_ms_p95": 91.23102919999937,
+      "viewport": [
+        2760,
+        1602
+      ],
+      "actors": 854,
+      "geometry_bytes": 50095419
+    }
+  },
+  "grouped-r6": {
+    "radius": 6,
+    "visible": true,
+    "stages": {
+      "open": {
+        "seconds": 6.353727416,
+        "heartbeat_ms_p95": 19.145843750000182,
+        "heartbeat_ms_max": 123.32033300000056,
+        "rss_gui_worker_bytes": 1674018816
+      },
+      "refresh": {
+        "seconds": 5.636764875000001,
+        "heartbeat_ms_p95": 19.52060829999862,
+        "heartbeat_ms_max": 131.4062079999996,
+        "rss_gui_worker_bytes": 2003255296
+      },
+      "refresh_again": {
+        "seconds": 2.7340364580000003,
+        "heartbeat_ms_p95": 27.331383949999523,
+        "heartbeat_ms_max": 119.1785000000003,
+        "rss_gui_worker_bytes": 2109915136
+      },
+      "save": {
+        "seconds": 1.8264864999999997,
+        "heartbeat_ms_p95": 81.55441250000102,
+        "heartbeat_ms_max": 124.63829199999665,
+        "rss_gui_worker_bytes": 2280783872
+      }
+    },
+    "blocks": 1068043,
+    "flight": {
+      "frames": 239,
+      "fps": 80.48387378353212,
+      "frame_ms_p95": 16.77098559999823,
+      "render_ms_mean": 8.796133907949747,
+      "render_ms_p95": 10.763738100002485,
+      "viewport": [
+        2760,
+        1602
+      ],
+      "actors": 183,
+      "geometry_bytes": 43829819
+    }
+  },
+  "grouped-r8": {
+    "radius": 8,
+    "visible": true,
+    "stages": {
+      "open": {
+        "seconds": 10.226224667,
+        "heartbeat_ms_p95": 18.929157850000088,
+        "heartbeat_ms_max": 218.14270800000025,
+        "rss_gui_worker_bytes": 2326708224
+      },
+      "refresh": {
+        "seconds": 10.113473833999999,
+        "heartbeat_ms_p95": 21.884491350000573,
+        "heartbeat_ms_max": 206.62679200000156,
+        "rss_gui_worker_bytes": 2513240064
+      },
+      "refresh_again": {
+        "seconds": 5.083250166999999,
+        "heartbeat_ms_p95": 22.35279199999951,
+        "heartbeat_ms_max": 267.47754200000173,
+        "rss_gui_worker_bytes": 2933293056
+      },
+      "save": {
+        "seconds": 3.417090292000001,
+        "heartbeat_ms_p95": 85.64266249999868,
+        "heartbeat_ms_max": 269.824584000002,
+        "rss_gui_worker_bytes": 3194322944
+      }
+    },
+    "blocks": 1887782,
+    "flight": {
+      "frames": 91,
+      "fps": 29.46174457217672,
+      "frame_ms_p95": 90.04328125,
+      "render_ms_mean": 19.116538032967046,
+      "render_ms_p95": 46.70937499999894,
+      "viewport": [
+        2760,
+        1602
+      ],
+      "actors": 310,
+      "geometry_bytes": 73446471
+    }
+  },
+  "large-r8": {
+    "radius": 8,
+    "visible": true,
+    "stages": {
+      "open": {
+        "seconds": 11.793378083,
+        "heartbeat_ms_p95": 17.645853599999572,
+        "heartbeat_ms_max": 217.27212499999916,
+        "rss_gui_worker_bytes": 2239692800
+      },
+      "refresh": {
+        "seconds": 11.416838916,
+        "heartbeat_ms_p95": 17.33899999999977,
+        "heartbeat_ms_max": 235.89029200000056,
+        "rss_gui_worker_bytes": 2711453696
+      },
+      "refresh_again": {
+        "seconds": 7.401822834000001,
+        "heartbeat_ms_p95": 17.999256299998116,
+        "heartbeat_ms_max": 214.16937500000088,
+        "rss_gui_worker_bytes": 2893692928
+      },
+      "save": {
+        "seconds": 11.206086666999997,
+        "heartbeat_ms_p95": 108.85780799999617,
+        "heartbeat_ms_max": 1495.5631660000001,
+        "rss_gui_worker_bytes": 2938077184
+      }
+    },
+    "blocks": 1887782,
+    "flight": {
+      "frames": 44,
+      "fps": 15.32067668099681,
+      "frame_ms_p95": 83.80003720000316,
+      "render_ms_mean": 28.40932009090932,
+      "render_ms_p95": 30.213758100002153,
+      "viewport": [
+        2760,
+        1602
+      ],
+      "actors": 74,
+      "geometry_bytes": 70432743
+    }
+  }
+}

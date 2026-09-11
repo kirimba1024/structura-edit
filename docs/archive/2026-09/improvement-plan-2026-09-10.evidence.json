@@ -1,0 +1,111 @@
+{
+  "date": "2026-09-10",
+  "purpose": "Evidence for an improvement plan; no application code was modified.",
+  "revisions": {
+    "edit": "99d7154497f39afbf927b382855fba9a5c4c1d7a",
+    "core": "5418cd4e5260bdd7cc4acf17ed54a8f2b9ecb28b",
+    "source_audits_edit": "c970996696091da95ad2ea104e5b92255dc9082f",
+    "source_audits_core": "34f477e05394d3e96e432efc246cce432deef825"
+  },
+  "tests": {
+    "command": ".venv-edit/bin/python -m pytest -q libs/structura-edit/tests/test_cell_set.py libs/structura-edit/tests/test_cell_session.py libs/structura-edit/tests/test_condition.py libs/structura-edit/tests/test_mix.py libs/structura-edit/tests/test_connected.py libs/structura-edit/tests/test_shapes.py libs/structura-edit/tests/test_restore.py libs/structura-edit/tests/test_edit_workflow.py",
+    "result": "68 passed in 0.65s",
+    "exit_code": 0,
+    "environment": "macOS, .venv-edit, outside sandbox to initialize native Qt",
+    "first_attempt": "Sandbox run aborted while importing Qt after 54 progress dots; not counted as a successful run."
+  },
+  "probes": {
+    "history_branching": {
+      "iterations": 100,
+      "reachable_entries": 1,
+      "sqlite_rows": 100,
+      "cache_entries": 100
+    },
+    "unsaved_after_save": {
+      "dirty": false,
+      "summary": "1 unsaved changes: 1 changed"
+    },
+    "unsaved_after_save_then_undo": {
+      "dirty": true,
+      "summary": "0 unsaved changes",
+      "disk_block": "minecraft:gold_block",
+      "local_block": "minecraft:stone"
+    },
+    "partial_world_install": {
+      "a": "new-a.dat",
+      "b": "old-b.dat",
+      "installed": [
+        "a.dat"
+      ]
+    },
+    "restore_created_file": {
+      "backup_verifies": true,
+      "before_hash": null,
+      "error_type": "OSError",
+      "cause_type": "FileNotFoundError",
+      "created_file_still_exists": true
+    },
+    "clipboard_version_check": {
+      "source": 3955,
+      "destination": 2865,
+      "plan_accepted": true,
+      "changed_cells": 2
+    }
+  },
+  "probe_method": {
+    "runtime": ".venv-edit/bin/python",
+    "filesystem_scope": "TemporaryDirectory under /private/tmp; synthetic files only; temporary fixture directories were removed on completion.",
+    "history_branching": "Construct a real one-cell ChangeSet. On a real History instance repeat cursor=0; append(change) 100 times. Inspect entries, SQLite SELECT count(*) and _cache.",
+    "unsaved_after_save": "EditSession.from_structure with DataVersion 3955, size [2,1,1], stone at [0,0,0]. Set it to gold, apply, save NBT, compare dirty with changes_view.summary(unsaved_changes(session)); undo and compare with a separately reopened saved file.",
+    "partial_world_install": "Real StagedWorld with two synthetic .dat text files. Stage new contents through file(), mark changed, inject OSError on os.replace for b.dat. Inspect both files and backup manifest.",
+    "restore_created_file": "Real StagedWorld with a previously absent new.dat. Install, verify backup and restore. Inspect before hash, exception cause and existence of the newly created target.",
+    "clipboard_version_check": "Copy a real DataVersion 3955 EditSession selection and paste into DataVersion 2865 at [0,0,0], include_air=True. This only proves acceptance without a version gate, not corruption."
+  },
+  "smoothing": {
+    "command": ".venv-edit/bin/python /Users/kirimba/Downloads/voxel_smoothing_checks.py",
+    "result": {
+      "scope": "synthetic test only; no Structura or Minecraft files accessed",
+      "numpy_version": "1.26.4",
+      "scipy_version": "1.13.1",
+      "domain": [
+        32,
+        32,
+        32
+      ],
+      "occupied_cube": [
+        16,
+        16,
+        16
+      ],
+      "sigma": 2,
+      "kernel_radius": 8,
+      "original_count": 4096,
+      "float_blur_then_threshold_count": 3576,
+      "lost_blocks_at_threshold_0_5": 520,
+      "uint8_blur_then_threshold_count": 0,
+      "top_k_count": 4096,
+      "max_error_without_halo": 0.7841549515724182,
+      "max_error_with_halo": 0,
+      "binary_disagreements_without_halo": 1336,
+      "checks_passed": true
+    }
+  },
+  "contrast": {
+    "method": "Linearized sRGB relative luminance; (lighter+0.05)/(darker+0.05)",
+    "white_on_accent": 2.9834,
+    "text_on_panel": 10.2837
+  },
+  "limitations": [
+    "No complete pytest suite or full native GUI workflow was run.",
+    "No real Minecraft world was written or corruption demonstrated.",
+    "No physical trackpad or accessibility evaluation was performed.",
+    "No broad performance benchmark or user study was performed.",
+    "Other findings in the plan are explicitly static observations or proposals."
+  ],
+  "primary_sources": [
+    "https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter.html",
+    "https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.distance_transform_edt.html",
+    "https://www.minecraft.net/en-us/article/minecraft-java-edition-26-1",
+    "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+  ]
+}

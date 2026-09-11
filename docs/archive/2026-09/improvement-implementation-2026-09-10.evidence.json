@@ -1,0 +1,90 @@
+{
+  "date": "2026-09-10",
+  "pytest": {
+    "summary": "750 passed, 19 warnings in 8.60s",
+    "command": "AMULET_LEVEL_CACHE_DIR=/private/tmp/structura-amulet-cache STRUCTURA_EDIT_DATA=/private/tmp/structura-implementation-data .venv-edit/bin/python -m pytest -q libs/structura-edit/tests libs/structura-core/tests"
+  },
+  "ruff": "passed: core/src, core/tests, edit/src, edit/tests",
+  "diff_check": "passed: workspace, core, edit",
+  "native_smokes": [
+    {
+      "name": "smoke_world_edit",
+      "exit": 0,
+      "seconds": 9.06
+    },
+    {
+      "name": "smoke_placement",
+      "exit": 0,
+      "seconds": 12.15
+    },
+    {
+      "name": "smoke_destination_rules",
+      "exit": 0,
+      "seconds": 13.49
+    },
+    {
+      "name": "smoke_placement_tools",
+      "exit": 0,
+      "seconds": 12.2
+    },
+    {
+      "name": "smoke_clipboard_entities",
+      "exit": 0,
+      "seconds": 10.49
+    },
+    {
+      "name": "smoke_gui",
+      "exit": 0,
+      "seconds": 41.19
+    },
+    {
+      "name": "smoke_backup",
+      "exit": 0,
+      "seconds": 5.43
+    },
+    {
+      "name": "smoke_improvements",
+      "exit": 0,
+      "seconds": 8.33
+    }
+  ],
+  "improvements_smoke": {
+    "planar": 35,
+    "extrude": 70,
+    "frame": 28,
+    "paste": "Review → Place",
+    "paint": "Focus loss cancels; one stroke, one Undo",
+    "draft": "Recovered without writing source",
+    "library": "Named fragment with tags, thumbnail and anchor placed",
+    "catalog": 1062
+  },
+  "measurements": {
+    "history_serialization": [
+      {
+        "case": "blocks",
+        "cells": 50000,
+        "nbt_chars_each": 0,
+        "retained_bytes": 27800554,
+        "pickle_bytes": 3850546,
+        "compressed_bytes": 128618,
+        "additional_python_peak_bytes": 29203501,
+        "seconds": 0.1069
+      },
+      {
+        "case": "nbt",
+        "cells": 2000,
+        "nbt_chars_each": 4096,
+        "retained_bytes": 9743464,
+        "pickle_bytes": 8424076,
+        "compressed_bytes": 56778,
+        "additional_python_peak_bytes": 10507176,
+        "seconds": 0.0122
+      }
+    ],
+    "white_on_accent_contrast": 4.9792,
+    "base_import_loaded_qt_or_vtk": false,
+    "python": "3.9.6 (default, May 22 2026, 11:13:45) \n[Clang 21.0.0 (clang-2100.1.1.101)]"
+  },
+  "verified_environment": "Current workspace; macOS native Qt. Fault injection and synthetic worlds. No physical trackpad, real power cut, live Minecraft, clean package install or other OS validation.",
+  "committed": false
+}

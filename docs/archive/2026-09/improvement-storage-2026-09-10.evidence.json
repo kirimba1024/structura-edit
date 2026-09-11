@@ -1,0 +1,318 @@
+{
+  "environment": {
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "baseline": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 5292.15,
+        "gui_timer_max_gap_ms": 163.96,
+        "timer_samples": 299
+      },
+      "take_start": {
+        "elapsed_ms": 2727.42,
+        "gui_timer_max_gap_ms": 123.76,
+        "timer_samples": 149
+      },
+      "take_review": {
+        "elapsed_ms": 12003.13,
+        "gui_timer_max_gap_ms": 320.75,
+        "timer_samples": 549
+      },
+      "take_apply": {
+        "elapsed_ms": 7677.46,
+        "gui_timer_max_gap_ms": 405.19,
+        "timer_samples": 412
+      },
+      "save": {
+        "elapsed_ms": 6150.71,
+        "gui_timer_max_gap_ms": 317.06,
+        "timer_samples": 322
+      },
+      "undo_take": {
+        "elapsed_ms": 10955.9,
+        "gui_timer_max_gap_ms": 834.91,
+        "timer_samples": 574
+      },
+      "redo_take": {
+        "elapsed_ms": 10711.21,
+        "gui_timer_max_gap_ms": 396.29,
+        "timer_samples": 560
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 1658.7,
+    "rss_samples": 1032,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "floors": 24,
+    "source_size": [
+      32,
+      144,
+      24
+    ],
+    "source_blocks": 28800,
+    "changed_cells": 57625,
+    "visible": true,
+    "profiled": false,
+    "viewport": [
+      1104,
+      660
+    ],
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+  },
+  "after": [
+    {
+      "stages": {
+        "open": {
+          "elapsed_ms": 4661.78,
+          "gui_timer_max_gap_ms": 126.45,
+          "timer_samples": 270
+        },
+        "take_start": {
+          "elapsed_ms": 2391.44,
+          "gui_timer_max_gap_ms": 89.6,
+          "timer_samples": 138
+        },
+        "take_review": {
+          "elapsed_ms": 8406.97,
+          "gui_timer_max_gap_ms": 322.81,
+          "timer_samples": 394
+        },
+        "take_apply": {
+          "elapsed_ms": 5958.96,
+          "gui_timer_max_gap_ms": 577.86,
+          "timer_samples": 318
+        },
+        "save": {
+          "elapsed_ms": 4018.18,
+          "gui_timer_max_gap_ms": 199.56,
+          "timer_samples": 218
+        },
+        "undo_take": {
+          "elapsed_ms": 8705.65,
+          "gui_timer_max_gap_ms": 534.35,
+          "timer_samples": 472
+        },
+        "redo_take": {
+          "elapsed_ms": 7776.65,
+          "gui_timer_max_gap_ms": 461.42,
+          "timer_samples": 416
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1396.39,
+      "rss_samples": 769,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    },
+    {
+      "stages": {
+        "open": {
+          "elapsed_ms": 4186.65,
+          "gui_timer_max_gap_ms": 142.2,
+          "timer_samples": 243
+        },
+        "take_start": {
+          "elapsed_ms": 2497.23,
+          "gui_timer_max_gap_ms": 77.5,
+          "timer_samples": 142
+        },
+        "take_review": {
+          "elapsed_ms": 9298.08,
+          "gui_timer_max_gap_ms": 337.35,
+          "timer_samples": 437
+        },
+        "take_apply": {
+          "elapsed_ms": 6073.8,
+          "gui_timer_max_gap_ms": 246.71,
+          "timer_samples": 327
+        },
+        "save": {
+          "elapsed_ms": 4049.68,
+          "gui_timer_max_gap_ms": 293.68,
+          "timer_samples": 216
+        },
+        "undo_take": {
+          "elapsed_ms": 8828.19,
+          "gui_timer_max_gap_ms": 508.17,
+          "timer_samples": 475
+        },
+        "redo_take": {
+          "elapsed_ms": 7925.92,
+          "gui_timer_max_gap_ms": 395.63,
+          "timer_samples": 413
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1445.36,
+      "rss_samples": 798,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    }
+  ],
+  "logs": [
+    "structura-edit-baseline",
+    "structura-edit-compact-after",
+    "structura-edit-compact-repeat"
+  ],
+  "profiling": {
+    "main_thread": "/private/tmp/structura-edit-profile-before",
+    "exchange_thread": "/private/tmp/structura-edit-exchange-profile"
+  },
+  "scope": "Synthetic fixture; RSS includes validation and fixture objects. One baseline and two after runs, not a statistical latency bound.",
+  "checks": {
+    "pytest": {
+      "passed": 787,
+      "warnings": 19,
+      "elapsed_seconds": 16.77,
+      "log": "/private/tmp/structura-storage-pytest.log"
+    },
+    "ruff": "passed",
+    "diff_check": "passed",
+    "smoke": {
+      "building_workflow": {
+        "log": "/private/tmp/structura-storage-building.log",
+        "result": {
+          "stages": {
+            "open": {
+              "elapsed_ms": 2134.1,
+              "gui_timer_max_gap_ms": 90.46,
+              "timer_samples": 125
+            },
+            "cancel_tools": {
+              "elapsed_ms": 1900.93,
+              "gui_timer_max_gap_ms": 46.48,
+              "timer_samples": 108
+            },
+            "wall_select": {
+              "elapsed_ms": 19.31,
+              "gui_timer_max_gap_ms": 19.34,
+              "timer_samples": 0
+            },
+            "wall_preview": {
+              "elapsed_ms": 833.52,
+              "gui_timer_max_gap_ms": 39.14,
+              "timer_samples": 48
+            },
+            "wall_apply": {
+              "elapsed_ms": 35.9,
+              "gui_timer_max_gap_ms": 30.69,
+              "timer_samples": 1
+            },
+            "floors_preview": {
+              "elapsed_ms": 1966.11,
+              "gui_timer_max_gap_ms": 103.15,
+              "timer_samples": 100
+            },
+            "floors_apply": {
+              "elapsed_ms": 722.06,
+              "gui_timer_max_gap_ms": 83.14,
+              "timer_samples": 39
+            },
+            "take_start": {
+              "elapsed_ms": 570.21,
+              "gui_timer_max_gap_ms": 81.97,
+              "timer_samples": 29
+            },
+            "take_review": {
+              "elapsed_ms": 2382.09,
+              "gui_timer_max_gap_ms": 113.03,
+              "timer_samples": 118
+            },
+            "take_apply": {
+              "elapsed_ms": 2257.59,
+              "gui_timer_max_gap_ms": 113.19,
+              "timer_samples": 123
+            },
+            "save": {
+              "elapsed_ms": 1009.2,
+              "gui_timer_max_gap_ms": 61.59,
+              "timer_samples": 55
+            },
+            "undo_take": {
+              "elapsed_ms": 2046.57,
+              "gui_timer_max_gap_ms": 148.93,
+              "timer_samples": 113
+            },
+            "draft_save": {
+              "elapsed_ms": 278.44,
+              "gui_timer_max_gap_ms": 41.07,
+              "timer_samples": 15
+            },
+            "draft_recover": {
+              "elapsed_ms": 1671.15,
+              "gui_timer_max_gap_ms": 58.95,
+              "timer_samples": 93
+            },
+            "recovered_save": {
+              "elapsed_ms": 417.27,
+              "gui_timer_max_gap_ms": 40.62,
+              "timer_samples": 24
+            }
+          },
+          "gui_and_worker_sampled_peak_rss_mib": 921.84,
+          "rss_samples": 363,
+          "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+          "viewport": [
+            1104,
+            660
+          ],
+          "visible": true,
+          "assertions": "Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save"
+        }
+      },
+      "formats": {
+        "log": "/private/tmp/structura-storage-smoke_formats.log",
+        "result": {
+          "opened": [
+            "source.nbt",
+            "source.snbt",
+            "source.litematic",
+            "source.schem",
+            "source.mcstructure",
+            "source.schematic",
+            "sponge-v1.schem"
+          ],
+          "source_version": "Sponge v1 Open and Import; Apply and Undo",
+          "preview": "scene and maps ready",
+          "originals": "unchanged"
+        }
+      },
+      "world_edit": {
+        "log": "/private/tmp/structura-storage-smoke_world_edit.log",
+        "result": {
+          "import_ghost": "one local Apply",
+          "refresh": "pending blocks and history survive",
+          "save": "explicit button; backup and NBT verified",
+          "undo_after_save": "inverse edit saved"
+        }
+      }
+    }
+  }
+}

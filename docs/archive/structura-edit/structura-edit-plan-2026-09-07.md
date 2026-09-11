@@ -1,4 +1,4 @@
-> Архив: историческое состояние, не текущие требования. Актуальное поведение — в [README редактора](../../../libs/structura-edit/README.md).
+> Архив: историческое состояние, не текущие требования. Актуальное поведение — в [README редактора](../../../README.md).
 
 # Structura Edit: архитектура и план первого выпуска
 
@@ -53,12 +53,12 @@
 | Низкоуровневые mesh-функции отсутствуют в корневом `__all__` | Единственный адаптер, фиксация версии и интеграционные проверки; стабильность такого API не считать гарантированной |
 | `RenderWarning`, `ConversionWarning`, строгие режимы и диапазоны проекций уже есть | Использовать их, а не создавать параллельные механизмы диагностики |
 
-Исходники: [NBT](../../../libs/structura-core/src/structura_core/nbt.py),
-[Litematic](../../../libs/structura-core/src/structura_core/litematic.py),
-[Sponge](../../../libs/structura-core/src/structura_core/schematic.py),
-[геометрия](../../../libs/structura-render/src/structura_render/geometry.py),
-[сборщик](../../../libs/structura-render/src/structura_render/mesh.py),
-[ресурсы](../../../libs/structura-render/src/structura_render/assets.py).
+Исходники: [NBT](../../../../structura-core/src/structura_core/nbt.py),
+[Litematic](../../../../structura-core/src/structura_core/litematic.py),
+[Sponge](../../../../structura-core/src/structura_core/schematic.py),
+[геометрия](../../../../structura-render/src/structura_render/geometry.py),
+[сборщик](../../../../structura-render/src/structura_render/mesh.py),
+[ресурсы](../../../../structura-render/src/structura_render/assets.py).
 
 ## Сравнение вариантов
 

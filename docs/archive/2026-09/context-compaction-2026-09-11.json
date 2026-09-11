@@ -1,0 +1,59 @@
+{
+  "date": "2026-09-11",
+  "scope": "Context compaction, shared sparse inspection, sequential workspace verification",
+  "documentation": {
+    "before": {
+      "files": 30,
+      "bytes": 459749,
+      "lines": 3596
+    },
+    "after": {
+      "files": 6,
+      "bytes": 52897,
+      "lines": 646
+    },
+    "historical_documents_preserved": 30,
+    "archive_markdown_links_checked": 39,
+    "active_markdown_links_checked": 13,
+    "search_exclusions": [
+      "docs/audit",
+      "libs/structura-edit/docs/archive"
+    ]
+  },
+  "checks": {
+    "fast": "passed",
+    "pytest": 1046,
+    "render": {
+      "passed": 425,
+      "skipped": 2,
+      "skip_reasons": [
+        "optional Amulet unavailable in render environment",
+        "external Khronos validator not configured"
+      ],
+      "qem": "included in editor fast profile"
+    },
+    "native": {
+      "passed": [
+        "building_workflow",
+        "placement_tools",
+        "object_search",
+        "nbt_batch",
+        "world_edit",
+        "camera_maps",
+        "height_slice",
+        "overview"
+      ],
+      "navigation": "blocked: macOS foreground is loginwindow; requires unlocked session"
+    },
+    "full": "failed",
+    "package": {
+      "status": "passed",
+      "sha256": "a106146c890138c1e9ed40044c04fd8ac071c40c791090d4e2d810d873368268"
+    }
+  },
+  "regression": "Inspection of 64 cells in a 256-cell overlay does not iterate the entire overlay; subprocess checks cover failure, missing tools, timeout, descendant termination and refusal to reuse output.",
+  "limitations": [
+    "Native focus/capture is not validated while the session is locked.",
+    "This phase does not establish whole-package type completeness or Windows/Linux GUI support."
+  ]
+}

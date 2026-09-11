@@ -1,0 +1,569 @@
+{
+  "date": "2026-09-11",
+  "benchmark": {
+    "before": {
+      "rows": [
+        {
+          "pending": 0,
+          "stages": {
+            "apply": {
+              "median_ms": 0.7309169999999976,
+              "samples_ms": [
+                4.346000000000003,
+                0.800083000000007,
+                0.7309169999999976,
+                0.7265000000000049,
+                0.6965830000000006
+              ]
+            },
+            "undo": {
+              "median_ms": 0.00408400000000142,
+              "samples_ms": [
+                0.007750000000000812,
+                0.0042499999999973115,
+                0.0036250000000070948,
+                0.00408400000000142,
+                0.00379200000000246
+              ]
+            },
+            "redo": {
+              "median_ms": 0.003958999999997825,
+              "samples_ms": [
+                0.005041999999996771,
+                0.004209000000005014,
+                0.0038329999999947573,
+                0.003958999999997825,
+                0.0037090000000045142
+              ]
+            }
+          },
+          "fork_ms": 0.011999999999998123,
+          "pickle_ms": 0.04208400000001167,
+          "pickle_bytes": 1830
+        },
+        {
+          "pending": 100000,
+          "stages": {
+            "apply": {
+              "median_ms": 64.80658299999997,
+              "samples_ms": [
+                80.40924999999999,
+                64.80658299999997,
+                66.14920899999998,
+                63.29066600000011,
+                64.34258299999995
+              ]
+            },
+            "undo": {
+              "median_ms": 65.58866699999987,
+              "samples_ms": [
+                65.827417,
+                65.73800000000007,
+                64.62970899999998,
+                65.58866699999987,
+                62.86225000000001
+              ]
+            },
+            "redo": {
+              "median_ms": 64.46679099999997,
+              "samples_ms": [
+                62.50308300000002,
+                64.46679099999997,
+                64.66612500000002,
+                64.55462499999997,
+                63.5576659999999
+              ]
+            }
+          },
+          "fork_ms": 65.95808400000003,
+          "pickle_ms": 7.41141699999992,
+          "pickle_bytes": 1471187
+        },
+        {
+          "pending": 300000,
+          "stages": {
+            "apply": {
+              "median_ms": 192.24583300000032,
+              "samples_ms": [
+                196.427417,
+                194.27337499999987,
+                191.62104099999988,
+                190.8712079999999,
+                192.24583300000032
+              ]
+            },
+            "undo": {
+              "median_ms": 192.07704099999967,
+              "samples_ms": [
+                190.3706249999999,
+                192.09245899999993,
+                192.07704099999967,
+                189.88025000000076,
+                199.8347909999998
+              ]
+            },
+            "redo": {
+              "median_ms": 191.411875,
+              "samples_ms": [
+                191.33158400000028,
+                191.411875,
+                194.74129100000016,
+                189.01699999999977,
+                195.6070830000005
+              ]
+            }
+          },
+          "fork_ms": 199.86904100000035,
+          "pickle_ms": 21.615917000000096,
+          "pickle_bytes": 4672028
+        },
+        {
+          "pending": 500000,
+          "stages": {
+            "apply": {
+              "median_ms": 323.0234999999997,
+              "samples_ms": [
+                322.19525000000004,
+                324.4512500000001,
+                323.0234999999997,
+                318.122583000001,
+                323.50329099999976
+              ]
+            },
+            "undo": {
+              "median_ms": 323.765583000001,
+              "samples_ms": [
+                321.1176670000002,
+                323.765583000001,
+                326.8380000000004,
+                322.0021249999991,
+                325.1687910000012
+              ]
+            },
+            "redo": {
+              "median_ms": 321.0663339999993,
+              "samples_ms": [
+                320.72849999999954,
+                322.19633300000083,
+                319.29324999999943,
+                321.0663339999993,
+                321.65875000000096
+              ]
+            }
+          },
+          "fork_ms": 329.81154099999975,
+          "pickle_ms": 39.59775000000043,
+          "pickle_bytes": 7872869
+        }
+      ],
+      "repeats": 5,
+      "scenario": "Python API, one loaded block, remaining synthetic patch outside the view; real SQLite history; no GUI, IPC or world writes"
+    },
+    "after": {
+      "rows": [
+        {
+          "pending": 0,
+          "stages": {
+            "apply": {
+              "median_ms": 0.7824579999999998,
+              "samples_ms": [
+                4.266624999999996,
+                0.8216659999999987,
+                0.7824579999999998,
+                0.7287500000000002,
+                0.6969159999999919
+              ]
+            },
+            "undo": {
+              "median_ms": 0.006040999999998298,
+              "samples_ms": [
+                0.008167000000003366,
+                0.007958000000002352,
+                0.006040999999998298,
+                0.005332999999996257,
+                0.00529200000000396
+              ]
+            },
+            "redo": {
+              "median_ms": 0.004166999999999366,
+              "samples_ms": [
+                0.005209000000006014,
+                0.005334000000009609,
+                0.004166999999999366,
+                0.004000000000004,
+                0.004000000000004
+              ]
+            }
+          },
+          "fork_ms": 0.013499999999999623,
+          "pickle_ms": 0.041625000000003465,
+          "pickle_bytes": 1876
+        },
+        {
+          "pending": 100000,
+          "stages": {
+            "apply": {
+              "median_ms": 0.7759999999999989,
+              "samples_ms": [
+                1.661250000000003,
+                0.7393750000000143,
+                0.7759999999999989,
+                0.7505829999999991,
+                0.8260840000000047
+              ]
+            },
+            "undo": {
+              "median_ms": 0.006667000000015744,
+              "samples_ms": [
+                0.007332999999998258,
+                0.005292000000017838,
+                0.005250000000012189,
+                0.0076249999999833395,
+                0.006667000000015744
+              ]
+            },
+            "redo": {
+              "median_ms": 0.004375000000000906,
+              "samples_ms": [
+                0.004583000000002446,
+                0.003750000000024567,
+                0.003833000000008635,
+                0.0050419999999828935,
+                0.004375000000000906
+              ]
+            }
+          },
+          "fork_ms": 89.48429099999997,
+          "pickle_ms": 8.154834,
+          "pickle_bytes": 1471233
+        },
+        {
+          "pending": 300000,
+          "stages": {
+            "apply": {
+              "median_ms": 0.4705830000000244,
+              "samples_ms": [
+                1.3383330000000804,
+                0.5205839999999906,
+                0.4690840000000085,
+                0.41483300000000334,
+                0.4705830000000244
+              ]
+            },
+            "undo": {
+              "median_ms": 0.005749999999915545,
+              "samples_ms": [
+                0.006333000000080524,
+                0.00495899999997107,
+                0.004541999999996271,
+                0.006375000000002906,
+                0.005749999999915545
+              ]
+            },
+            "redo": {
+              "median_ms": 0.003666999999984988,
+              "samples_ms": [
+                0.0037089999999073697,
+                0.0035419999999675156,
+                0.0034580000000117295,
+                0.004250000000038945,
+                0.003666999999984988
+              ]
+            }
+          },
+          "fork_ms": 201.44954199999998,
+          "pickle_ms": 21.446999999999996,
+          "pickle_bytes": 4672074
+        },
+        {
+          "pending": 500000,
+          "stages": {
+            "apply": {
+              "median_ms": 0.47850000000004833,
+              "samples_ms": [
+                1.3525840000001565,
+                0.47850000000004833,
+                0.4422920000000108,
+                0.49183299999988606,
+                0.3758750000000255
+              ]
+            },
+            "undo": {
+              "median_ms": 0.005000000000032756,
+              "samples_ms": [
+                0.008875000000019284,
+                0.005000000000032756,
+                0.004458999999901181,
+                0.0041669999999438545,
+                0.005999999999950489
+              ]
+            },
+            "redo": {
+              "median_ms": 0.0034159999999783253,
+              "samples_ms": [
+                0.005459000000040959,
+                0.0034159999999783253,
+                0.0033329999999942572,
+                0.003250000000010189,
+                0.003874999999986528
+              ]
+            }
+          },
+          "fork_ms": 330.88304199999993,
+          "pickle_ms": 39.837708000000084,
+          "pickle_bytes": 7872915
+        }
+      ],
+      "repeats": 5,
+      "scenario": "Python API, one loaded block, remaining synthetic patch outside the view; real SQLite history; no GUI, IPC or world writes"
+    },
+    "after-2": {
+      "rows": [
+        {
+          "pending": 0,
+          "stages": {
+            "apply": {
+              "median_ms": 0.7657089999999894,
+              "samples_ms": [
+                4.1323749999999935,
+                0.7657089999999894,
+                0.7177079999999975,
+                0.7424169999999952,
+                0.8319580000000076
+              ]
+            },
+            "undo": {
+              "median_ms": 0.007250000000000312,
+              "samples_ms": [
+                0.008083000000005947,
+                0.005874999999988528,
+                0.005375000000001906,
+                0.007250000000000312,
+                0.00729200000000596
+              ]
+            },
+            "redo": {
+              "median_ms": 0.004458999999998325,
+              "samples_ms": [
+                0.005167000000000366,
+                0.004458999999998325,
+                0.004000000000004,
+                0.004540999999996798,
+                0.004416999999992677
+              ]
+            }
+          },
+          "fork_ms": 0.012999999999999123,
+          "pickle_ms": 0.04241599999998957,
+          "pickle_bytes": 1876
+        },
+        {
+          "pending": 100000,
+          "stages": {
+            "apply": {
+              "median_ms": 0.7044579999999911,
+              "samples_ms": [
+                1.704041999999989,
+                0.6971659999999991,
+                0.7044579999999911,
+                0.7096250000000193,
+                0.666625000000004
+              ]
+            },
+            "undo": {
+              "median_ms": 0.005875000000016284,
+              "samples_ms": [
+                0.006208000000007541,
+                0.006458999999986448,
+                0.005875000000016284,
+                0.005041000000011175,
+                0.005167000000000366
+              ]
+            },
+            "redo": {
+              "median_ms": 0.004042000000009649,
+              "samples_ms": [
+                0.004333000000023013,
+                0.004042000000009649,
+                0.004042000000009649,
+                0.003833000000008635,
+                0.003709000000018392
+              ]
+            }
+          },
+          "fork_ms": 92.16091599999999,
+          "pickle_ms": 7.567292000000004,
+          "pickle_bytes": 1471233
+        },
+        {
+          "pending": 300000,
+          "stages": {
+            "apply": {
+              "median_ms": 0.44912499999993916,
+              "samples_ms": [
+                1.4023749999999557,
+                0.46362500000007856,
+                0.43720800000002225,
+                0.4265839999999521,
+                0.44912499999993916
+              ]
+            },
+            "undo": {
+              "median_ms": 0.004624999999980339,
+              "samples_ms": [
+                0.006500000000020378,
+                0.004624999999980339,
+                0.004457999999929463,
+                0.007500000000049134,
+                0.004541999999996271
+              ]
+            },
+            "redo": {
+              "median_ms": 0.0034170000000610656,
+              "samples_ms": [
+                0.0035409999999957975,
+                0.0035000000000451337,
+                0.0034170000000610656,
+                0.0033329999999942572,
+                0.0034170000000610656
+              ]
+            }
+          },
+          "fork_ms": 200.14233300000006,
+          "pickle_ms": 22.238583000000034,
+          "pickle_bytes": 4672074
+        },
+        {
+          "pending": 500000,
+          "stages": {
+            "apply": {
+              "median_ms": 0.5605829999999479,
+              "samples_ms": [
+                1.5838749999999013,
+                0.5605829999999479,
+                0.581041999999865,
+                0.39333399999996743,
+                0.39604199999998535
+              ]
+            },
+            "undo": {
+              "median_ms": 0.006790999999894964,
+              "samples_ms": [
+                0.007416000000093348,
+                0.007124999999996717,
+                0.006790999999894964,
+                0.005083000000016824,
+                0.0058750000000440394
+              ]
+            },
+            "redo": {
+              "median_ms": 0.004083000000099091,
+              "samples_ms": [
+                0.0037079999999356517,
+                0.004416000000118103,
+                0.0047499999999978115,
+                0.004083000000099091,
+                0.004083000000099091
+              ]
+            }
+          },
+          "fork_ms": 336.25020800000004,
+          "pickle_ms": 41.77416699999981,
+          "pickle_bytes": 7872915
+        }
+      ],
+      "repeats": 5,
+      "scenario": "Python API, one loaded block, remaining synthetic patch outside the view; real SQLite history; no GUI, IPC or world writes"
+    }
+  },
+  "tests": {
+    "command": "pytest -q libs/structura-core/tests libs/structura-edit/tests libs/structura-render/tests/test_lod_geometry.py",
+    "passed": 988,
+    "warnings": 21,
+    "seconds": 42.56,
+    "ruff": "passed",
+    "diff_check": "passed"
+  },
+  "smoke_world_edit": {
+    "import_ghost": "one local Apply",
+    "refresh": "pending blocks and history survive",
+    "save": "explicit button; backup and NBT verified",
+    "undo_after_save": "inverse edit saved"
+  },
+  "smoke_camera_maps": {
+    "maps": "Surface stays above ground; explicit Slices, unchanged axes reused, M pan and return",
+    "counts": "compact cells, hover names and IDs, no ambiguous no air",
+    "guides": "2 px, 35% opacity",
+    "errors": "short status, full selectable Issues, Copy details"
+  },
+  "build": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "7b10cd5eefe7d90290b04ec31f5287dbdfbb815fa039651e3e4cd9c32b8516d2",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "5c20264603602f337fba034d356ceb628ae68d8ab7de7b42e85d7249363331d6",
+      "structura_render-0.8.1-py3-none-any.whl": "2da436e945123139a372a4f2d36047647c3d0adf8ccd98aaf323ab4a00c14d9e",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "f97eacceafa5067fd94bd39112df5ad8cd529c5b74e3875f95e2713531e5dbd9"
+    }
+  },
+  "installation": {
+    "frozen": true,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.7108043750000004,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  },
+  "limitations": [
+    "Synthetic Python API benchmark; no GUI, IPC or world writes in timing",
+    "Fork and serialization still scale with accumulated patch",
+    "Entity deltas still rebuild the visible entity projection",
+    "Physical input and other platforms not verified"
+  ]
+}

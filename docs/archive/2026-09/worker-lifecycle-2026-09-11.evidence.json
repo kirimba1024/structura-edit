@@ -1,0 +1,962 @@
+{
+  "date": "2026-09-11",
+  "tests": {
+    "passed": 1013,
+    "warnings": 21,
+    "seconds": 49.8,
+    "command": "pytest -q libs/structura-core/tests libs/structura-edit/tests libs/structura-render/tests/test_lod_geometry.py",
+    "ruff": "passed",
+    "diff_check": "passed",
+    "mypy": {
+      "version": "1.18.2",
+      "status": "passed",
+      "strict": true,
+      "follow_imports": "skip",
+      "files": [
+        "task_protocol.py",
+        "worker_document.py"
+      ]
+    }
+  },
+  "worker_benchmark": {
+    "rows": [
+      {
+        "rss": {
+          "parent_mib": 35.53125,
+          "worker_mib": 36.125
+        },
+        "mode": "full_session",
+        "pending": 0,
+        "cold_ms": 125.99745899999998,
+        "stages": {
+          "preview": {
+            "median_ms": 5.962708000000038,
+            "samples_ms": [
+              3.5259169999999895,
+              4.990374999999991,
+              7.066875000000028,
+              6.2810420000000144,
+              5.962708000000038
+            ]
+          },
+          "apply": {
+            "median_ms": 8.871709000000006,
+            "samples_ms": [
+              9.504457999999993,
+              6.177708000000004,
+              9.351084000000009,
+              8.871709000000006,
+              6.3552499999999785
+            ]
+          },
+          "undo": {
+            "median_ms": 6.44904199999996,
+            "samples_ms": [
+              6.44904199999996,
+              6.384415999999948,
+              7.739541999999988,
+              6.422415999999986,
+              8.664124999999967
+            ]
+          },
+          "redo": {
+            "median_ms": 6.254166000000005,
+            "samples_ms": [
+              6.254166000000005,
+              3.3946249999999845,
+              6.673499999999999,
+              6.273915999999991,
+              5.150041999999965
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 2245,
+          "received": 661
+        },
+        "apply_bytes": {
+          "sent": 2807,
+          "received": 2435
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 35.59375,
+          "worker_mib": 36.140625
+        },
+        "mode": "resident",
+        "pending": 0,
+        "cold_ms": 159.881209,
+        "stages": {
+          "preview": {
+            "median_ms": 4.431249999999998,
+            "samples_ms": [
+              3.452125000000028,
+              3.1252090000000177,
+              4.431249999999998,
+              9.378458000000034,
+              6.949834000000044
+            ]
+          },
+          "apply": {
+            "median_ms": 6.294457999999947,
+            "samples_ms": [
+              10.667250000000017,
+              6.294457999999947,
+              6.221333000000051,
+              6.825334000000072,
+              4.247250000000036
+            ]
+          },
+          "undo": {
+            "median_ms": 4.821291000000061,
+            "samples_ms": [
+              4.76641599999994,
+              6.344208000000018,
+              4.821291000000061,
+              4.3215420000000115,
+              5.055000000000032
+            ]
+          },
+          "redo": {
+            "median_ms": 4.770875000000063,
+            "samples_ms": [
+              4.770875000000063,
+              4.772416999999973,
+              4.866250000000072,
+              3.8634170000000356,
+              3.584707999999992
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 833
+        },
+        "apply_bytes": {
+          "sent": 909,
+          "received": 2559
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 84.859375,
+          "worker_mib": 74.546875
+        },
+        "mode": "full_session",
+        "pending": 100000,
+        "cold_ms": 281.8871249999999,
+        "stages": {
+          "preview": {
+            "median_ms": 96.76770900000031,
+            "samples_ms": [
+              118.93195899999998,
+              94.00529200000007,
+              97.00079100000013,
+              96.72091700000007,
+              96.76770900000031
+            ]
+          },
+          "apply": {
+            "median_ms": 45.740917000000046,
+            "samples_ms": [
+              47.93729199999986,
+              45.07629200000007,
+              45.740917000000046,
+              46.18483300000031,
+              44.56554199999996
+            ]
+          },
+          "undo": {
+            "median_ms": 44.926750000000126,
+            "samples_ms": [
+              45.07683400000006,
+              44.926750000000126,
+              44.502209000000015,
+              45.425625000000025,
+              44.40858399999969
+            ]
+          },
+          "redo": {
+            "median_ms": 44.901124999999986,
+            "samples_ms": [
+              44.56862499999992,
+              45.007084000000084,
+              44.901124999999986,
+              45.88254200000019,
+              44.79512499999983
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 1471600,
+          "received": 663
+        },
+        "apply_bytes": {
+          "sent": 1472126,
+          "received": 1471644
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 88.640625,
+          "worker_mib": 73.484375
+        },
+        "mode": "resident",
+        "pending": 100000,
+        "cold_ms": 175.95533299999965,
+        "stages": {
+          "preview": {
+            "median_ms": 3.245124999999849,
+            "samples_ms": [
+              7.041917000000009,
+              3.201541000000141,
+              3.2640000000001557,
+              3.228540999999918,
+              3.245124999999849
+            ]
+          },
+          "apply": {
+            "median_ms": 24.997500000000006,
+            "samples_ms": [
+              43.352666999999734,
+              25.157875000000107,
+              24.450041000000144,
+              24.997500000000006,
+              24.835541999999933
+            ]
+          },
+          "undo": {
+            "median_ms": 24.248708000000008,
+            "samples_ms": [
+              45.325333999999714,
+              24.248708000000008,
+              24.59508399999999,
+              23.80204099999972,
+              24.031125000000042
+            ]
+          },
+          "redo": {
+            "median_ms": 23.730708999999628,
+            "samples_ms": [
+              49.582624999999766,
+              23.87366600000007,
+              23.45287500000026,
+              23.730708999999628,
+              23.458499999999827
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 835
+        },
+        "apply_bytes": {
+          "sent": 911,
+          "received": 1471771
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 175.609375,
+          "worker_mib": 127.890625
+        },
+        "mode": "full_session",
+        "pending": 300000,
+        "cold_ms": 459.1560840000004,
+        "stages": {
+          "preview": {
+            "median_ms": 291.4311249999999,
+            "samples_ms": [
+              307.45016699999985,
+              287.51045799999986,
+              290.46174999999954,
+              292.9737499999998,
+              291.4311249999999
+            ]
+          },
+          "apply": {
+            "median_ms": 137.6789579999995,
+            "samples_ms": [
+              142.49641700000026,
+              137.6789579999995,
+              136.80595900000014,
+              143.9786249999999,
+              137.05883300000022
+            ]
+          },
+          "undo": {
+            "median_ms": 136.07783299999988,
+            "samples_ms": [
+              136.80458299999998,
+              136.07783299999988,
+              134.3007079999996,
+              138.26333300000027,
+              135.00445900000102
+            ]
+          },
+          "redo": {
+            "median_ms": 136.87754200000057,
+            "samples_ms": [
+              143.77200000000022,
+              136.14837500000033,
+              135.2765420000006,
+              137.6514999999996,
+              136.87754200000057
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 4672441,
+          "received": 663
+        },
+        "apply_bytes": {
+          "sent": 4672967,
+          "received": 4672485
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 180.125,
+          "worker_mib": 121.25
+        },
+        "mode": "resident",
+        "pending": 300000,
+        "cold_ms": 226.61354199999906,
+        "stages": {
+          "preview": {
+            "median_ms": 3.2645840000000703,
+            "samples_ms": [
+              7.12558299999877,
+              2.854666999999367,
+              3.2645840000000703,
+              3.241915999998568,
+              3.293834000000828
+            ]
+          },
+          "apply": {
+            "median_ms": 71.87737499999969,
+            "samples_ms": [
+              100.57624999999959,
+              68.63675000000136,
+              71.87737499999969,
+              68.10833299999963,
+              73.28095799999979
+            ]
+          },
+          "undo": {
+            "median_ms": 70.64175000000006,
+            "samples_ms": [
+              69.28758299999949,
+              71.08641599999999,
+              70.64175000000006,
+              69.40958300000055,
+              74.03691699999904
+            ]
+          },
+          "redo": {
+            "median_ms": 69.68204100000008,
+            "samples_ms": [
+              69.51116699999993,
+              69.68204100000008,
+              70.33799999999957,
+              69.66779200000062,
+              71.9291670000004
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 835
+        },
+        "apply_bytes": {
+          "sent": 911,
+          "received": 4672612
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 318.4375,
+          "worker_mib": 180.609375
+        },
+        "mode": "full_session",
+        "pending": 500000,
+        "cold_ms": 614.6247920000008,
+        "stages": {
+          "preview": {
+            "median_ms": 513.1636250000007,
+            "samples_ms": [
+              520.7868330000007,
+              503.9222089999988,
+              508.6727080000006,
+              513.1636250000007,
+              514.585708000002
+            ]
+          },
+          "apply": {
+            "median_ms": 268.37045899999976,
+            "samples_ms": [
+              271.36633399999965,
+              268.37045899999976,
+              266.97320799999954,
+              268.02987499999983,
+              275.35383300000046
+            ]
+          },
+          "undo": {
+            "median_ms": 266.4816250000008,
+            "samples_ms": [
+              266.4816250000008,
+              273.1187500000001,
+              261.8512499999994,
+              264.52399999999795,
+              268.74662500000215
+            ]
+          },
+          "redo": {
+            "median_ms": 270.6538750000007,
+            "samples_ms": [
+              275.88554199999925,
+              274.507625,
+              267.5472499999998,
+              265.92554200000154,
+              270.6538750000007
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 7873282,
+          "received": 663
+        },
+        "apply_bytes": {
+          "sent": 7873808,
+          "received": 7873326
+        }
+      },
+      {
+        "rss": {
+          "parent_mib": 325.890625,
+          "worker_mib": 174.734375
+        },
+        "mode": "resident",
+        "pending": 500000,
+        "cold_ms": 264.7210830000013,
+        "stages": {
+          "preview": {
+            "median_ms": 3.323875000003085,
+            "samples_ms": [
+              6.540499999999838,
+              3.2805410000023016,
+              3.2294159999999295,
+              3.323875000003085,
+              4.902666999999639
+            ]
+          },
+          "apply": {
+            "median_ms": 141.32208399999868,
+            "samples_ms": [
+              151.81150000000088,
+              141.32208399999868,
+              134.8071659999981,
+              130.92762500000177,
+              146.1884590000011
+            ]
+          },
+          "undo": {
+            "median_ms": 133.12374999999932,
+            "samples_ms": [
+              130.93345799999767,
+              133.37783300000083,
+              133.12374999999932,
+              134.58629100000152,
+              129.02725000000004
+            ]
+          },
+          "redo": {
+            "median_ms": 132.33412499999986,
+            "samples_ms": [
+              130.72362500000168,
+              131.67170899999903,
+              132.40479099999902,
+              135.3081660000015,
+              132.33412499999986
+            ]
+          }
+        },
+        "preview_bytes": {
+          "sent": 544,
+          "received": 835
+        },
+        "apply_bytes": {
+          "sent": 911,
+          "received": 7873453
+        }
+      }
+    ],
+    "repeats": 5,
+    "scenario": "Real spawn/Pipe and SQLite history; synthetic world patch; no GUI or world writes; bytes measured separately from timings"
+  },
+  "gui_workflow": {
+    "full_session": {
+      "stages": {
+        "open": {
+          "elapsed_ms": 1682.06,
+          "gui_timer_max_gap_ms": 99.25,
+          "timer_samples": 97
+        },
+        "take_start": {
+          "elapsed_ms": 347.54,
+          "gui_timer_max_gap_ms": 64.38,
+          "timer_samples": 17
+        },
+        "take_review": {
+          "elapsed_ms": 2718.75,
+          "gui_timer_max_gap_ms": 423.99,
+          "timer_samples": 126
+        },
+        "take_apply": {
+          "elapsed_ms": 2170.38,
+          "gui_timer_max_gap_ms": 228.07,
+          "timer_samples": 83
+        },
+        "save": {
+          "elapsed_ms": 1210.4,
+          "gui_timer_max_gap_ms": 228.5,
+          "timer_samples": 54
+        },
+        "undo_take": {
+          "elapsed_ms": 1977.35,
+          "gui_timer_max_gap_ms": 65.24,
+          "timer_samples": 111
+        },
+        "redo_take": {
+          "elapsed_ms": 1703.18,
+          "gui_timer_max_gap_ms": 212.47,
+          "timer_samples": 88
+        }
+      },
+      "gui_and_worker_sampled_peak_rss_mib": 1281.8,
+      "rss_samples": 306,
+      "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "visible": true,
+      "profiled": false,
+      "traced": false,
+      "resident_document": false,
+      "viewport": [
+        1104,
+        660
+      ],
+      "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+    },
+    "resident": [
+      {
+        "stages": {
+          "open": {
+            "elapsed_ms": 1661.26,
+            "gui_timer_max_gap_ms": 83.46,
+            "timer_samples": 96
+          },
+          "take_start": {
+            "elapsed_ms": 316.06,
+            "gui_timer_max_gap_ms": 84.74,
+            "timer_samples": 14
+          },
+          "take_review": {
+            "elapsed_ms": 2863.15,
+            "gui_timer_max_gap_ms": 232.85,
+            "timer_samples": 134
+          },
+          "take_apply": {
+            "elapsed_ms": 2060.05,
+            "gui_timer_max_gap_ms": 237.44,
+            "timer_samples": 76
+          },
+          "save": {
+            "elapsed_ms": 900.1,
+            "gui_timer_max_gap_ms": 180.7,
+            "timer_samples": 33
+          },
+          "undo_take": {
+            "elapsed_ms": 1298.05,
+            "gui_timer_max_gap_ms": 53.81,
+            "timer_samples": 72
+          },
+          "redo_take": {
+            "elapsed_ms": 1027.6,
+            "gui_timer_max_gap_ms": 162.38,
+            "timer_samples": 48
+          }
+        },
+        "gui_and_worker_sampled_peak_rss_mib": 1330.89,
+        "rss_samples": 262,
+        "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+        "floors": 24,
+        "source_size": [
+          32,
+          144,
+          24
+        ],
+        "source_blocks": 28800,
+        "changed_cells": 57625,
+        "visible": true,
+        "profiled": false,
+        "traced": false,
+        "viewport": [
+          1104,
+          660
+        ],
+        "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+      },
+      {
+        "stages": {
+          "open": {
+            "elapsed_ms": 1622.59,
+            "gui_timer_max_gap_ms": 92.75,
+            "timer_samples": 92
+          },
+          "take_start": {
+            "elapsed_ms": 350.47,
+            "gui_timer_max_gap_ms": 68.72,
+            "timer_samples": 17
+          },
+          "take_review": {
+            "elapsed_ms": 2862.46,
+            "gui_timer_max_gap_ms": 436.45,
+            "timer_samples": 138
+          },
+          "take_apply": {
+            "elapsed_ms": 2067.9,
+            "gui_timer_max_gap_ms": 223.35,
+            "timer_samples": 79
+          },
+          "save": {
+            "elapsed_ms": 907.09,
+            "gui_timer_max_gap_ms": 172.17,
+            "timer_samples": 33
+          },
+          "undo_take": {
+            "elapsed_ms": 1303.7,
+            "gui_timer_max_gap_ms": 51.66,
+            "timer_samples": 73
+          },
+          "redo_take": {
+            "elapsed_ms": 1000.99,
+            "gui_timer_max_gap_ms": 196.43,
+            "timer_samples": 46
+          }
+        },
+        "gui_and_worker_sampled_peak_rss_mib": 1333.91,
+        "rss_samples": 260,
+        "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+        "floors": 24,
+        "source_size": [
+          32,
+          144,
+          24
+        ],
+        "source_blocks": 28800,
+        "changed_cells": 57625,
+        "visible": true,
+        "profiled": false,
+        "traced": false,
+        "resident_document": true,
+        "viewport": [
+          1104,
+          660
+        ],
+        "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source"
+      }
+    ]
+  },
+  "code_version": {
+    "editable": {
+      "mode": "editable workspace",
+      "files": 236,
+      "median_ms": 1.3708329999999949,
+      "max_ms": 4.323250000000001,
+      "samples_ms": [
+        1.444292,
+        1.3948339999999977,
+        1.3846669999999923,
+        1.371457999999992,
+        1.3706250000000004,
+        1.3537919999999926,
+        1.3582500000000053,
+        1.3544169999999967,
+        2.6437500000000003,
+        3.750792000000003,
+        3.458292000000002,
+        2.731999999999984,
+        1.4921250000000108,
+        1.5291249999999923,
+        1.526957999999995,
+        3.244666000000007,
+        4.323250000000001,
+        3.16333399999999,
+        1.4453330000000209,
+        1.3423750000000068,
+        1.3394170000000094,
+        1.3360420000000095,
+        1.3384999999999925,
+        1.9592499999999957,
+        1.3987500000000042,
+        1.3433340000000016,
+        1.3402090000000089,
+        1.342834000000015,
+        1.3386670000000156,
+        1.7430420000000002,
+        1.3710409999999895,
+        1.346291999999999,
+        1.3335829999999993,
+        1.3335839999999988,
+        1.3303749999999948,
+        3.4062910000000057,
+        3.4796250000000137,
+        2.8827499999999895,
+        1.4509580000000022,
+        1.3697079999999973,
+        1.3550410000000013,
+        1.3599169999999883,
+        1.3580000000000259,
+        1.772459000000004,
+        1.4090829999999777,
+        1.3668749999999896,
+        1.3510419999999967,
+        1.348999999999989,
+        1.349165999999985,
+        1.3662499999999855
+      ]
+    },
+    "bundle_layout": {
+      "mode": "Built bundle directories, source interpreter; filesystem scan only",
+      "files": 0,
+      "median_ms": 0.3740209999999883,
+      "max_ms": 1.3666250000000102,
+      "samples_ms": [
+        0.38687500000000874,
+        0.3742919999999983,
+        0.3742919999999983,
+        0.37587499999999774,
+        0.37249999999999783,
+        0.38050000000000583,
+        0.37737499999998536,
+        0.37283399999998856,
+        0.3740419999999911,
+        0.37187499999999374,
+        0.37299999999998446,
+        1.3666250000000102,
+        0.39704199999998635,
+        0.37399999999998546,
+        0.3713750000000071,
+        0.3700000000000092,
+        0.3691660000000041,
+        0.3667910000000052,
+        0.36495799999999856,
+        0.3654590000000124,
+        0.3625000000000156,
+        0.3665000000000196,
+        0.36466700000001295,
+        0.3699169999999974,
+        0.3699169999999974,
+        0.3636250000000063,
+        0.3618750000000115,
+        0.36349999999998883,
+        0.3643750000000001,
+        0.3618750000000115,
+        0.3666659999999877,
+        0.8910000000000029,
+        0.7988749999999767,
+        0.7300830000000202,
+        0.728833000000012,
+        0.7290830000000192,
+        0.7290829999999915,
+        0.7262920000000173,
+        0.7867089999999965,
+        0.7596669999999917,
+        0.7273329999999967,
+        0.7227499999999942,
+        0.8924170000000065,
+        0.7542080000000062,
+        0.854166999999989,
+        0.4019999999999857,
+        0.3761669999999828,
+        0.3724590000000194,
+        0.367416999999981,
+        0.3646669999999852
+      ]
+    }
+  },
+  "smoke_world": {
+    "import_ghost": "one local Apply",
+    "refresh": "pending blocks and history survive",
+    "save": "explicit button; backup and NBT verified",
+    "undo_after_save": "inverse edit saved"
+  },
+  "smoke_building": {
+    "stages": {
+      "open": {
+        "elapsed_ms": 1201.64,
+        "gui_timer_max_gap_ms": 86.39,
+        "timer_samples": 70
+      },
+      "cancel_tools": {
+        "elapsed_ms": 2083.12,
+        "gui_timer_max_gap_ms": 186.16,
+        "timer_samples": 114
+      },
+      "wall_select": {
+        "elapsed_ms": 35.96,
+        "gui_timer_max_gap_ms": 35.26,
+        "timer_samples": 1
+      },
+      "wall_preview": {
+        "elapsed_ms": 269.25,
+        "gui_timer_max_gap_ms": 25.56,
+        "timer_samples": 16
+      },
+      "wall_apply": {
+        "elapsed_ms": 27.74,
+        "gui_timer_max_gap_ms": 16.22,
+        "timer_samples": 1
+      },
+      "floors_preview": {
+        "elapsed_ms": 616.93,
+        "gui_timer_max_gap_ms": 43.14,
+        "timer_samples": 33
+      },
+      "floors_apply": {
+        "elapsed_ms": 246.31,
+        "gui_timer_max_gap_ms": 37.19,
+        "timer_samples": 14
+      },
+      "take_start": {
+        "elapsed_ms": 204.34,
+        "gui_timer_max_gap_ms": 61.41,
+        "timer_samples": 9
+      },
+      "take_review": {
+        "elapsed_ms": 932.84,
+        "gui_timer_max_gap_ms": 110.26,
+        "timer_samples": 50
+      },
+      "take_apply": {
+        "elapsed_ms": 533.14,
+        "gui_timer_max_gap_ms": 79.69,
+        "timer_samples": 30
+      },
+      "save": {
+        "elapsed_ms": 259.61,
+        "gui_timer_max_gap_ms": 34.67,
+        "timer_samples": 15
+      },
+      "undo_take": {
+        "elapsed_ms": 476.09,
+        "gui_timer_max_gap_ms": 52.34,
+        "timer_samples": 27
+      },
+      "draft_save": {
+        "elapsed_ms": 255.29,
+        "gui_timer_max_gap_ms": 20.64,
+        "timer_samples": 15
+      },
+      "draft_recover": {
+        "elapsed_ms": 568.23,
+        "gui_timer_max_gap_ms": 55.11,
+        "timer_samples": 27
+      },
+      "recovered_save": {
+        "elapsed_ms": 291.66,
+        "gui_timer_max_gap_ms": 65.84,
+        "timer_samples": 15
+      }
+    },
+    "gui_and_worker_sampled_peak_rss_mib": 858.55,
+    "rss_samples": 215,
+    "rss_sampling": "ps RSS sum every 20 ms plus subprocess time; shared pages may be counted twice",
+    "viewport": [
+      1104,
+      628
+    ],
+    "visible": false,
+    "assertions": "Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save"
+  },
+  "build": {
+    "app": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app",
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "4cb60c141e339b408542e10723aaf5919ecdf8d8cb1073360819ddbbd33fce93",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "660836034673043db1adf2e5170f154b5890e612fb048b3d2cabf17cfec43174",
+      "structura_render-0.8.1-py3-none-any.whl": "661a09d7338df6f97e01779dce3db0ecdf639d51c9fb5ca9df91c45a2beb9689",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "fba3efdde9a433e6ad375252dc68544cd7ee80e8f8d2bc75de03dfe0ff3e8105"
+    }
+  },
+  "installation": {
+    "frozen": true,
+    "executable": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/MacOS/Structura Edit",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "example": "/Users/kirimba/Projects/dev/mc/structura/libs/structura-edit/dist/Structura Edit.app/Contents/Frameworks/structura_render/data/examples/demo.nbt",
+    "objects": 70,
+    "assets": "Empty directory: fallback rendering",
+    "overview": {
+      "build_seconds": 0.7501364159999984,
+      "chunks": 6,
+      "rotation_without_loading": true,
+      "latest_teleport_preserves_document": true,
+      "manual_flight_cancels_teleport": true,
+      "load_here_preserves_camera": true,
+      "rapid_height_changes_keep_the_latest_view": true,
+      "cancel_does_not_restart_auto_detail": true,
+      "zoom_anchor": true,
+      "visible_tiles": 4,
+      "geometry_bytes": 365112
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "status": "passed"
+  },
+  "limitations": [
+    "Apply/History/Save responses still contain the full session",
+    "Legacy TaskCall payloads and operation values remain partially typed",
+    "GUI preview took about 5% longer and sampled peak RSS grew about 4%",
+    "A lost apply response may leave unreachable rows in the temporary journal",
+    "Physical input and other platforms were not verified"
+  ]
+}

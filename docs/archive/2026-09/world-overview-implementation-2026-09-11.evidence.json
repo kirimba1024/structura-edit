@@ -1,0 +1,386 @@
+{
+  "date": "2026-09-11",
+  "kind": "implemented_world_overview_and_compact_world_storage",
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "python": "3.9.6"
+  },
+  "method": {
+    "native_qt": true,
+    "source_world_read_only": true,
+    "save_world": "temporary copy of A",
+    "completed_render_rate_not_display_refresh": true,
+    "rss_is_process_sum_not_unique_physical_memory": true,
+    "world_storage_benchmark_runs": 1,
+    "overview_long_flight_seconds": 30,
+    "overview_full_build_flight_seconds": 4,
+    "geometry_budget_bytes": 100663296,
+    "staging_geometry_budget_bytes": 100663296,
+    "notes": [
+      "Full build includes initial display. Cached prepare reads an existing snapshot.",
+      "Navigation groups ready buffers and atlases; no source import, voxel meshing or QEM.",
+      "Final progress panel layout does not change geometry; it was checked after the long overview benchmarks.",
+      "Overview rotation and flight run with physical freelook disabled to keep the test camera reproducible.",
+      "The short world-storage flight and long whole-overview flight are different routes.",
+      "RSS samples include shared pages and are not a proven peak; end-of-stage samples may exceed in-task samples.",
+      "The pre-batching prototype and an invalid empty-frame benchmark are not delivery measurements."
+    ]
+  },
+  "source_sha256_at_delivery": {
+    "structura-core": "0824d458cd150e93b5b0688fdec680ee7ca3a7ff9f17cb83ace3bd0456130007",
+    "structura-render": "79609c35b555e27d420cc12101a6f8265c7149180439db5e550b7d516d016134",
+    "structura-edit": "512944e25d076b5736ee5919d6871273fadb7df29a322e10ade99ed549cb80c4"
+  },
+  "baseline_reference": "world-overview-plan-2026-09-11.evidence.json",
+  "world_storage": {
+    "radius": 6,
+    "visible": true,
+    "stages": {
+      "open": {
+        "seconds": 4.7844880419999996,
+        "heartbeat_ms_p95": 19.693649999999966,
+        "heartbeat_ms_max": 171.43550000000008,
+        "rss_gui_worker_bytes": 1511587840
+      },
+      "refresh": {
+        "seconds": 4.027012459000001,
+        "heartbeat_ms_p95": 21.921978899999573,
+        "heartbeat_ms_max": 38.02450000000057,
+        "rss_gui_worker_bytes": 1828995072
+      },
+      "refresh_again": {
+        "seconds": 1.1113440000000008,
+        "heartbeat_ms_p95": 21.101108200000592,
+        "heartbeat_ms_max": 30.965124999999816,
+        "rss_gui_worker_bytes": 1819410432
+      },
+      "save": {
+        "seconds": 0.4010638750000002,
+        "heartbeat_ms_p95": 27.221606199999286,
+        "heartbeat_ms_max": 33.7026250000001,
+        "rss_gui_worker_bytes": 1859829760
+      }
+    },
+    "blocks": 1068043,
+    "flight": {
+      "frames": 218,
+      "fps": 76.07977402554125,
+      "frame_ms_p95": 16.761133600000022,
+      "render_ms_mean": 9.596694568807342,
+      "render_ms_p95": 12.087746449999948,
+      "viewport": [
+        2760,
+        1602
+      ],
+      "actors": 183,
+      "geometry_bytes": 43829819
+    }
+  },
+  "overview_full_build": {
+    "world": "/Users/kirimba/Library/Application Support/minecraft/saves/A",
+    "radius": 6,
+    "stages": {
+      "open": {
+        "seconds": 4.831303167,
+        "gui_gap_p95_ms": 21.130882800000183,
+        "gui_gap_max_ms": 162.3743339999999,
+        "rss_gui_workers_bytes": 1485291520,
+        "sampled_rss_max_bytes": 1491927040
+      },
+      "prepare": {
+        "seconds": 236.38191662499997,
+        "gui_gap_p95_ms": 25.254181249998453,
+        "gui_gap_max_ms": 94.45291700001235,
+        "rss_gui_workers_bytes": 2174795776,
+        "sampled_rss_max_bytes": 1974059008
+      },
+      "fit": {
+        "seconds": 3.113048041999974,
+        "gui_gap_p95_ms": 30.47889809999162,
+        "gui_gap_max_ms": 147.09679099999562,
+        "rss_gui_workers_bytes": 2537521152,
+        "sampled_rss_max_bytes": 2537521152
+      },
+      "teleport": {
+        "seconds": 2.767688291999974,
+        "gui_gap_p95_ms": 33.35058300001492,
+        "gui_gap_max_ms": 124.12124999997332,
+        "rss_gui_workers_bytes": 2681995264,
+        "sampled_rss_max_bytes": 2681995264
+      }
+    },
+    "snapshot": {
+      "version": 3,
+      "world": "/Users/kirimba/Library/Application Support/minecraft/saves/A",
+      "dimension": "minecraft:overworld",
+      "created": 1789126645.248003,
+      "assets": "/Users/kirimba/Library/Application Support/minecraft/versions/1.21.1/1.21.1.jar",
+      "resources": [
+        1787778480844425822,
+        26836906,
+        34663892
+      ],
+      "below_y": null,
+      "name": "A",
+      "chunks": 2601,
+      "document_id": "46fcbbffe0df44e0b00f33ed926e5ed6",
+      "revision": 0,
+      "height": {
+        "mode": "all",
+        "y": 0
+      },
+      "assets_option": null,
+      "volatile": false,
+      "complete": true,
+      "bounds": [
+        [
+          -400,
+          -64,
+          -400
+        ],
+        [
+          416,
+          320,
+          416
+        ]
+      ],
+      "map_level": 3,
+      "tiles": 12367,
+      "warnings": [],
+      "path": "/private/tmp/structura-overview-full-data/overviews/bd68532ae6bf1ab3c5b10cfba1d54ce20e8f0f45d70e4f048592d34f0eb59cfb/ce1c29fdd6c140579c355f8071c04a64.sqlite",
+      "disk_bytes": 299687936
+    },
+    "fit_lod_counts": {
+      "1": 1456,
+      "2": 19,
+      "0": 137
+    },
+    "fit_camera": {
+      "position": [
+        886.479419137578,
+        699.764528049282,
+        1082.0992739219723
+      ],
+      "target": [
+        104.0,
+        64.0,
+        104.0
+      ],
+      "direction": [
+        -0.5570484990582332,
+        -0.4526019054848144,
+        -0.6963106238227913
+      ],
+      "bounds": [
+        -160.0,
+        368.0,
+        -128.0,
+        96.0,
+        -160.0,
+        368.0
+      ]
+    },
+    "fit_actors": {
+      "visible": 64,
+      "total": 64
+    },
+    "rotation_starts_no_jobs": true,
+    "flight_camera": [
+      [
+        886.479419137578,
+        699.764528049282,
+        1082.0992739219723
+      ],
+      [
+        104.0,
+        64.0,
+        104.0
+      ]
+    ],
+    "flight": {
+      "frames": 165,
+      "renders_per_second": 39.86692065998495,
+      "frame_p95_ms": 26.25081880000124,
+      "frame_p99_ms": 28.702075920001,
+      "render_mean_ms": 22.444454284848028,
+      "render_p95_ms": 23.6238085999787
+    },
+    "latest_teleport_wins": true,
+    "visible_tiles": 24,
+    "geometry_bytes": 100662939,
+    "overview_actors": 67,
+    "viewport": [
+      2760,
+      1602
+    ],
+    "issues": [],
+    "source_unchanged": true
+  },
+  "overview_cached_long_flight": {
+    "world": "/Users/kirimba/Library/Application Support/minecraft/saves/A",
+    "radius": 6,
+    "stages": {
+      "open": {
+        "seconds": 4.544171583,
+        "gui_gap_p95_ms": 18.49345850000006,
+        "gui_gap_max_ms": 81.64254199999999,
+        "rss_gui_workers_bytes": 1448607744,
+        "sampled_rss_max_bytes": 1454030848
+      },
+      "prepare": {
+        "seconds": 3.284331667000001,
+        "gui_gap_p95_ms": 23.504558600000358,
+        "gui_gap_max_ms": 96.89770799999842,
+        "rss_gui_workers_bytes": 2204155904,
+        "sampled_rss_max_bytes": 2204155904
+      },
+      "fit": {
+        "seconds": 2.5112485420000006,
+        "gui_gap_p95_ms": 24.92060030000065,
+        "gui_gap_max_ms": 141.3691669999988,
+        "rss_gui_workers_bytes": 2578169856,
+        "sampled_rss_max_bytes": 2578169856
+      },
+      "teleport": {
+        "seconds": 2.1761570840000033,
+        "gui_gap_p95_ms": 29.76990860000228,
+        "gui_gap_max_ms": 107.5381670000013,
+        "rss_gui_workers_bytes": 2437136384,
+        "sampled_rss_max_bytes": 2437136384
+      }
+    },
+    "snapshot": {
+      "version": 3,
+      "world": "/Users/kirimba/Library/Application Support/minecraft/saves/A",
+      "dimension": "minecraft:overworld",
+      "created": 1789124277.809932,
+      "assets": "/Users/kirimba/Library/Application Support/minecraft/versions/1.21.1/1.21.1.jar",
+      "resources": [
+        1787778480844425822,
+        26836906,
+        34663892
+      ],
+      "below_y": null,
+      "name": "A",
+      "chunks": 2601,
+      "document_id": "1dbe9a2fc8cb42c2994c4086f3528030",
+      "revision": 0,
+      "height": {
+        "mode": "all",
+        "y": 0
+      },
+      "assets_option": null,
+      "volatile": false,
+      "complete": true,
+      "bounds": [
+        [
+          -400,
+          -64,
+          -400
+        ],
+        [
+          416,
+          320,
+          416
+        ]
+      ],
+      "map_level": 3,
+      "tiles": 12367,
+      "warnings": [],
+      "path": "/private/tmp/structura-overview-full-data/overviews/bd68532ae6bf1ab3c5b10cfba1d54ce20e8f0f45d70e4f048592d34f0eb59cfb/9ccc4dd0b94e4df68ad6f664c64c3fcb.sqlite",
+      "disk_bytes": 299687936
+    },
+    "fit_lod_counts": {
+      "1": 1456,
+      "2": 19,
+      "0": 137
+    },
+    "fit_camera": {
+      "position": [
+        886.479419137578,
+        699.764528049282,
+        1082.0992739219723
+      ],
+      "target": [
+        104.0,
+        64.0,
+        104.0
+      ],
+      "direction": [
+        -0.5570484990582332,
+        -0.4526019054848144,
+        -0.6963106238227913
+      ],
+      "bounds": [
+        -160.0,
+        368.0,
+        -128.0,
+        96.0,
+        -160.0,
+        368.0
+      ]
+    },
+    "fit_actors": {
+      "visible": 64,
+      "total": 64
+    },
+    "rotation_starts_no_jobs": true,
+    "flight_camera": [
+      [
+        886.479419137578,
+        699.764528049282,
+        1082.0992739219723
+      ],
+      [
+        104.0,
+        64.0,
+        104.0
+      ]
+    ],
+    "flight": {
+      "frames": 1637,
+      "renders_per_second": 55.30510602608506,
+      "frame_p95_ms": 21.147499749999632,
+      "frame_p99_ms": 25.500789800000096,
+      "render_mean_ms": 16.066006589492975,
+      "render_p95_ms": 18.921358600000094
+    },
+    "latest_teleport_wins": true,
+    "visible_tiles": 24,
+    "geometry_bytes": 100662939,
+    "overview_actors": 67,
+    "viewport": [
+      2760,
+      1602
+    ],
+    "issues": [],
+    "source_unchanged": true
+  },
+  "smoke": {
+    "build_seconds": 1.2088655,
+    "chunks": 6,
+    "rotation_without_loading": true,
+    "latest_teleport_preserves_document": true,
+    "manual_flight_cancels_teleport": true,
+    "load_here_preserves_camera": true,
+    "rapid_height_changes_keep_the_latest_view": true,
+    "cancel_does_not_restart_auto_detail": true,
+    "zoom_anchor": true,
+    "visible_tiles": 4,
+    "geometry_bytes": 549109
+  },
+  "validation": {
+    "core_edit_native_lod": {
+      "passed": 940,
+      "seconds": 43.92
+    },
+    "render_export_environment": {
+      "passed": 425,
+      "skipped": 2,
+      "seconds": 20.76
+    },
+    "ruff": "passed",
+    "ui_layout": "both tasks readable, no overlap, fixed 1104x700 window and unchanged viewport",
+    "bundle_rebuilt": false
+  }
+}
