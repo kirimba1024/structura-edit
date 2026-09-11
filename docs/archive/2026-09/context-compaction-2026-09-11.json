@@ -27,8 +27,7 @@
       "passed": 425,
       "skipped": 2,
       "skip_reasons": [
-        "optional Amulet unavailable in render environment",
-        "external Khronos validator not configured"
+        "GLB and glTF interoperability checks: external Khronos validator not configured"
       ],
       "qem": "included in editor fast profile"
     },
