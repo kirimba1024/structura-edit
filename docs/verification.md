@@ -13,7 +13,7 @@
 
 - **fast:** локальные ссылки активной документации, Ruff, strict mypy выбранной границы,
   core/edit pytest и native QEM unit test. Часть pytest использует Qt: это не headless-профиль.
-- **native:** обязательные smoke сохранения/восстановления, clipboard, поиска/NBT,
+- **native:** обязательные smoke сохранения/восстановления, отклонения старого recipe, clipboard, поиска/NBT,
   карт/срезов, world overview/телепорта и навигации. Окна запускаются последовательно.
 - **full:** fast и native. Сборка приложения — отдельный [packaging check](../packaging/README.md).
 - **docs:** только структура и локальные ссылки текущей документации.

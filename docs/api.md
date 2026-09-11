@@ -37,6 +37,7 @@ Fill/Replace/Erase/Move/shapes produce ChangeSet values for `apply`, `snapshot(c
 or `transaction(label)`. A change belongs to one document revision; later edits raise
 StaleChangeError for old changes. `transaction` edits a disposable branch and commits
 one diff if successful; an exception leaves the original unchanged.
+`diff` orders changed blocks by local X/Y/Z, then entity changes by their stable keys.
 
 The default operation budget is 500,000 cells/objects as checked by each operation.
 `stored_positions(selection)` iterates stored base/overlay entries using the smaller
@@ -133,6 +134,10 @@ win. This does not validate every Minecraft version or mod's semantics.
 The GUI Python panel runs ordinary local Python on a disposable branch. Preview never
 commits parent edits; exceptions and cancellation discard that branch. Filesystem/network
 side effects of explicitly executed code are outside the transaction.
+Intermediate Undo/Redo remains available through a temporary history journal with the
+usual 64 MiB change cache; completion, failure and worker cancellation remove that journal.
+Only the final diff reaches Apply as one history step. This bounds the change cache,
+not all Python allocations or the list of history entries.
 
 File saves retain supported native metadata and core's atomic-file writer. Edited
 Litematic saving and arbitrary cross-format conversion are separate capabilities.

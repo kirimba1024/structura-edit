@@ -119,3 +119,17 @@ def test_one_block_expansion_does_not_copy_or_rekey_existing_cells(edit):
     assert edit.undo() and edit.size == original
     assert edit.redo() and edit.size == change.resize.after
     assert base.size == original
+
+
+@pytest.mark.parametrize('protocol', [4, 5])
+def test_compact_change_pickle_preserves_shared_cells_nbt_entities_and_resize(edit, protocol, tmp_path):
+    from copy import copy
+
+    change = edit.paste(edit.copy(edit.select()), (-5, -3, -8))
+    restored = pickle.loads(pickle.dumps(change, protocol=protocol))
+    assert restored == change
+    assert copy(restored.changes[0]) == restored.changes[0]
+    first, second = edit.fork(), edit.fork()
+    first.apply(change)
+    second.apply(restored)
+    assert load_root(first.save(tmp_path / 'first.nbt')) == load_root(second.save(tmp_path / 'second.nbt'))

@@ -14,7 +14,7 @@ from structura_edit.ui import EditorWindow
 
 def settle(window, timeout=45):
     def ready():
-        return (not window.tasks.busy and window.world.queued is None and not window.views.render_queued
+        return (QApplication.activeModalWidget() is None and not window.tasks.busy and window.world.queued is None and not window.views.render_queued
                 and (not window.views.map_queued or window.minimap.collapsed) and not window.minimap.maps.busy
                 and window.objects.pending_edit is None)
     if ready():

@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 import pytest
 
@@ -45,6 +46,52 @@ def test_recipe_stdout_reports_full_write_length(edit):
     assert len(output) == 16_000 and output.endswith("20000\n")
 
 
+@pytest.mark.parametrize('fixture', ['edit', 'world_edit'])
+def test_recipe_history_is_bounded_without_losing_undo_redo(request, fixture, tmp_path):
+    session = request.getfixturevalue(fixture)
+    session.history.cache_bytes = 2048
+    scratch = tmp_path / 'scratch'
+    scratch.mkdir()
+    code = '''for index in range(40):
+    edit.apply(edit.set_block((0, 0, 0), 'minecraft:gold_block' if index % 2 else 'minecraft:glass'))
+assert edit.history._cached_bytes <= edit.history.cache_bytes
+assert len(edit.history.entries) == 40
+for _ in range(40): assert edit.undo()
+assert not edit.undo() and edit.state_at((0, 0, 0)) == 'minecraft:stone'
+for _ in range(40): assert edit.redo()
+assert not edit.redo()
+print(edit.history.path)
+'''
+    change, output = execute('recipe', dict(session=session, selection=session.select(), code=code), scratch_dir=str(scratch))
+    assert len(change) == 1 and not session.dirty and not session.can_undo
+    assert not list(scratch.iterdir()) and not Path(output.strip()).exists()
+    session.apply(change)
+    assert session.state_at((0, 0, 0)) == 'minecraft:gold_block'
+    assert session.undo() and session.state_at((0, 0, 0)) == 'minecraft:stone'
+
+
+@pytest.mark.parametrize('disk_failure', [False, True])
+def test_recipe_failure_cleans_journal_and_preserves_source_redo(edit, tmp_path, monkeypatch, disk_failure):
+    import sqlite3
+
+    edit.apply(edit.set_block((0, 0, 0), 'minecraft:gold_block'))
+    edit.undo()
+    history = tuple(edit.history.entries), edit.history.cursor, edit.revision
+    scratch = tmp_path / 'scratch'
+    scratch.mkdir()
+    if disk_failure:
+        def fail(*args, **kwargs):
+            raise sqlite3.OperationalError('disk full')
+        monkeypatch.setattr(sqlite3, 'connect', fail)
+    with pytest.raises(sqlite3.OperationalError if disk_failure else RuntimeError):
+        execute('recipe', dict(session=edit, selection=edit.select(), code='''for _ in range(3):
+    edit.apply(edit.set_block((0, 0, 0), 'minecraft:glass'))
+raise RuntimeError('intentional')'''), scratch_dir=str(scratch))
+    assert not list(scratch.iterdir())
+    assert (tuple(edit.history.entries), edit.history.cursor, edit.revision) == history
+    assert edit.can_redo and not edit.dirty
+
+
 @pytest.mark.parametrize("index", [0.5, True, -1, 100, "1", None])
 def test_invalid_history_position_is_rejected_before_changing_document(edit, index):
     edit.apply(edit.set_block((0, 0, 0), "minecraft:glass"))
@@ -63,18 +110,27 @@ def test_history_task_reports_progress_in_both_directions(edit):
     assert progress == [("History", done, 3) for done in (1, 2, 3, 1, 2, 3)]
 
 
-def test_worker_cancel_and_recover(edit):
+def test_worker_cancel_and_recover(edit, tmp_path):
     worker = Worker()
     try:
-        worker.submit("recipe", session=edit.fork(), selection=edit.select(), code="while True: pass")
+        marker = tmp_path / 'started'
+        worker.submit("recipe", session=edit.fork(), selection=edit.select(), code=
+                      f"from pathlib import Path\nedit.apply(edit.set_block((0, 0, 0), 'minecraft:glass'))\nPath({str(marker)!r}).touch()\nwhile True: pass")
+        scratch = Path(worker._scratch.name)
+        deadline = time.monotonic() + 20
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert marker.exists() and list(scratch.rglob('history.sqlite'))
         with pytest.raises(RuntimeError):
             worker.submit("recipe")
         worker.close()
         wait_stopped(worker)
+        assert not scratch.exists()
         assert not edit.dirty
         worker.submit("recipe", session=edit.fork(), selection=edit.select(), code='edit.apply(edit.set_block((0, 0, 0), "minecraft:glass"))\nprint("done")')
         reply = wait(worker)
         assert isinstance(reply, TaskSuccess), reply
+        assert not list(Path(worker._scratch.name).iterdir())
         result = reply.payload
         change, output = result
         assert output == "done\n"
@@ -84,6 +140,28 @@ def test_worker_cancel_and_recover(edit):
         assert edit.state_at((0, 0, 0)) == "minecraft:stone"
     finally:
         worker.close()
+
+
+def test_failed_worker_start_removes_its_scratch_directory(edit, monkeypatch):
+    import multiprocessing.process
+    import structura_edit.jobs as jobs
+
+    created = []
+    temporary = jobs.TemporaryDirectory
+    def track(**kwargs):
+        directory = temporary(**kwargs)
+        created.append(Path(directory.name))
+        return directory
+    def fail(self):
+        raise OSError('process creation failed')
+    monkeypatch.setattr(jobs, 'TemporaryDirectory', track)
+    monkeypatch.setattr(multiprocessing.process.BaseProcess, 'start', fail)
+    worker = Worker()
+    with pytest.raises(OSError, match='process creation failed'):
+        worker.submit('recipe', session=edit, selection=edit.select(), code='pass')
+    assert created and all(not path.exists() for path in created)
+    assert not worker.busy and worker._process is None and worker._scratch is None
+    worker.close()
 
 
 def test_changed_code_requires_restart_before_loading_mixed_modules(tmp_path):

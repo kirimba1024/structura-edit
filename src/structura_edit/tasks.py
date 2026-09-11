@@ -3,6 +3,8 @@ import sqlite3
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, replace
 from numbers import Integral
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Callable, Dict, Optional
 
 from .object_search import ObjectSearch
@@ -26,6 +28,7 @@ class _Output(io.StringIO):
 class TaskContext:
     progress: Optional[ProgressCallback] = None
     object_search: Optional[ObjectSearch] = None
+    scratch_dir: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -207,7 +210,9 @@ def _recipe(args, context):
     branch = session.fork()
     output = _Output()
     namespace = {"edit": branch, "selection": args["selection"]}
-    with redirect_stdout(output), redirect_stderr(output):
+    with TemporaryDirectory(prefix="recipe-", dir=context.scratch_dir) as directory, redirect_stdout(output), redirect_stderr(output):
+        branch.history.persistent = True
+        branch.history.path = str(Path(directory) / "history.sqlite")
         exec(compile(args["code"], "<structura recipe>", "exec"), namespace)
     return session.diff(branch), output.getvalue()
 
@@ -358,13 +363,13 @@ def task_definition(kind):
         raise ValueError(f"Unknown task: {kind}") from None
 
 
-def execute(kind, args, progress=None, *, object_search=None):
+def execute(kind, args, progress=None, *, object_search=None, scratch_dir=None):
     task = task_definition(kind)
     if task.resources:
         from .resources import refresh_resources
 
         refresh_resources(args.get("assets"))
-    result = task.execute(args, TaskContext(progress, object_search))
+    result = task.execute(args, TaskContext(progress, object_search, scratch_dir))
     if kind in ("operation", "recipe", "repeat", "placement_plan", "paint", "nbt_batch"):
         from .change_report import report_change
 

@@ -69,12 +69,18 @@ class _Cell:
     origin: Optional[Position] = None
     data: Optional[CellData] = None
 
+    def __reduce__(self):
+        return type(self), (self.state, self.variant, self.keep_nbt, self.origin, self.data)
+
 
 @dataclass(frozen=True)
 class _Delta:
     position: Position
     before: Optional[_Cell]
     after: _Cell
+
+    def __reduce__(self):
+        return type(self), (self.position, self.before, self.after)
 
 
 @dataclass(frozen=True)

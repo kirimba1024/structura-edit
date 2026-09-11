@@ -4,13 +4,14 @@ import threading
 import traceback
 from dataclasses import replace
 from time import monotonic
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from .task_protocol import DocumentRequest, TaskCall, TaskRequest, TaskProgress, TaskSuccess, TaskFailure
 from .worker_document import WorkerDocument, document_token, matches_document
 
 
-def _serve(connection):
+def _serve(connection, scratch_dir):
     from .runtime_code import CodeVersion
     from .tasks import execute, task_definition
     from .object_search import ObjectSearch
@@ -38,9 +39,9 @@ def _serve(connection):
                     object_search = ObjectSearch()
                 token = None
                 if isinstance(command, DocumentRequest):
-                    payload, token = document.execute(command, progress, object_search=object_search)
+                    payload, token = document.execute(command, progress, object_search=object_search, scratch_dir=scratch_dir)
                 else:
-                    payload = execute(command.kind, command.args, progress, object_search=object_search)
+                    payload = execute(command.kind, command.args, progress, object_search=object_search, scratch_dir=scratch_dir)
                 connection.send(TaskSuccess(request.task_id, payload, token))
             except BaseException as error:
                 document.clear()
@@ -54,6 +55,7 @@ def _serve(connection):
 class Worker:
     def __init__(self):
         self._process = None
+        self._scratch = None
         self._connection = None
         self._results = queue.Queue()
         self._progress = queue.Queue(maxsize=1)
@@ -75,16 +77,19 @@ class Worker:
     def _start(self):
         context = multiprocessing.get_context('spawn')
         connection, child = context.Pipe()
-        process = context.Process(target=_serve, args=(child,), daemon=True)
+        scratch = TemporaryDirectory(prefix="structura-worker-")
+        process = context.Process(target=_serve, args=(child, scratch.name), daemon=True)
         try:
             process.start()
         except Exception:
             connection.close()
             process.close()
+            scratch.cleanup()
             raise
         finally:
             child.close()
         self._connection, self._process = connection, process
+        self._scratch = scratch
 
     def submit_document(self, command, session, *, task_id=None):
         return self.submit(command.kind, task_id=task_id, document=(command, session))
@@ -213,6 +218,9 @@ class Worker:
                 self._process.kill()
                 self._process.join(timeout=0.5)
             self._process.close()
+        if self._scratch is not None:
+            self._scratch.cleanup()
+            self._scratch = None
         if self._exchange is not None and self._exchange.is_alive():
             self._retiring = self._exchange
         elif self._connection is not None:

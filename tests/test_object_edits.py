@@ -37,6 +37,22 @@ def test_unknown_entity_inventory_edit_undo_and_save(objects, tmp_path):
         objects.apply(change)
 
 
+def test_diff_order_is_independent_of_edit_and_container_order(objects):
+    positions = ((4, 4, 4), (0, 1, 3), (2, 2, 2))
+    results = []
+    for reverse in (False, True):
+        branch = objects.fork()
+        branch._entities = dict(sorted(branch._entities.items(), reverse=reverse))
+        branch.apply(transform_entities(branch, tuple(branch._entities), action='Move', offset=(1, 0, 0)))
+        for position in reversed(positions) if reverse else positions:
+            branch.apply(branch.set_block(position, 'minecraft:glass'))
+        result = objects.diff(branch)
+        assert result.positions == tuple(sorted(positions))
+        assert tuple(delta.key for delta in result.entities) == tuple(sorted(objects._entities))
+        results.append(result)
+    assert results[0] == results[1]
+
+
 def test_typed_inspector_drafts_apply_without_mutating_inputs(objects):
     from structura_edit.nbt_values import replace_value
     from structura_edit.object_edits import edit_objects, inspect_objects

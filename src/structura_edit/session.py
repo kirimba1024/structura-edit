@@ -389,14 +389,14 @@ class EditSession:
             check_resize(self, resize)
             branch = branch.fork()
             resize_document(branch, resize, reverse=True)
-        changes = tuple(
+        changes = tuple(sorted((
             _Delta(p, self._cell(p), branch._cell(p))
             for p in self._cells.keys() | branch._cells.keys()
             if self._cell(p) != branch._cell(p)
-        )
-        entities = tuple(EntityDelta(key, self._entities.get(key), branch._entities.get(key))
-                         for key in self._entities.keys() | branch._entities.keys()
-                         if self._entities.get(key) != branch._entities.get(key))
+        ), key=lambda delta: delta.position))
+        entities = tuple(sorted((EntityDelta(key, self._entities.get(key), branch._entities.get(key))
+                                 for key in self._entities.keys() | branch._entities.keys()
+                                 if self._entities.get(key) != branch._entities.get(key)), key=lambda delta: delta.key))
         change = ChangeSet(self._id, self.revision, label, changes, entities, resize)
         self._check_change(change)
         return change

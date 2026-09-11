@@ -18,7 +18,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         from .ui import launch
-    except ImportError as error:
+    except ModuleNotFoundError as error:
+        if error.name not in ("PySide6", "pyvista", "pyvistaqt", "vtk", "vtkmodules", "qtpy"):
+            raise
         parser.exit(2, f"Install structura-edit[gui] to open the workbench.\n{error}\n")
     if args.world and args.region:
         parser.error("--region applies to Litematic files; choose a world dimension in View")

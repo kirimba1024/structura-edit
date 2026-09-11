@@ -1,0 +1,153 @@
+{
+  "date": "2026-09-11",
+  "baseline_edit": "01a48229083e1130fa09022045a2ecd9a08ca99b",
+  "scope": [
+    "Compact constructor pickle for _Cell/_Delta; no new value model",
+    "Recipe uses existing disk-backed History with full intermediate Undo/Redo and parent-owned cancellation cleanup",
+    "Deterministic diff order, package metadata version, precise optional-GUI import errors"
+  ],
+  "fast": {
+    "command": "python tools/check_edit.py fast",
+    "tests": 1081,
+    "warnings": 21,
+    "ruff": "passed",
+    "mypy_boundary_files": 4,
+    "qem_runtime": "passed",
+    "log_directory": "/private/tmp/structura-next-fast"
+  },
+  "native": {
+    "building_workflow": "passed",
+    "placement_tools": "passed",
+    "object_search": "passed",
+    "nbt_batch": "passed",
+    "world_edit": "passed",
+    "camera_maps": "passed",
+    "height_slice": "passed",
+    "overview": "passed",
+    "connected": "passed",
+    "placement_boundary": "passed"
+  },
+  "native_logs": "/private/tmp/structura-next-delivery-verified",
+  "initial_native_failure": {
+    "stage": "building_workflow / draft_recover",
+    "observation": "Process sampled waiting inside QMessageBox.information; stopped after 148 seconds",
+    "diagnostic": "Instrumented follow-up completed recovery, Save and stale-recipe rejection",
+    "change": "Shared smoke settle now waits until no modal widget is active; final canonical run passed",
+    "limit": "Original intermittent hang cause not conclusively established; not a proven product fix",
+    "log": "/private/tmp/structura-next-delivery/building_workflow.log",
+    "stack": "/private/tmp/structura-building-hang.sample"
+  },
+  "full_gate": "Incomplete: navigation deferred because macOS session is locked; user authorized delivery. Physical input is not verified.",
+  "codec": {
+    "cells": 57625,
+    "samples": 5,
+    "results": [
+      {
+        "mode": "default",
+        "bytes": 4219193,
+        "dump_ms": 61.61391699999985,
+        "load_ms": 224.97458300000005
+      },
+      {
+        "mode": "compact",
+        "bytes": 2519856,
+        "dump_ms": 65.0476659999999,
+        "load_ms": 229.00012499999977
+      }
+    ],
+    "fixture": "24-floor building Take to (-40,-3,-32); protocol 5; 5-sample median; round-trip equality checked",
+    "limit": "Payload reduced by 40%; raw decode throughput did not improve"
+  },
+  "native_workflow": {
+    "command": "python tests/benchmark_edit_workflow.py --visible",
+    "fixture": {
+      "floors": 24,
+      "source_size": [
+        32,
+        144,
+        24
+      ],
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "viewport": [
+        1104,
+        660
+      ],
+      "resident_document": true
+    },
+    "before": {
+      "take_review": {
+        "elapsed_ms": 2742.28,
+        "gui_timer_max_gap_ms": 385.65,
+        "timer_samples": 126
+      },
+      "rss_sum_mib": 1362.91
+    },
+    "after": {
+      "take_review": {
+        "elapsed_ms": 2772.62,
+        "gui_timer_max_gap_ms": 212.22,
+        "timer_samples": 125
+      },
+      "rss_sum_mib": 1285.92
+    },
+    "assertions": "Take, Save and reload, Undo, Redo, block NBT, entities, bounds and untouched source",
+    "limit": "One unprofiled run each, no simultaneous benchmarks. Shared RSS pages may be counted twice. Review elapsed time unchanged; measurable GUI stalls remain.",
+    "profile_finding": "Separate trace: EditorDocument.show_preview -> _check_change about 179 ms on main thread; validation retained"
+  },
+  "recipe": {
+    "fixture": "Fresh process; 256x1x1 empty structure; 1000 alternating glass/stone fills followed by Undo/Redo; final 256-cell diff",
+    "before": {
+      "seconds": 3.4138070419999997,
+      "peak_rss_mib": 132.421875,
+      "cells": 256,
+      "history": {
+        "entries": 1000,
+        "cached_changes": 1000,
+        "cached_bytes": 142887856
+      }
+    },
+    "after": {
+      "seconds": 3.9827768750000003,
+      "peak_rss_mib": 82.25,
+      "cells": 256,
+      "history": {
+        "entries": 1000,
+        "cached_changes": 469,
+        "cached_bytes": 67036046
+      }
+    },
+    "limit": "64 MiB bounds estimated retained ChangeSet cache, not all Python allocations/history metadata; SQLite adds IO time"
+  },
+  "regressions": [
+    "40-step Undo/Redo under 2 KiB cache for schematic and WorldView",
+    "Recipe exception/disk failure preserves source state and redo, removes journal",
+    "Hard worker cancellation after journal creation removes scratch, then new worker succeeds",
+    "Failed worker start removes scratch",
+    "Protocol 4/5 NBT/entity/resize round-trip and identical saved roots",
+    "Diff independent of edit/entity container order",
+    "CLI missing optional module versus genuine import bug; base import/help without GUI",
+    "Building smoke rejects stale recipe output without changing revision"
+  ],
+  "package": {
+    "archive": "Structura-Edit-macOS-arm64.zip",
+    "sha256": "44dd84d73bcfc7027d4bf5563e836b5cde283899c17617f42a0e0063b79db914",
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "signing": "Ad hoc; not notarized",
+    "installation_check": "passed",
+    "versions": {
+      "structura-edit": "0.1.0a1",
+      "structura-core": "0.6.1",
+      "structura-render": "0.8.1",
+      "PySide6-Essentials": "6.10.2",
+      "vtk": "9.5.2",
+      "meshoptimizer": "0.2.30a0"
+    },
+    "wheels": {
+      "structura_core-0.6.1-py3-none-any.whl": "8df69515d373f89749e18caa12b31f7328943445b46e82543aa4f5612b2c9fd3",
+      "structura_render-0.8.1-py3-none-any.whl": "cb542873a72d7f55a04258c20bcf6b943e5495d324f140266cc3a62b3dbb60dc",
+      "structura_edit-0.1.0a1-py3-none-any.whl": "a7c041da20f106b280493f6984d6541ee95afeee0c770cbee0d23d216c314406"
+    }
+  }
+}

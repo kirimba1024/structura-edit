@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication, QInputDialog, QMessageBox
 from structura_core import save_structure
 
 from building_fixture import building_source, content
-from smoke_gui import settle
+from smoke_gui import check_recipe_invalidation, settle
 from structura_edit import EditSession
 from structura_edit.picking import Hit
 from structura_edit.ui import EditorWindow
@@ -160,6 +160,8 @@ def journey(window, root, output, measurements):
     assert not window.placement.bar.placement.isVisible()
     window.grab().save(str(output / 'recovered.png'))
     window.plotter.screenshot(str(output / 'recovered-scene.png'))
+    window.selection_actions.set_bounds((0, 0, 0), (1, 1, 1))
+    run('recipe_invalidation', lambda: check_recipe_invalidation(window))
     assert original.read_bytes() == original_bytes
 
 
@@ -182,7 +184,7 @@ def main():
         try:
             journey(window, root, args.output, measurements)
             result = dict(measurements.finish(), viewport=[window.plotter.width(), window.plotter.height()],
-                          visible=args.visible, assertions='Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save')
+                          visible=args.visible, assertions='Wall with chest and glass, four floors, Take, Save, Undo, draft recovery, repeated Save, stale recipe rejection')
             (args.output / 'result.json').write_text(json.dumps(result, indent=2))
             print(json.dumps(result), flush=True)
         finally:

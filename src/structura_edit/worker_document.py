@@ -32,7 +32,7 @@ class WorkerDocument:
         self.token = None
 
     def execute(self, request: DocumentRequest, progress: Optional[ProgressCallback] = None,
-                *, object_search: Optional[ObjectSearch] = None) -> Tuple[Any, DocumentToken]:
+                *, object_search: Optional[ObjectSearch] = None, scratch_dir: Optional[str] = None) -> Tuple[Any, DocumentToken]:
         from .tasks import execute
         from .worker_delta import compact_change, DocumentDelta
 
@@ -50,7 +50,7 @@ class WorkerDocument:
             self.session.history.prune()
             change = compact_change(self.session, command)
             with self.session.history.defer_pruning():
-                result = execute(command.kind, dict(args, session=self.session), progress, object_search=object_search)
+                result = execute(command.kind, dict(args, session=self.session), progress, object_search=object_search, scratch_dir=scratch_dir)
             token = document_token(self.session) if isinstance(command, (ApplyCommand, HistoryCommand, SaveCommand)) else request.token
             if change is not None:
                 result = DocumentDelta.capture(self.session, request.token, change, local=isinstance(command, ApplyCommand))
