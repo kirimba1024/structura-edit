@@ -17,9 +17,8 @@ within their current minor series; older wheels are rejected during installation
 The GUI includes Qt/VTK and optional format readers; the base import loads neither
 Qt nor VTK. Native GUI verification is currently on macOS.
 
-The [0.1.0a2 release](https://github.com/kirimba1024/structura-edit/releases/tag/v0.1.0a2)
-provides a Python wheel and a bundled Apple Silicon application. Install the
-downloaded wheel with its GUI extra:
+Available downloads are listed in [GitHub Releases](https://github.com/kirimba1024/structura-edit/releases).
+Install a downloaded Python wheel with its GUI extra:
 
 ```bash
 python -m pip install './structura_edit-0.1.0a2-py3-none-any.whl[gui]'

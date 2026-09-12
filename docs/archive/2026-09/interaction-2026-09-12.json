@@ -1,7 +1,7 @@
 {
   "date": "2026-09-12",
   "scope": "Interaction CPU in 2D/3D; map atlas reuse and reload identity; compact ChangeSet validation/IPC; CI configuration",
-  "baseline": "Current dirty workspace before this interaction pass; earlier render/cache work retained. No commits created.",
+  "baseline": "Dirty workspace at the start of the interaction benchmarks; earlier render/cache work retained. Later commits, releases and final validation are recorded under release.",
   "constraints": [
     "User deferred unlocking the Mac. Active native navigation, physical input and stable 60/120 Hz acceptance remain pending.",
     "Benchmarks and tests ran sequentially; timing and profiling were separate runs.",
@@ -316,7 +316,7 @@
     "targeted_maps_and_measurement": "109 passed",
     "fast": {
       "status": "passed",
-      "pytest": "1184 passed, 21 warnings",
+      "pytest": "1213 passed, 21 warnings",
       "steps": {
         "docs": "passed",
         "ruff": "passed",
@@ -324,7 +324,7 @@
         "qem_runtime": "passed",
         "pytest": "passed"
       },
-      "result": "/private/tmp/structura-interaction-fast-final-20260912/result.json"
+      "result": "/private/tmp/structura-alpha2-layout-final-fast/result.json"
     },
     "native": {
       "status": "partial",
@@ -353,19 +353,20 @@
   },
   "ci": {
     "path": ".github/workflows/check-edit.yml",
-    "status": "Configured; YAML parsed locally; remote jobs not run",
+    "status": "Executed on all four jobs; last workspace run passed macOS and failed only layout checks on Linux/Windows. Final local layout fixes await push and rerun.",
     "matrix": [
       "ubuntu-22.04/Python 3.9",
       "ubuntu-22.04/Python 3.11",
       "macos-14/Python 3.11",
       "windows-2022/Python 3.11"
     ],
-    "limitation": "Needs published library changes and updated submodule refs; does not replace native input, minimum macOS or packaging checks.",
+    "limitation": "Final layout fixes are not yet tested remotely. Does not replace native input, minimum macOS or packaging checks.",
     "action_documentation": [
       "https://github.com/actions/checkout/releases",
       "https://github.com/actions/setup-python/blob/main/README.md",
       "https://github.com/actions/upload-artifact/blob/main/README.md"
-    ]
+    ],
+    "run": "https://github.com/kirimba1024/structura/actions/runs/34701744256"
   },
   "source_sha256_after": {
     "camera_map_render.py": "6ed7e2c6877d2a1af98d6b0fee168ac7504b9cc1f2b1e853f1ad3ebc24c610ce",
@@ -398,7 +399,7 @@
       "structura_render-0.8.1-py3-none-any.whl": "c5df458b8186f2232f0513b23ac74b20267fa5536fb0db179c87d98dfc83cefb",
       "structura_core-0.6.1-py3-none-any.whl": "32770341f3141f5fe587523491104ae3e41a209d9fdf025a9b212b2a0fb821a8"
     },
-    "next_step": "Publish matching library APIs and raise editor dependency bounds before a source release. Use current workspace sources for development and local packaging."
+    "next_step": "Resolved by published core 0.6.2/render 0.8.2 and editor dependency bounds; this entry records the incompatible baseline."
   },
   "packaging": {
     "status": "passed",
@@ -440,7 +441,8 @@
       "World map zoom"
     ],
     "archive_bytes": 159284727,
-    "limitation": "Local arm64 build on macOS 26.6.2 with ad hoc signing. Minimum macOS, other platforms, Developer ID and notarization were not verified. Matching version strings do not make these workspace wheels identical to published wheels."
+    "limitation": "Local arm64 build on macOS 26.6.2 with ad hoc signing. Minimum macOS, other platforms, Developer ID and notarization were not verified. Matching version strings do not make these workspace wheels identical to published wheels.",
+    "superseded_by": "release.packaging records the versioned alpha 2 build; this baseline alpha 1 archive is not a release artifact."
   },
   "release": {
     "versions": {
@@ -453,14 +455,17 @@
       "pypi": "https://pypi.org/project/structura-core/0.6.2/",
       "commit": "1dbea0991ca1761601d7eeb01655932643d69619",
       "publish_ci": "https://github.com/kirimba1024/structura-core/actions/runs/34699756433",
-      "status": "published"
+      "status": "published",
+      "test_commit": "5a7c15e2737f644cfa6b080195e421f6fbb8f821",
+      "test_ci": "https://github.com/kirimba1024/structura-core/actions/runs/34700483851"
     },
     "render": {
       "release": "https://github.com/kirimba1024/structura-render/releases/tag/v0.8.2",
       "commit": "585e799e8ebea073785cd618e457b9ac57fcbddc",
       "ci": "https://github.com/kirimba1024/structura-render/actions/runs/34700183954",
       "publish_ci": "https://github.com/kirimba1024/structura-render/actions/runs/34700366035",
-      "status": "publishing"
+      "status": "published",
+      "pypi": "https://pypi.org/project/structura-render/0.8.2/"
     },
     "installed_checks": {
       "environment": "/private/tmp/structura-release-env-20260912",
@@ -475,11 +480,12 @@
         "log": "/private/tmp/structura-render-release-tests.log"
       },
       "edit": {
-        "passed": 866,
+        "passed": 874,
         "qt": "6.10.3",
-        "log": "/private/tmp/structura-edit-release-tests.log"
+        "log": "/private/tmp/structura-alpha2-reviewed-installed-tests.log",
+        "source": "Local release wheel from 1b47f4a, installed with published core 0.6.2/render 0.8.2 wheels; all module locations are site-packages."
       },
-      "twine": "All three wheels and sdists passed metadata validation; final editor artifacts come from its release commit"
+      "twine": "Core/render release artifacts and final editor wheel/sdist passed metadata validation; editor artifacts come from the prepared code commit 1b47f4a."
     },
     "format_matrix": {
       "supported_routes": 30,
@@ -495,6 +501,120 @@
         "No in-game format acceptance in this pass"
       ]
     },
-    "edit_pypi": "First project publisher is not configured; PyPI management requires account login. Publish editor wheel and app in GitHub Releases."
+    "edit_pypi": "First project publisher is not configured; PyPI management requires account login. Publish editor wheel and app in GitHub Releases.",
+    "edit": {
+      "status": "Built locally; final layout fixes are not pushed and no GitHub release is created",
+      "code_commit": "1b47f4a1a81dd9dd7d0e4d9422a4f6e04d8c4c52",
+      "previous_ci": "https://github.com/kirimba1024/structura-edit/actions/runs/34701740874",
+      "previous_ci_results": {
+        "macos-14/3.11": "passed",
+        "ubuntu-22.04/3.9": "2 failed, 870 passed, 2 skipped",
+        "ubuntu-22.04/3.11": "2 failed, 870 passed, 2 skipped",
+        "windows-2022/3.11": "4 failed, 868 passed, 2 skipped"
+      },
+      "remaining_remote_checks": "Placement control position with wrapped hints; repeat destination column overlap. Fixed locally in 1b47f4a; Linux/Windows confirmation awaits push.",
+      "local_layout_checks": {
+        "qt_6_10_2": "8 passed",
+        "qt_6_8_3": "8 passed"
+      },
+      "publication_block": "Automatic approval review rejected push and release asset upload, including a retry after public repository/admin and diff verification. It requires explicit user approval naming the public destinations and payload."
+    },
+    "packaging": {
+      "status": "passed",
+      "output": "libs/structura-edit/dist/0.1.0a2",
+      "manifest": {
+        "app": "Structura Edit.app",
+        "archive": "Structura-Edit-macOS-arm64.zip",
+        "sha256": "6c4737cc5aaed9d324f849d21ddeb946018b8c1020216427a8419c470877442a",
+        "python": "3.9.6",
+        "platform": "macOS-26.6.2-arm64-arm-64bit",
+        "signing": "Ad hoc; not notarized",
+        "installation_check": "passed",
+        "versions": {
+          "structura-edit": "0.1.0a2",
+          "structura-core": "0.6.2",
+          "structura-render": "0.8.2",
+          "PySide6-Essentials": "6.10.2",
+          "vtk": "9.5.2",
+          "meshoptimizer": "0.2.30a0"
+        },
+        "wheels": {
+          "structura_core-0.6.2-py3-none-any.whl": "7f657e6da9082d6758ede2060c0917be1a58213f4a236b78cf8f20f913bb88c7",
+          "structura_render-0.8.2-py3-none-any.whl": "088ae4d0e207cc99382788e3af0e794fe6e83ff608c332c884f328a2d8842e16",
+          "structura_edit-0.1.0a2-py3-none-any.whl": "82470bb49a019c124691420fe5b8b8a7c230fcb2ecc572c8a59b43c7346d3ddd"
+        },
+        "source_commits": {
+          "core": "5a7c15e2737f644cfa6b080195e421f6fbb8f821",
+          "render": "585e799e8ebea073785cd618e457b9ac57fcbddc",
+          "edit": "1b47f4a1a81dd9dd7d0e4d9422a4f6e04d8c4c52"
+        },
+        "package_source_matches": {
+          "structura_core": {
+            "version": "0.6.2",
+            "files": 38,
+            "reference": "Published PyPI wheel"
+          },
+          "structura_render": {
+            "version": "0.8.2",
+            "files": 60,
+            "reference": "Published PyPI wheel"
+          },
+          "structura_edit": {
+            "version": "0.1.0a2",
+            "files": 184,
+            "reference": "Local release wheel"
+          }
+        },
+        "source_archive_audit": {
+          "tracked_source_files": 408,
+          "generated_metadata_files": [
+            "PKG-INFO",
+            "setup.cfg",
+            "src/structura_edit.egg-info/PKG-INFO",
+            "src/structura_edit.egg-info/SOURCES.txt",
+            "src/structura_edit.egg-info/dependency_links.txt",
+            "src/structura_edit.egg-info/entry_points.txt",
+            "src/structura_edit.egg-info/requires.txt",
+            "src/structura_edit.egg-info/top_level.txt"
+          ]
+        },
+        "editor_ci": {
+          "status": "Final layout fixes await push and Linux/macOS/Windows verification",
+          "previous_run": "https://github.com/kirimba1024/structura-edit/actions/runs/34701740874"
+        },
+        "installed_editor_tests": {
+          "passed": 874,
+          "qt": "6.10.3",
+          "dependencies": "Published core 0.6.2/render 0.8.2 wheels"
+        },
+        "workspace_fast": {
+          "passed": 1213,
+          "docs": "passed",
+          "ruff": "passed",
+          "mypy": "passed",
+          "qem_runtime": "passed"
+        }
+      },
+      "checks": [
+        "Bundled example",
+        "Qt and VTK scene",
+        "Worker spawn",
+        "NBT batch preview",
+        "Apply",
+        "Save and reload",
+        "Undo",
+        "World overview and native QEM",
+        "Teleport and cancellation",
+        "Load here",
+        "World map zoom"
+      ],
+      "limitation": "Ad hoc signing, not notarized; checked on macOS 26.6.2 arm64 only. Minimum macOS 13, real native input and stable frame-time acceptance remain pending."
+    },
+    "regressions": [
+      "Teleport rechecks camera position and direction before publishing a ready result; deterministic regression failed 4 cases before the fix and passed all 6 after.",
+      "Worker cancellation checks pipe readiness instead of waiting indefinitely for a silent peer; the new regression failed before the fix.",
+      "Recovery fsync uses writable handles on Windows and read-only handles on POSIX; JSON is UTF-8 and manifest paths use POSIX separators.",
+      "Placement hint growth has its own row; repeat destination has an explicit column minimum. Geometry tests also compare positions relative to the placement panel."
+    ]
   }
 }

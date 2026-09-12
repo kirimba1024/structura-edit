@@ -36,8 +36,11 @@ Ruff пока E4/E7/E9/F; расширение format/import rules выполн�
 
 В [CI](../../../.github/workflows/check-edit.yml) тот же `fast` настроен для Linux
 (Python 3.9/3.11, Xvfb), macOS и Windows (Python 3.11). Логи сохраняются артефактом.
-Конфигурация требует публикации текущих изменений библиотек и submodule refs;
-её наличие не означает успешный прогон на этих системах. Native navigation,
+Прогоны уже выполнены: core/render прошли всю матрицу; последние проверки edit
+и workspace прошли macOS, но нашли дефекты раскладки на Linux/Windows. Их локальные
+исправления требуют нового удалённого прогона после push. Точные commits, ссылки
+и результаты — в [evidence](archive/2026-09/interaction-2026-09-12.json).
+Windows CI использует Mesa software OpenGL; native navigation,
 минимальная macOS и упаковка остаются отдельными проверками.
 
 Совместимость зависимостей проверяется отдельно от workspace: импорт должен идти
