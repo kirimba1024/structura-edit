@@ -105,7 +105,7 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
 
 
 @pytest.mark.parametrize("width", [1104, 1380])
-def test_repeat_panel_fits_long_values_without_overflow(qt_app, width):
+def test_repeat_panel_fits_long_values_without_overflow(qt_app, width, request):
     host = QWidget()
     apply_theme(host)
     host.resize(width, 200)
@@ -114,7 +114,14 @@ def test_repeat_panel_fits_long_values_without_overflow(qt_app, width):
     host.show()
     try:
         QTest.qWait(30)
+        request.node.user_properties.extend((
+            ("requested_width", width), ("initial_width", host.width()),
+            ("available_width", host.screen().availableGeometry().width()),
+        ))
+        host.setMinimumWidth(width)
+        QTest.qWait(30)
         bar.reposition()
+        assert host.width() == width
         widgets = [bar.layout().itemAt(index).widget() for index in range(bar.layout().count())]
         geometry = [widget.geometry() for widget in widgets]
         bar.copies.setValue(500_000)
