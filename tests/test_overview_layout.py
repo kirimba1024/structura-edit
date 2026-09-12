@@ -30,12 +30,15 @@ def test_progress_stays_in_status_bar_without_moving_the_viewport(qt_app):
             assert all(not rect.intersects(other) for other in rects), (type(widget).__name__, rect, rects)
             rects.append(rect)
         for progress in (window.progress, window.overview.progress):
-            assert QLabel.text(progress.label) == "Building detail"
-            assert QLabel.text(progress.count) == "12,345/62,424"
+            assert progress.label.text() == "Building detail"
+            assert progress.label.toolTip() == "Building detail"
+        assert QLabel.text(window.progress.count) == "12,345/62,424"
         assert window.progress.isVisible() and not window.overview.progress.isVisible()
         assert window.progress_panel.parent() is window.status_content
         window.progress.finish()
+        qt_app.processEvents()
         assert window.overview.progress.isVisible() and window.progress_panel.isVisible()
+        assert QLabel.text(window.overview.progress.count) == "12,345/62,424"
         window.overview.progress.finish()
         assert not window.progress_panel.isVisible()
     finally:
