@@ -39,7 +39,7 @@ class EditorCapabilities:
 def editor_capabilities(session: Optional[EditSession], *, busy: bool = False, protected: bool = False,
                         selected: bool = False, preview: Optional[ChangeSet] = None, scene_ready: bool = False,
                         placing: bool = False, repeating: bool = False, stroke: bool = False, world: bool = False,
-                        placement_ready: bool = False) -> EditorCapabilities:
+                        placement_ready: bool = False, selection_busy: Optional[bool] = None) -> EditorCapabilities:
     ready = session is not None and not busy
     editable = session is not None and not session.readonly and not busy
     dirty = session is not None and session.dirty
@@ -47,10 +47,11 @@ def editor_capabilities(session: Optional[EditSession], *, busy: bool = False, p
                        and (preview.document_id, preview.base_revision) == (session._id, session.revision))
     transient = placing or repeating or stroke
     selectable = session is not None and not transient
+    selection_busy = busy if selection_busy is None else selection_busy
     settled = ready and preview is None and not transient
     writable = settled and editable
     return EditorCapabilities(
-        ready=ready, editable=editable, can_select=selectable and not busy, can_keep_selecting=selectable,
+        ready=ready, editable=editable, can_select=selectable and not selection_busy, can_keep_selecting=selectable,
         can_operate=editable and selected and not transient, can_choose_material=selectable and not busy,
         can_apply=editable and scene_ready and not stroke and (placement_ready if placing else current_preview),
         can_discard=not protected and (preview is not None or transient),

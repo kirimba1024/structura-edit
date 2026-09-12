@@ -17,7 +17,6 @@ from structura_edit.overview_cache import open_snapshot, snapshot_build_slot, sn
 
 
 def test_full_snapshot_keeps_exact_blocks_and_publishes_only_complete_builds(tmp_path):
-    pytest.importorskip("meshoptimizer")
     world = create_overview_world(tmp_path / "world")
     before = {path: path.read_bytes() for path in world.rglob("*") if path.is_file()}
     stages = set()

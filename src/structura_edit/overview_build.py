@@ -11,11 +11,12 @@ from amulet_nbt import IntTag, from_snbt
 
 from structura_core.world import JavaWorld
 from structura_core.world_terrain import existing_chunks, terrain_sections, terrain_stamp
-from structura_render.lod_geometry import colored_geometry, merge_lods, simplify_lod
+from structura_render.lod_geometry import merge_lods, simplify_lod
 
 from .file_state import resource_stamp
 from .height_slice import HeightSlice
 from .overview_maps import build_map_pyramid
+from .overview_geometry import overview_geometry
 from .overview_model import OverviewNode, parent_key, tile_bounds
 from .overview_store import OVERVIEW_VERSION, OverviewStore, clip_overview_source, load_manifest
 from .resources import resolve_assets, texture_bank
@@ -58,10 +59,6 @@ def build_overview(path, dimension, directory, *, assets=None, progress=None, ch
 
 def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, below_y,
                     edits, document_id, revision, height, disk_budget):
-    import meshoptimizer
-
-    if not hasattr(meshoptimizer, "simplify_with_attributes"):
-        raise RuntimeError("Mesh simplification is unavailable")
     progress = progress or (lambda *args: None)
     world = JavaWorld(path)
     region = world.dimensions[dimension] / "region"
@@ -119,7 +116,7 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
                     mesh.points -= 1
                 for points, _, _ in geometry['flat']:
                     points -= 1
-                lod = colored_geometry(geometry['meshes'], geometry['flat'])
+                lod = overview_geometry(geometry, source)
                 if len(lod.triangles):
                     node = OverviewNode((0, *key), (), 0.0, geometry['geometry_bytes'])
                     nodes[node.key] = node

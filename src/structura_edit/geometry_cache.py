@@ -11,7 +11,7 @@ from .local_store import storage_root
 from .array_codec import encode_arrays
 
 
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 CACHE_BYTES = 512 * 1024**2
 
 

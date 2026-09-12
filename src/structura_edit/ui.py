@@ -1,7 +1,7 @@
 from time import perf_counter
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QToolButton
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QStackedWidget, QToolButton
 
 from .camera import FreeCamera
 from .action_log import ActionLog
@@ -58,6 +58,7 @@ class EditorWindow(QMainWindow):
         self.setMinimumSize(1104, 600)
         self.document = EditorDocument()
         self.assets = assets
+        self._start_fly_when_ready = False
         self.audit = ActionLog(storage_root() / 'logs')
         self.tasks = TaskRunner(Worker(), started=self._task_started, finished=self._sync, failed=self._task_failed,
                                 progress=lambda *update: self.progress.set_progress(*update), audit=self.audit)
@@ -114,8 +115,7 @@ class EditorWindow(QMainWindow):
                                             available=lambda: self.capabilities.can_choose_material)
         self.overview = OverviewController(self)
         self.streaming = WorldStreaming(self.world, lambda: self.overview.auto
-                                        and not self.overview.compatible() and not self.overview.worker.busy
-                                        and self.overview.blocked_target != self.overview._target() and not self.placement.active
+                                        and not self.placement.active
                                         and not self.repeat.active and self.document.pending is None and self.views.ready)
         self.views.prepare_scene = self.overview.prepare_document
         self.views.present_scene = self.overview.present_document
@@ -141,6 +141,7 @@ class EditorWindow(QMainWindow):
         placement_ready = (self.document.session is not None and model is not None and not model.reason(self.document.session)
                            and (plan is None or bool(plan.change)))
         return editor_capabilities(self.document.session, busy=self.tasks.busy, protected=self.tasks.protected,
+                                   selection_busy=self.tasks.busy and self.tasks.kind not in ("world", "render", "map"),
                                    selected=self.document.selected.current is not None, preview=self.document.pending,
                                    scene_ready=self.views.ready, placing=self.placement.active,
                                    repeating=self.repeat.active, stroke=self.paint.dragging, world=self.world.active,
@@ -200,7 +201,9 @@ class EditorWindow(QMainWindow):
         self.document_status = CellLabel(width=GRID * 24)
         self.statusBar().addPermanentWidget(self.document_status)
         self.status = CellLabel("Open a schematic or world")
-        self.statusBar().addWidget(self.status, 1)
+        self.status_content = QStackedWidget()
+        self.status_content.addWidget(self.status)
+        self.statusBar().addWidget(self.status_content, 1)
         self.error_message = ""
         self.issues = []
         self.error_button = QToolButton()
@@ -230,9 +233,13 @@ class EditorWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.fly_button)
         self.progress = TaskProgress()
         self.progress.cancelled.connect(self.cancel_task)
-        self.progress_panel = TaskProgressPanel(self.workbench, (self.progress, self.overview.progress))
+        self.progress_panel = TaskProgressPanel(self.status_content, (self.progress, self.overview.progress))
+        self.status_content.addWidget(self.progress_panel)
+        self.progress_panel.visibility_changed.connect(
+            lambda visible: self.status_content.setCurrentWidget(self.progress_panel if visible else self.status))
 
     def _connect_ui(self):
+        self.minimap.canvas.picked.connect(self.map_click)
         self.sources.opening.connect(self.navigation.stop)
         self.sources.message.connect(self.status.setText)
         self.world.opening.connect(self.navigation.stop)
@@ -348,7 +355,7 @@ class EditorWindow(QMainWindow):
 
     def _map_changed(self, large):
         self.navigation.suspend()
-        self.navigation.enabled = self.document.session is not None and not large
+        self.navigation.enabled = self.views.displayed is not None and not large
         self._sync()
 
     def fly_camera(self):
@@ -366,6 +373,8 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def _task_failed(self, kind, message):
+        if kind in ("world", "render", "render_preview") and self.views.preparing:
+            self.views.fail()
         if kind == "world" and self.world.queued is None:
             self.world.reset_request()
         if kind == "nbt_batch":
@@ -422,7 +431,10 @@ class EditorWindow(QMainWindow):
         if not self.tasks.busy:
             self.views.flush()
         if not self.tasks.busy:
-            self.progress.finish()
+            if self.views.preparing:
+                self.progress.start("Preparing scene", cancellable=False)
+            else:
+                self.progress.finish()
         self.drafts.tick()
         if not self.tasks.busy:
             self.panels.materials.request_icons()
@@ -513,7 +525,8 @@ class EditorWindow(QMainWindow):
         self.minimap.set_document(session)
         if fit and not self.world.active:
             self.camera.frame(session.size)
-        self.navigation.enabled = not self.minimap.large
+        self.navigation.enabled = preserve_focus and not self.minimap.large
+        self._start_fly_when_ready = not preserve_focus
         self._selection_changed()
         self.materials.set_counts(self.document.session.palette_counts())
         self.views.request(session, None, self.assets, self.entities_action.isChecked(), fit=fit, data=rendered,
@@ -523,8 +536,6 @@ class EditorWindow(QMainWindow):
         if not preserve_focus:
             (self.minimap if self.minimap.large else self.plotter).setFocus()
         self._sync()
-        if not preserve_focus:
-            self.navigation.start_fly()
 
     def _selection_changed(self):
         self._invalidate()
@@ -559,6 +570,26 @@ class EditorWindow(QMainWindow):
                 self.objects.refresh()
                 self.connected.pick(hit)
             return
+        if hit is not None:
+            self.objects.keys.clear()
+            self.objects.refresh()
+            self.document.selected.select_block(hit.position, extend=extend)
+            self._selection_changed()
+
+    def map_click(self, view, position, entity, extend):
+        from .map_picking import pick_map_block
+
+        session = self.document.session
+        if session is None or not self.capabilities.can_select or self.document.pending is not None:
+            return
+        if entity is not None and entity in session._entities:
+            self.objects.select(entity, extend)
+            return
+        maps = self.minimap.maps
+        if maps.context is None or maps.context.state._state_id != session._state_id:
+            return
+        hit = pick_map_block(session, position, view, self.minimap.canvas.map_cut,
+                             self.minimap.canvas.cave_y, self.slicing.value)
         if hit is not None:
             self.objects.keys.clear()
             self.objects.refresh()
@@ -690,6 +721,10 @@ class EditorWindow(QMainWindow):
             self._sync()
 
     def _rendered(self, data):
+        self.navigation.enabled = not self.minimap.large
+        if self._start_fly_when_ready:
+            self._start_fly_when_ready = False
+            self.navigation.start_fly()
         preview = self.document.preview
         if preview is not None and preview.change.report is not None:
             self.operation.info.setText(preview.change.report.for_height(self.slicing.value).summary)
@@ -697,7 +732,7 @@ class EditorWindow(QMainWindow):
         canvas = self.minimap.canvas
         if (canvas.size_blocks, canvas.origin) != (state.size, state.origin):
             self.minimap.set_document(state)
-        canvas.set_entities(self.scene.entity_markers)
+        canvas.set_entities(self.scene.entity_markers, self.scene.entity_marker_keys)
         canvas.update()
         self._guides_changed()
         self.objects.refresh()

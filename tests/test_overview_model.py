@@ -48,3 +48,11 @@ def test_old_arrivals_never_reactivate_a_cancelled_teleport():
     intent.cancel()
     assert not intent.accepts(first) and not intent.accepts(second)
     assert DetailTarget.at((-0.1, -16, 0), 1080, 60).cell == (-1, -1, 0)
+@pytest.mark.parametrize('blocks, changed, superseded', [(16, False, False), (64, False, False), (80, False, True), (0, True, True)])
+def test_moving_camera_keeps_nearby_precomputation_but_rejects_changed_coverage(blocks, changed, superseded):
+    from structura_edit.overview_model import DetailIntent
+
+    intent = DetailIntent()
+    intent.request(DetailTarget.at((0, 80, 0), 1080, 60))
+    target = DetailTarget.at((blocks, 80, 0), 1080, 60, ((0, 0, 0), (16, 16, 16)) if changed else ())
+    assert intent.superseded_by(target) is superseded

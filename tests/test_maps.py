@@ -9,6 +9,29 @@ from structura_core import parse_state
 from structura_edit.map_projection import VIEWS, project, unproject
 
 
+def test_sparse_alpha_layers_match_front_to_back_composition():
+    from structura_edit.map_images import _composite
+
+    rng = np.random.default_rng(19)
+    data = np.full((3, 4, 384), -1, np.int32)
+    data[0, 0, [0, 211, 383]] = (0, 1, 2)
+    data[1, 2, [14, 212, 319]] = (1, 0, 1)
+    data[2, 3, 383] = 2
+    tiles = rng.random((4, 2, 2, 4)).astype(np.float32)
+    tiles[-1] = 0
+    tiles[2, ..., 3] = 1
+    tiles[..., :3] *= tiles[..., 3:4]
+    expected = np.zeros((12, 2, 2, 3), np.float32)
+    transmission = np.ones((12, 2, 2, 1), np.float32)
+    for ray, cells in enumerate(data.reshape(-1, 384)):
+        for index in cells[cells >= 0]:
+            expected[ray] += transmission[ray] * tiles[index, ..., :3]
+            transmission[ray] *= 1 - tiles[index, ..., 3:4]
+    colors, remaining = _composite(data, tiles)
+    assert np.array_equal(colors, expected)
+    assert np.array_equal(remaining, transmission)
+
+
 @pytest.mark.parametrize("view", VIEWS)
 def test_map_coordinates_roundtrip(view):
     point, size = (1.25, 2.5, 3.75), (12, 8, 16)

@@ -71,6 +71,7 @@ def build_sections(sections, *, reset, assets=None, ghosts=None, progress=None):
         if cached is None and persistent:
             cached = _disk[1].get(signature)
             if cached is not None:
+                cached = prepare_geometry(cached)
                 _sections.put(signature, cached)
         if cached is not None:
             results[key] = cached
@@ -89,6 +90,7 @@ def build_sections(sections, *, reset, assets=None, ghosts=None, progress=None):
             from .map_entities import entity_markers
 
             data["entity_markers"] = entity_markers(source.entities, assets)
+            data["entity_marker_keys"] = source.entity_keys
         data["layers"] = {name: build_geometry(layer, assets, bounds)
                           for name, layer in zip(("added", "removed"), (ghosts or {}).get(key, ()))
                           if layer is not None and layer.present}
@@ -98,16 +100,17 @@ def build_sections(sections, *, reset, assets=None, ghosts=None, progress=None):
             total += layer["geometry_bytes"]
         data["geometry_bytes"] = sum(layer["geometry_bytes"] for layer in layers)
         data["signature"] = signature
+        if persistent:
+            _disk[1].put(signature, data)
+        data = prepare_geometry(data, position=origin)
         if signature is not None:
             _sections.put(signature, data)
-            if persistent:
-                _disk[1].put(signature, data)
         results[key] = data
         if total > MAX_GEOMETRY_BYTES:
             raise ValueError("Scene geometry exceeds 192 MiB; reduce the loaded area or schematic size")
         if progress:
             progress("Sections", index + 1, len(sections))
-    prepared = {key: prepare_geometry(data, position=sections[key][1]) for key, data in results.items()}
+    prepared = {key: dict(data, position=sections[key][1]) for key, data in results.items()}
     for data in prepared.values():
         if data.get('signature') is not None:
             data['signature'] = data['signature'], data['position']

@@ -22,6 +22,7 @@ class Scene:
         self.entity_bounds = {}
         self.entity_keys = ()
         self.entity_markers = []
+        self.entity_marker_keys = ()
         self.entity_boxes = np.empty((0, 2, 3))
         self.height = HeightSlice()
 
@@ -40,6 +41,7 @@ class Scene:
         self.entity_bounds = {}
         self.entity_keys = ()
         self.entity_markers = []
+        self.entity_marker_keys = ()
         self.entity_boxes = np.empty((0, 2, 3))
 
     def shift(self, offset):
@@ -47,7 +49,11 @@ class Scene:
             return
         for actor in self.actors:
             actor.SetPosition(*(p + d for p, d in zip(actor.GetPosition(), offset)))
-        self.signatures.clear()
+        self.signatures = {key: (signature[0], tuple(p + d for p, d in zip(signature[1], offset)))
+                           for key, signature in self.signatures.items() if signature is not None}
+        self.entity_bounds = {key: tuple(tuple(p + d for p, d in zip(corner, offset)) for corner in bounds)
+                              for key, bounds in self.entity_bounds.items()}
+        self.entity_boxes = np.asarray(list(self.entity_bounds.values())).reshape(-1, 2, 3)
 
     def replace(self, data, revision):
         for _ in self.replace_steps(data, revision):
@@ -83,6 +89,7 @@ class Scene:
                     self.entity_keys = tuple(self.entity_bounds)
                     self.entity_boxes = np.asarray(list(self.entity_bounds.values()))
                     self.entity_markers = section.get("entity_markers", [])
+                    self.entity_marker_keys = section.get("entity_marker_keys", ())
             self.sections.update(replacements)
             self.signatures.update((key, section.get("signature")) for key, section in data["sections"].items())
             self.removed_bytes.update((key, section.get("layers", {}).get("removed", {}).get("geometry_bytes", 0))

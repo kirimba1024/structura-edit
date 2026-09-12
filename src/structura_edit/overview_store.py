@@ -22,14 +22,14 @@ from .overview_model import OverviewNode, TILE_SPAN
 from .array_codec import encode_arrays as encode_arrays
 
 
-OVERVIEW_VERSION = 6
+OVERVIEW_VERSION = 7
 MAX_SNAPSHOT_BYTES = 8 * 1024**3
 MAP_SPAN = 128
 
 
-def decode_arrays(data):
+def decode_arrays(data, prefix=None):
     with np.load(BytesIO(data), allow_pickle=False) as archive:
-        return {name: archive[name] for name in archive.files}
+        return {name: archive[name] for name in archive.files if prefix is None or name.startswith(prefix)}
 
 
 def encode_image(array):
@@ -140,14 +140,19 @@ class OverviewStore:
 
     def read_lod(self, key):
         row = self.db.execute("SELECT data FROM meshes WHERE key=?", (json.dumps(key),)).fetchone()
-        arrays = decode_arrays(row[0])
+        arrays = decode_arrays(row[0], "lod_")
         return LodMesh(arrays["lod_points"], arrays["lod_triangles"], arrays["lod_colors"])
 
     def read_mesh(self, key, textures):
         row = self.db.execute("SELECT data FROM meshes WHERE key=?", (json.dumps(key),)).fetchone()
         if row is None:
             raise ValueError("Overview tile is missing; refresh the overview")
-        arrays = decode_arrays(row[0])
+        if key[0]:
+            arrays = decode_arrays(row[0], "lod_")
+        else:
+            arrays = decode_arrays(row[0], ("textures", "mesh_", "flat_"))
+            if not len(arrays['textures']) and 'flat_0_points' not in arrays:
+                arrays.update(decode_arrays(row[0], "lod_"))
         if key[0] or not len(arrays['textures']) and 'flat_0_points' not in arrays:
             return dict(lod=LodMesh(arrays["lod_points"], arrays["lod_triangles"], arrays["lod_colors"]))
         meshes = []

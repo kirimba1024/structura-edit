@@ -121,8 +121,9 @@ class WorldMap(QWidget):
         keys = tuple((level, x, z) for x in ranges[0] for z in ranges[1])
         target = self.snapshot["path"], keys
         if target != self.target:
+            if self.target is None or self.target == self.loaded:
+                self.deadline = monotonic() + SETTLE_MILLISECONDS / 1000
             self.target = target
-            self.deadline = monotonic() + SETTLE_MILLISECONDS / 1000
 
     def tick(self):
         if self.future is not None and self.future[1].done():
@@ -130,7 +131,7 @@ class WorldMap(QWidget):
             self.future = None
             try:
                 images = future.result()
-                if target == self.target:
+                if self.snapshot is not None and target[0] == self.snapshot["path"]:
                     self.images = images
                     self.loaded = target
                     self.update()

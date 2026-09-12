@@ -12,7 +12,7 @@
 ```
 
 - **fast:** локальные ссылки активной документации, Ruff, strict mypy выбранной границы,
-  core/edit pytest и native QEM unit test. Часть pytest использует Qt: это не headless-профиль.
+  core/edit pytest и проверки кубической LOD-геометрии. Часть pytest использует Qt: это не headless-профиль.
 - **native:** обязательные smoke сохранения/восстановления, отклонения старого recipe, clipboard, поиска/NBT,
   карт/срезов, точных texels и entity icons, повторного GPU preview, world overview/телепорта
   и навигации. Окна запускаются последовательно.
@@ -49,7 +49,7 @@ Windows CI использует Mesa software OpenGL; native navigation,
 имели ширину 1028 px. Минимальная ширина самого редактора — 1104 px.
 
 Совместимость зависимостей проверяется отдельно от workspace: импорт должен идти
-из wheels, а не editable checkout. Edit 0.1.0a2 требует core 0.6.2/render 0.8.2:
+из wheels, а не editable checkout. Edit 0.1.0a3 требует core 0.6.2/render 0.8.3:
 прежние опубликованные версии не содержали обязательных API. Собственный
 [CI редактора](../.github/workflows/verify.yml) собирает wheel, устанавливает его
 с опубликованными зависимостями на Linux/macOS/Windows и проверяет версии,
@@ -58,6 +58,11 @@ Windows CI использует Mesa software OpenGL; native navigation,
 каждой библиотеки и записывает их версии и SHA-256 в `build.json`.
 
 ## Проверка конкретной правки
+
+По просьбе пользователя от 12 сентября computer use и локальные native окна
+запрещены. Для текущих изменений запускать CPU-тесты и QWidget-проверки без
+QtInteractor, визуальную приёмку выполняет пользователь. Это не полный `full`.
+Последние результаты и A/B — [cubic-render-2026-09-12.json](archive/2026-09/cubic-render-2026-09-12.json).
 
 Сначала воспроизведение и целевые tests, затем профиль по затронутой границе.
 Документация без кода требует docs; data/model — fast; GUI/state/worker — full.

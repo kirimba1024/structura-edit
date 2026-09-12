@@ -5,6 +5,10 @@ VIEWS = ("top", "north", "west", "bottom", "south", "east")
 LABELS = ("Top", "North", "West", "Bottom", "South", "East")
 
 
+def cave_view(view, cut, cave_y):
+    return cave_y is not None and (view == "bottom" or view == "top" and cut is not None)
+
+
 def camera_cut(position, size):
     return tuple(min(length, max(-1, floor(value))) for value, length in zip(position, size))
 

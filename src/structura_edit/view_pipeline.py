@@ -61,6 +61,7 @@ class ViewPipeline:
         self._cancel_installation()
         self.current = None
         self.ready = False
+        self.preparing = False
         self.render_queued = False
         self.map_queued = False
         self.maps_current = None
@@ -71,6 +72,7 @@ class ViewPipeline:
         fit = fit or bool(self.current and self.current.fit and not self.ready)
         self.current = ViewRequest(session.fork(), change, assets, entities, fit, height)
         self.ready = False
+        self.preparing = True
         self.render_queued = True
         self.map_queued = False
         if data is not None:
@@ -110,6 +112,8 @@ class ViewPipeline:
                     "render", lambda data: self._rendered(request, data),
                     prepare_args=lambda: request.geometry_args(previous))
             self.render_queued = not accepted and accepted is not SubmitResult.FAILED_TO_START
+            if accepted is SubmitResult.FAILED_TO_START:
+                self.preparing = False
         elif self.map_queued and (not self.minimap.collapsed or hasattr(request.session, "map_identity")):
             self.map_queued = False
             if self.map_updates is not None:
@@ -136,10 +140,11 @@ class ViewPipeline:
             self._stage_rendered(request, data)
 
     def _stage_rendered(self, request, data):
-        if request is not self.current:
+        if request is not self.current or not self.preparing:
             return
         retained = self.retained_geometry()
         if retained and sum(replacement_sizes(data, self.scene.section_bytes).values()) + retained > MAX_GEOMETRY_BYTES:
+            self.fail()
             raise ValueError("Scene and clipboard exceed 192 MiB; use a smaller selection")
         if self.schedule is None:
             self.scene.replace(data, request.session.revision)
@@ -154,6 +159,11 @@ class ViewPipeline:
         if self._installation is not None:
             self._installation.close()
             self._installation = None
+
+    def fail(self):
+        self._cancel_installation()
+        self.preparing = False
+        self.render_queued = False
 
     def _install_next(self, request, data, steps):
         if steps is not self._installation:
@@ -174,8 +184,7 @@ class ViewPipeline:
                     self.schedule(lambda: self._install_next(request, data, steps))
                     return
         except Exception as error:
-            self._cancel_installation()
-            self.render_queued = False
+            self.fail()
             self.failed(f"{type(error).__name__}: {error}\n{traceback.format_exc()}")
 
     def _presented(self, request, data):
@@ -193,6 +202,7 @@ class ViewPipeline:
             self.camera.needs_render = True
             self.camera.render()
         self.ready = True
+        self.preparing = False
         self.map_queued = True
         self.on_rendered(data)
 

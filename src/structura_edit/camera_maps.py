@@ -36,6 +36,7 @@ class CameraMaps(QObject):
 
     def request(self, request):
         self.context = request
+        self.canvas.height_mode = getattr(request.height, 'mode', 'all')
         self.update()
 
     def update(self):
@@ -54,7 +55,7 @@ class CameraMaps(QObject):
                 previous, images, atlas, notice, details, cut, cave_y = future.result()
                 if self.context is not None and target[0] == context_key(self.context):
                     self.previous = previous
-                    if self.active and target == self.target():
+                    if self.active:
                         self.canvas.set_images(images)
                         self.canvas.set_details(details)
                         self.canvas.map_cut = cut

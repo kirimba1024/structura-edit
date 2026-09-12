@@ -17,7 +17,6 @@ kiwisolver==1.4.7
 lz4==4.4.5
 matplotlib==3.9.4
 numpy==1.26.4
-meshoptimizer==0.2.30a0
 packaging==26.3
 pillow==11.3.0
 platformdirs==3.11.0

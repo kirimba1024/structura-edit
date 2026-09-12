@@ -43,5 +43,5 @@ def test_section_geometry_survives_origin_changes_without_remeshing(tmp_path, mo
     first = preview.build_sections({'a': ('stone', (0, 0, 0), None)}, reset=True)['sections']['a']
     next_view = preview.build_sections({'b': ('stone', (-64, 0, 128), None)}, reset=True)['sections']['b']
     assert len(builds) == 1 and first['signature'] != next_view['signature']
-    assert np.array_equal(first['packets'][0].points, next_view['packets'][0].points)
+    assert first['packets'] is next_view['packets']
     assert next_view['position'] == (-64, 0, 128)

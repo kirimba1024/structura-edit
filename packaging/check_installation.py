@@ -97,7 +97,7 @@ def exercise(output, root):
         return dict(example=str(demo), objects=70, assets='Empty directory: fallback rendering',
                     overview=overview,
                     checks=['Bundled example', 'Qt and VTK scene', 'Worker spawn', 'NBT batch preview',
-                            'Apply', 'Save and reload', 'Undo', 'World overview and native QEM',
+                            'Apply', 'Save and reload', 'Undo', 'World overview and cubic geometry',
                             'Teleport and cancellation', 'Load here', 'World map zoom'])
     finally:
         window.document.load(None)
@@ -118,7 +118,7 @@ def main(argv=None):
     result = dict(frozen=bool(getattr(sys, 'frozen', False)), executable=sys.executable)
     try:
         result['versions'] = {name: version(name) for name in ('structura-edit', 'structura-core', 'structura-render',
-                                                             'PySide6-Essentials', 'vtk', 'meshoptimizer')}
+                                                             'PySide6-Essentials', 'vtk')}
         with TemporaryDirectory(prefix='structura-installation-') as temporary:
             root = Path(temporary).resolve()
             os.environ['STRUCTURA_EDIT_DATA'] = str(root / 'local')

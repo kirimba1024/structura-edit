@@ -31,9 +31,9 @@ class HeightSlice:
         return y < self.y + 1 and (self.mode == "below" or y >= self.y)
 
 
-def slice_sections(keys, before, after, size, chunk_size):
+def slice_sections(keys, before, after, size, chunk_size, origin=(0, 0, 0)):
     def covered(interval, key):
-        start, stop = key[1] * chunk_size, (key[1] + 1) * chunk_size
+        start, stop = key[1] * chunk_size - origin[1], (key[1] + 1) * chunk_size - origin[1]
         if max(interval[0], start) >= min(interval[1], stop):
             return None
         lo = max(interval[0], start - 1)

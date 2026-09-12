@@ -1,0 +1,296 @@
+{
+  "date": "2026-09-12",
+  "versions": {
+    "core": "0.6.2",
+    "render": "0.8.3",
+    "edit": "0.1.0a3"
+  },
+  "publication": {
+    "render_pr": "https://github.com/kirimba1024/structura-render/pull/1",
+    "render_commit": "5c35d0034fc80c1ace05a12d0d27beb1945ad89c",
+    "render_ci": "Linux, macOS, Windows and all extras passed",
+    "release": "Merge and publication authorized by user; renderer PR merged, release pending."
+  },
+  "environment": {
+    "python": "3.9.6",
+    "qt": "6.10.2",
+    "vtk": "9.5.2",
+    "world": "A",
+    "radius": 6,
+    "native_graphics": false
+  },
+  "checks": {
+    "render": {
+      "passed": 445,
+      "skipped": 2,
+      "seconds": 22.33
+    },
+    "algorithm_regressions": {
+      "passed": 144,
+      "note": "143 cases plus sparse alpha reference; the two world-grid fixtures passed after declaring their loaded sections."
+    },
+    "ruff": "passed",
+    "mypy": "4 files passed",
+    "edit_installed": {
+      "passed": 882,
+      "seconds": 55.35,
+      "note": "878 passed in full headless wheel run; 4 map request fixtures initially lacked new slab metadata, corrected and all 4 passed against the same wheel. Native QtInteractor files excluded."
+    },
+    "wheel_install": {
+      "render": "0.8.3",
+      "edit": "0.1.0a3",
+      "source": "built local wheels, --no-deps target install; imported modules resolve under isolated target"
+    }
+  },
+  "overview": {
+    "build_seconds": 217.48009125000002,
+    "chunks": 2601,
+    "snapshot_bytes": 503238656,
+    "root_bytes": 128747388,
+    "views": [
+      {
+        "selected_bytes": 184547649,
+        "prepared_bytes": 181626568,
+        "packets": 350,
+        "prepare_seconds": 2.0340894590000005,
+        "case": "start"
+      },
+      {
+        "selected_bytes": 184549318,
+        "prepared_bytes": 181891632,
+        "packets": 354,
+        "prepare_seconds": 1.9818499589999874,
+        "case": "forest"
+      },
+      {
+        "selected_bytes": 184546461,
+        "prepared_bytes": 183643840,
+        "packets": 351,
+        "prepare_seconds": 2.0971455840000033,
+        "case": "cave"
+      },
+      {
+        "selected_bytes": 184546206,
+        "prepared_bytes": 181756680,
+        "packets": 360,
+        "prepare_seconds": 2.008943834000007,
+        "case": "distant"
+      }
+    ],
+    "source_unchanged": true,
+    "reopen_seconds": 0.055755000000004884
+  },
+  "world_sections": {
+    "before": [
+      {
+        "read_seconds": 0.7397030419999999,
+        "partition_seconds": 0.029211874999999998,
+        "geometry_seconds": 7.493490375,
+        "sections": 53,
+        "meshed": 53,
+        "packed": 53,
+        "reusable_sections": 0,
+        "geometry_bytes": 114518768,
+        "case": "start"
+      },
+      {
+        "read_seconds": 0.648256709,
+        "partition_seconds": 0.05985137499999915,
+        "geometry_seconds": 7.2554289999999995,
+        "sections": 53,
+        "meshed": 53,
+        "packed": 53,
+        "reusable_sections": 0,
+        "geometry_bytes": 115470252,
+        "case": "move_48_blocks"
+      },
+      {
+        "read_seconds": 0.6476366250000005,
+        "partition_seconds": 0.0270870830000014,
+        "geometry_seconds": 7.1692454580000025,
+        "sections": 52,
+        "meshed": 52,
+        "packed": 52,
+        "reusable_sections": 0,
+        "geometry_bytes": 123291928,
+        "case": "move_96_blocks"
+      },
+      {
+        "read_seconds": 0.6402610410000023,
+        "partition_seconds": 0.030074332999998177,
+        "geometry_seconds": 0.7516530410000009,
+        "sections": 53,
+        "meshed": 1,
+        "packed": 53,
+        "reusable_sections": 0,
+        "geometry_bytes": 114518768,
+        "case": "return"
+      }
+    ],
+    "world_grid_64": [
+      {
+        "read_seconds": 0.740637708,
+        "partition_seconds": 0.02880841700000003,
+        "geometry_seconds": 7.237675416,
+        "sections": 50,
+        "meshed": 50,
+        "packed": 50,
+        "reusable_sections": 0,
+        "geometry_bytes": 114644216,
+        "case": "start"
+      },
+      {
+        "read_seconds": 0.603857915999999,
+        "partition_seconds": 0.05567287499999907,
+        "geometry_seconds": 5.186809542000001,
+        "sections": 51,
+        "meshed": 42,
+        "packed": 42,
+        "reusable_sections": 9,
+        "geometry_bytes": 115469580,
+        "case": "move_48_blocks"
+      },
+      {
+        "read_seconds": 0.6363253749999984,
+        "partition_seconds": 0.026684166999999093,
+        "geometry_seconds": 5.224588499999999,
+        "sections": 51,
+        "meshed": 40,
+        "packed": 40,
+        "reusable_sections": 11,
+        "geometry_bytes": 123217832,
+        "case": "move_96_blocks"
+      },
+      {
+        "read_seconds": 0.6236526249999983,
+        "partition_seconds": 0.026625124999998917,
+        "geometry_seconds": 0.72708175,
+        "sections": 50,
+        "meshed": 1,
+        "packed": 50,
+        "reusable_sections": 0,
+        "geometry_bytes": 114644216,
+        "case": "return"
+      }
+    ],
+    "rejected_world_grid_32": [
+      {
+        "read_seconds": 0.7092680840000001,
+        "partition_seconds": 0.03225050000000007,
+        "geometry_seconds": 6.2106197089999995,
+        "sections": 286,
+        "meshed": 286,
+        "packed": 286,
+        "reusable_sections": 0,
+        "geometry_bytes": 121561200,
+        "case": "start"
+      },
+      {
+        "read_seconds": 0.6104702090000007,
+        "partition_seconds": 0.032341832999999376,
+        "geometry_seconds": 2.948420875000001,
+        "sections": 286,
+        "meshed": 141,
+        "packed": 141,
+        "reusable_sections": 145,
+        "geometry_bytes": 122551444,
+        "case": "move_48_blocks"
+      },
+      {
+        "read_seconds": 0.5997568750000006,
+        "partition_seconds": 0.02953304200000062,
+        "geometry_seconds": 3.7867717910000014,
+        "sections": 288,
+        "meshed": 178,
+        "packed": 178,
+        "reusable_sections": 110,
+        "geometry_bytes": 130793896,
+        "case": "move_96_blocks"
+      },
+      {
+        "read_seconds": 0.5787832910000006,
+        "partition_seconds": 0.05649762500000044,
+        "geometry_seconds": 0.7238790000000002,
+        "sections": 286,
+        "meshed": 1,
+        "packed": 218,
+        "reusable_sections": 68,
+        "geometry_bytes": 121561200,
+        "case": "return"
+      }
+    ]
+  },
+  "packet_count": {
+    "world_grid_64": 205,
+    "rejected_world_grid_32": 676
+  },
+  "maps": {
+    "before": [
+      {
+        "cut": null,
+        "seconds": 0.41222508300000005,
+        "sha256": {
+          "top": "6faf966373d27eae7089f03973c42bfe1b986e2f1be1a9927ebd8dbab68c5813",
+          "north": "9f7c5eefbd5bf40ef76dbf30d62f04eb7dc6c43db908c2e14ad04bb78b506bf7",
+          "west": "10b619a643550ded8c907992a8960d5104587ffa1812d3602559a7cb19746932",
+          "bottom": "9072171abcbe25c759d30646f550c197d7c5bd5e64ed0f9576ae0164fc2b7912",
+          "south": "105e7166c89990177dcda63b627f506a5fcb1b85ff16f13569beaaa96df4bcdc",
+          "east": "0a82ff37e73ba0fa69fa466fdb9c129876bf1c724617c6ab48918be841926780"
+        }
+      },
+      {
+        "cut": [
+          104,
+          40,
+          104
+        ],
+        "seconds": 0.23088291699999997,
+        "sha256": {
+          "top": "e3eafbadec3036114e88ee940248bca9c5fe1470f03b0e1a157b629398de49d7",
+          "north": "551cc7419e04d665811b28296ae1b02abebbe5b9451190ba4804282beb274d0a",
+          "west": "f4f1b0dc8307b69e9785066c743f3dbb3279d2b38d88a75e9cf14f702b9ac6a4",
+          "bottom": "6986ac5380002763d7d1b027a2637459a7b4e909ae50b26051ca78699907bc39",
+          "south": "eee2bf0744775bc781d39ebeba164b4bd77f3d0250301a475efc07450a6aeab5",
+          "east": "2707d018798786becbd6d0ebca81af7e283ab9b7fc566535e3e292889efb7b25"
+        }
+      }
+    ],
+    "after": [
+      {
+        "cut": null,
+        "seconds": 0.3507378750000001,
+        "sha256": {
+          "top": "6faf966373d27eae7089f03973c42bfe1b986e2f1be1a9927ebd8dbab68c5813",
+          "north": "9f7c5eefbd5bf40ef76dbf30d62f04eb7dc6c43db908c2e14ad04bb78b506bf7",
+          "west": "10b619a643550ded8c907992a8960d5104587ffa1812d3602559a7cb19746932",
+          "bottom": "9072171abcbe25c759d30646f550c197d7c5bd5e64ed0f9576ae0164fc2b7912",
+          "south": "105e7166c89990177dcda63b627f506a5fcb1b85ff16f13569beaaa96df4bcdc",
+          "east": "0a82ff37e73ba0fa69fa466fdb9c129876bf1c724617c6ab48918be841926780"
+        }
+      },
+      {
+        "cut": [
+          104,
+          40,
+          104
+        ],
+        "seconds": 0.20914204199999986,
+        "sha256": {
+          "top": "e3eafbadec3036114e88ee940248bca9c5fe1470f03b0e1a157b629398de49d7",
+          "north": "551cc7419e04d665811b28296ae1b02abebbe5b9451190ba4804282beb274d0a",
+          "west": "f4f1b0dc8307b69e9785066c743f3dbb3279d2b38d88a75e9cf14f702b9ac6a4",
+          "bottom": "6986ac5380002763d7d1b027a2637459a7b4e909ae50b26051ca78699907bc39",
+          "south": "eee2bf0744775bc781d39ebeba164b4bd77f3d0250301a475efc07450a6aeab5",
+          "east": "2707d018798786becbd6d0ebca81af7e283ab9b7fc566535e3e292889efb7b25"
+        }
+      }
+    ]
+  },
+  "limits": [
+    "One sequential CPU A/B, not a distribution or a GPU/FPS acceptance test.",
+    "Map hashes match for every projection.",
+    "Overview reopen timing measures manifest only.",
+    "Root geometry is larger than previous QEM; distant voxel downsampling remains an optimization task.",
+    "No computer use or native input tests; user performs visual acceptance."
+  ]
+}

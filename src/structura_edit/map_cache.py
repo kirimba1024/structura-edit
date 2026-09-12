@@ -23,7 +23,7 @@ MAX_READ_PIXELS = 16_777_216
 MAP_COVERAGE_VERSION = 1
 
 
-def map_spec(session, assets, path, *, cut=None, preview=False):
+def map_spec(session, assets, path, *, cut=None, preview=False, views=VIEWS):
     if path is None or not hasattr(session, "map_identity"):
         return None
     resource = (str(Path(assets).resolve()), resource_stamp(assets)) if assets else None
@@ -31,7 +31,7 @@ def map_spec(session, assets, path, *, cut=None, preview=False):
     space = hashlib.sha256(identity.encode()).hexdigest()
     slabs = {}
     bounds = {}
-    for view in VIEWS:
+    for view in views:
         axis = depth_axis(view)
         lower, upper = slice_bounds(session.size, cut, view)
         bounds[view] = lower, upper
@@ -153,6 +153,8 @@ def read_tiles(spec, areas, scales=None):
     result = {}
     with connect(spec["path"]) as db:
         for view, (left, top, right, bottom) in areas.items():
+            if view not in spec['slabs']:
+                continue
             rows = db.execute(
                 "SELECT rowid, x, y, image FROM tiles WHERE space=? AND slab=? "
                 "AND x < ? AND x + ? > ? AND y < ? AND y + ? > ? "

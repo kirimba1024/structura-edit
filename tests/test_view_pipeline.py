@@ -212,11 +212,11 @@ def test_staged_scene_yields_before_becoming_ready(edit, monkeypatch):
     calls.pop()[1]('scene')
     for _ in range(2):
         scheduled.pop(0)()
-        assert not view.ready and view.render_queued and not frames
+        assert not view.ready and view.preparing and view.render_queued and not frames
         view.flush()
         assert not calls
     scheduled.pop(0)()
-    assert view.ready and not view.render_queued and view.map_queued
+    assert view.ready and not view.preparing and not view.render_queued and view.map_queued
     assert frames == [('scene', edit.revision)] and closed == ['scene'] and not failures
 
 
@@ -241,9 +241,24 @@ def test_staged_scene_errors_leave_pipeline_reusable(edit, monkeypatch):
     view.request(edit, None, None, True, data='broken')
     while scheduled:
         scheduled.pop(0)()
-    assert not view.ready and not view.render_queued and not view.map_queued
+    assert not view.ready and not view.preparing and not view.render_queued and not view.map_queued
     assert not frames and closed == ['broken'] and 'Invalid scene' in failures[0]
     view.request(edit, None, None, True, data='recovered')
     while scheduled:
         scheduled.pop(0)()
     assert view.ready and frames == [('recovered', edit.revision)]
+
+
+def test_scene_stays_preparing_while_waiting_for_overview_and_clears_on_failure(edit):
+    view, calls, frames, _ = pipeline()
+    waiting = []
+    view.prepare_scene = lambda request, ready: waiting.append(ready)
+    view.request(edit, None, None, True)
+    view.flush()
+    calls.pop()[1]('scene')
+    assert view.preparing and not view.ready and not frames
+    waiting.pop()()
+    assert view.ready and not view.preparing and frames
+    view.request(edit, None, None, True)
+    view.fail()
+    assert not view.preparing and not view.render_queued
