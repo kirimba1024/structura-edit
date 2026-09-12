@@ -55,7 +55,7 @@ def snapshot_directory(root, world, dimension):
 class OverviewStore:
     def __init__(self, path, *, create=False):
         self.path = Path(path).expanduser().resolve()
-        self.db = sqlite3.connect(str(self.path) if create else self.path.as_uri() + "?mode=ro", uri=not create)
+        self.db = sqlite3.connect(self.path.as_uri() + ("?mode=rwc" if create else "?mode=ro"), uri=True)
         if create:
             self.db.executescript("""
                 PRAGMA page_size=4096;

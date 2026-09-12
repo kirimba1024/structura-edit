@@ -32,6 +32,9 @@ class RenderSource:
         self.literals = {}
         self.palette = [str(state["Name"]) for state in self.palette_raw]
         self.grid = None
+        self.grid_offset = 0
+        halo = getattr(session, "_render_halo", None)
+        self.halo = halo if halo is not None and (halo.origin, halo.size) == (session.origin, session.size) else None
 
     def prepare_grid(self):
         size = self.session.size
@@ -60,9 +63,23 @@ class RenderSource:
         low, high = self.height.interval(self.session)
         self.grid[:, :low, :] = -1
         self.grid[:, high:, :] = -1
+        halo = self.halo
+        if halo is not None:
+            from .world_halo import halo_updates
+
+            halo = halo.updated(halo_updates(self.session))
+            self.grid = np.pad(self.grid, 1, constant_values=-1)
+            self.grid_offset = 1
+            mapping = np.asarray([*(self._state_index(state) for state in halo.palette), -1], np.int32)
+            for position, array in halo.faces:
+                slices = tuple(slice(p + 1, p + 1 + size) for p, size in zip(position, array.shape))
+                self.grid[slices] = mapping[array]
+            if self.height.mode != "all":
+                self.grid[:, :low + 1, :] = -1
+                self.grid[:, high + 1:, :] = -1
 
     def _grid_region(self, lower, upper, include_nbt):
-        grid = self.grid[tuple(slice(lo, hi) for lo, hi in zip(lower, upper))]
+        grid = self.grid[tuple(slice(lo + self.grid_offset, hi + self.grid_offset) for lo, hi in zip(lower, upper))]
         present = BlockArray(grid.copy())
         block_nbt = {}
         if include_nbt:
@@ -86,14 +103,18 @@ class RenderSource:
     def _index(self, cell):
         if cell.variant is not None:
             return cell.variant
-        if cell.state not in self.literals:
-            self.literals[cell.state] = len(self.palette_raw)
-            self.palette_raw.append(parse_state(cell.state))
+        return self._state_index(cell.state)
+
+    def _state_index(self, state):
+        if state not in self.literals:
+            self.literals[state] = len(self.palette_raw)
+            self.palette_raw.append(parse_state(state))
             self.palette.append(str(self.palette_raw[-1]["Name"]))
-        return self.literals[cell.state]
+        return self.literals[state]
 
     def region(self, lower=None, upper=None, *, include_entities=False, include_nbt=True):
-        if lower is None and isinstance(self.base.present, BlockArray) and self.grid is None:
+        if self.grid is None and (self.halo is not None
+                                 or lower is None and isinstance(self.base.present, BlockArray)):
             self.prepare_grid()
         if self.grid is not None:
             source = self._grid_region(lower or (0, 0, 0), upper or self.session.size, include_nbt)

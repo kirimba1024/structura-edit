@@ -7,8 +7,19 @@ from PIL import Image
 from structura_core.world_terrain import TerrainSection
 
 from structura_edit.overview_maps import MAP_MIN_LEVEL, build_map_pyramid
-from structura_edit.overview_store import OverviewStore
+from structura_edit.overview_store import OverviewStore, decode_arrays
 from structura_edit.resources import texture_bank
+
+
+def test_known_sectionless_column_stays_distinct_from_unknown_map(tmp_path):
+    from structura_edit.overview_maps import EMPTY_HEIGHT
+
+    with closing(OverviewStore(tmp_path / "empty.sqlite", create=True)) as store:
+        build_map_pyramid(store, [(0, 0)], texture_bank(None), lambda *args: None)
+        assert np.all(store.read_map((MAP_MIN_LEVEL, 0, 0))[..., 3] == 255)
+        assert store.read_map((MAP_MIN_LEVEL, -1, 0)) is None
+        data, = store.db.execute("SELECT data FROM surfaces WHERE x=0 AND z=0").fetchone()
+        assert np.all(decode_arrays(data)["height"] == EMPTY_HEIGHT)
 
 
 def test_prepared_tiles_keep_texture_pixels_and_shading_across_chunk_edges(tmp_path):

@@ -30,6 +30,8 @@ def affected_sections(positions, size, span=CHUNK_SIZE, origin=(0, 0, 0)):
 
 
 def changed_positions(before, current):
+    from .world_halo import halo_updates
+
     if before._state_id == current._state_id:
         return ()
     old, new = before._transition, current._transition
@@ -41,7 +43,9 @@ def changed_positions(before, current):
         positions = chain(old[1], new[1])
     else:
         positions = before._cells.keys() | current._cells.keys()
-    return (p for p in positions if before._cells.get(p) != current._cells.get(p))
+    old_halo, new_halo = halo_updates(before), halo_updates(current)
+    boundary = (p for p in old_halo.keys() | new_halo.keys() if old_halo.get(p) != new_halo.get(p))
+    return chain(boundary, (p for p in positions if before._cells.get(p) != current._cells.get(p)))
 
 
 def occupied_sections(session, span, origin=(0, 0, 0)):
@@ -100,8 +104,9 @@ def prepare_sections(session, change=None, *, previous=None, include_entities=Tr
         start = tuple(value * span - offset for value, offset in zip(key, origin))
         lower = tuple(max(0, value) for value in start)
         upper = tuple(min(value + span, length) for value, length in zip(start, current.size))
-        start = tuple(max(0, value - 1) for value in lower)
-        stop = tuple(min(value + 1, length) for value, length in zip(upper, current.size))
+        halo = int(source.halo is not None)
+        start = tuple(max(-halo, value - 1) for value in lower)
+        stop = tuple(min(value + 1, length + halo) for value, length in zip(upper, current.size))
         bounds = tuple(tuple(value - origin for value, origin in zip(bound, start)) for bound in (lower, upper))
         region = source.region(start, stop)
         if changed:

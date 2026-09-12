@@ -4,16 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "structura-edit"
-version = "0.1.0a3"
+version = "0.1.0a4"
 description = "Transactional Minecraft schematic editing with an optional desktop workbench"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["structura-core>=0.6.2,<0.7", "structura-render>=0.8.3,<0.9", "PyMCTranslate>=1.2.38,<2"]
+dependencies = ["structura-core>=0.6.3,<0.7", "structura-render>=0.8.3,<0.9", "PyMCTranslate>=1.2.38,<2"]
 
 [project.optional-dependencies]
-world = ["structura-core[world]>=0.6.2,<0.7"]
+world = ["structura-core[world]>=0.6.3,<0.7"]
 gui = [
-  "structura-core[world,legacy,bedrock]>=0.6.2,<0.7",
+  "structura-core[world,legacy,bedrock]>=0.6.3,<0.7",
   "structura-render[hero,overview]>=0.8.3,<0.9",
   "PySide6-Essentials>=6.10.2,<6.11; sys_platform == 'darwin'",
   "PySide6-Essentials>=6.8,<6.9; sys_platform != 'darwin'",

@@ -1,9 +1,11 @@
 import numpy as np
+from PIL import ImageColor
 
 from structura_render.color_space import linear_to_srgb, srgb_to_linear
 
 from .overview_store import MAP_SPAN, clip_overview_source, encode_arrays, encode_image
 from .height_slice import HeightSlice
+from .appearance import MAP_BACKGROUND
 from .map_images import MAP_TEXTURE_SIZE, map_faces, map_tiles, render_map
 
 
@@ -16,7 +18,9 @@ def column_image(store, cx, cz, bank, below_y, height_slice):
                                 (cx - 1, cx, cz - 1, cz)).fetchone()
     height = np.full((16, 16), EMPTY_HEIGHT, np.int32)
     if low is None:
-        return np.zeros((256, 256, 4), np.uint8), height
+        image = np.full((16 * MAP_TEXTURE_SIZE, 16 * MAP_TEXTURE_SIZE, 4),
+                        (*ImageColor.getrgb(MAP_BACKGROUND), 255), np.uint8)
+        return image, height
     low, high = low * 16, (high + 1) * 16
     source = store.read_region((cx * 16 - 1, low, cz * 16 - 1), (cx * 16 + 16, high, cz * 16 + 16))
     clip_overview_source(source, low, height_slice)

@@ -63,7 +63,7 @@ def test_map_reduction_preserves_known_void_and_ignores_unknown_color():
 
 def test_unchanged_snapshot_reuses_geometry_and_textured_maps(tmp_path, monkeypatch):
     world = create_overview_world(tmp_path / "world")
-    directory = tmp_path / "overview"
+    directory = tmp_path / "overview #100% ä"
     first = build_overview(world, "minecraft:overworld", directory)
     def unexpected(*args, **kwargs):
         pytest.fail("Unchanged snapshot was recalculated")

@@ -12,7 +12,7 @@
 |---|---|
 | Состояние редактора | `editor_document.py`: сессия, selection, preview, epoch/input tokens; `edit_workflow.py`: подготовка, Apply, history, Save |
 | Данные и история | `session.py`, `document.py`, `changes.py`, `history.py`; проверка ChangeSet — `change_validation.py`; unsaved — `saved_changes.py`; resize — `document_resize.py` |
-| Мировая область | `source_loading.py`, `world_view.py`, `world_changes.py`; GUI — `source_ui.py`, `world_ui.py` |
+| Мировая область | `source_loading.py`, `world_view.py`, `world_changes.py`; соседи для meshing — `world_halo.py`; GUI — `source_ui.py`, `world_ui.py` |
 | Фоновая задача | `task_protocol.py` → `jobs.py` → `tasks.py`; lifecycle callback — `task_runner.py`; один снимок — `worker_document.py`, delta — `worker_delta.py` |
 | Команды и геометрические операции | `commands.py`, `operations.py`, `condition.py`, `mix.py`, `planar.py`, `paint.py` |
 | Перенос и повтор | `clipboard.py`, `clipboard_placement.py`, `clipboard_transform.py`; `placement_ui.py`/`placement_review.py`, `repeat_ui.py` |

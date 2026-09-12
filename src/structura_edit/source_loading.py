@@ -61,6 +61,10 @@ def open_source(path, *, region=None, palette_index=0, center=None, dimension=No
     if world_changes is not None:
         world_changes.revision += 1
     session = WorldView(world, area, world_changes)
+    from .world_halo import read_world_halo
+
+    session._render_halo = read_world_halo(world.dimensions[dimension] / "region", session.origin, session.size,
+                                           world.data_version, vertical=vertical_radius is not None)
     session.map_stamps = stamps
     session.map_identity = str(world.path), dimension, str(world.data.get("WorldGenSettings", {}).get("seed", world.data.get("RandomSeed", "")))
     return session

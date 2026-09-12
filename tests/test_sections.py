@@ -83,6 +83,27 @@ def combined(sections):
     return sum((surfaces(section) for section in sections.values()), Counter())
 
 
+def test_world_boundary_does_not_add_a_transparent_water_wall(assets):
+    from structura_edit.preview import build_sections
+    from structura_edit.world_halo import WorldHalo
+
+    source = Structure.from_root(from_snbt('{DataVersion:3955,size:[4,2,4],palette:[{Name:"minecraft:water"}],blocks:[],entities:[]}'))
+    from structura_core.block_array import BlockArray
+
+    source.present = BlockArray(np.zeros((4, 2, 4), np.int32))
+    edit = EditSession.from_structure(source)
+    edit.dimension = "minecraft:overworld"
+    before = combined(build_sections(**prepare_sections(edit), assets=assets)["sections"])
+    def boundary(key):
+        return key[0] == ((1., 0., 0.), 4.)
+    assert sum(area for key, area in before.items() if boundary(key)) == 8
+    edit._render_halo = WorldHalo(edit.origin, edit.size, ("minecraft:water",),
+                                  (((4, 0, 0), np.zeros((1, 2, 4), np.int32)),))
+    after = combined(build_sections(**prepare_sections(edit), assets=assets)["sections"])
+    assert not any(boundary(key) for key in after)
+    assert {key: area for key, area in before.items() if not boundary(key)} == after
+
+
 @pytest.mark.parametrize('name', ['stone', 'water', 'kelp', 'oak_slab[waterlogged=true]'])
 @pytest.mark.parametrize('span,size', [(64, (160, 80, 96)), (64, (160, 160, 160))])
 def test_large_render_cells_keep_geometry_and_update_both_sides_of_seam(assets, name, span, size):

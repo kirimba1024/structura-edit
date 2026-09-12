@@ -142,6 +142,10 @@ class WorldView(EditSession):
         self._states = tuple(state_key(p) for p in snapshot.palette_raw)
         self._base_counts = Counter(snapshot.present.counts() if isinstance(snapshot.present, BlockArray) else snapshot.present.values())
         self._base_entities = self._entities.copy()
+        if getattr(self, "_render_halo", None) is not None:
+            from .world_halo import halo_updates
+
+            self._render_halo = self._render_halo.updated(halo_updates(self))
         self.world_changes.patch.clear()
         self.world_changes.entities.clear()
         if hasattr(self, "map_stamps"):
