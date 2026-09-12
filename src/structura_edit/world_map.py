@@ -1,6 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
 from collections import OrderedDict
-from contextlib import closing
 from math import floor, log2
 from time import monotonic
 
@@ -9,12 +8,8 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
 from .overview_model import SETTLE_MILLISECONDS
-from .overview_store import MAP_SPAN, OverviewStore
-
-
-def read_map_tiles(path, keys):
-    with closing(OverviewStore(path)) as store:
-        return {key: image for key in keys if (image := store.read_map(key)) is not None}
+from .overview_store import MAP_SPAN
+from .map_image_cache import MapImageCache
 
 
 class WorldMap(QWidget):
@@ -38,6 +33,7 @@ class WorldMap(QWidget):
         self.future = None
         self.deadline = 0.0
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="overview-map")
+        self.cache = MapImageCache()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
         self.setMouseTracking(True)
 
@@ -133,9 +129,9 @@ class WorldMap(QWidget):
             target, future = self.future
             self.future = None
             try:
-                arrays = future.result()
+                images = future.result()
                 if target == self.target:
-                    self.images = self._images(arrays)
+                    self.images = images
                     self.loaded = target
                     self.update()
             except Exception as error:
@@ -143,7 +139,7 @@ class WorldMap(QWidget):
                     self.loaded = target
                     self.failed.emit(str(error))
         if self.snapshot and self.isVisible() and self.future is None and self.target != self.loaded and monotonic() >= self.deadline:
-            self.future = self.target, self.executor.submit(read_map_tiles, *self.target)
+            self.future = self.target, self.executor.submit(self.cache.read, *self.target)
 
     def paintEvent(self, event):
         painter = QPainter(self)

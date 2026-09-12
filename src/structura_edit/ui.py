@@ -43,6 +43,7 @@ from .view_pipeline import ViewPipeline
 from .workbench import EditorPanels, Workbench
 from .world_ui import WorldController
 from .overview_ui import OverviewController
+from .world_streaming import WorldStreaming
 from .action_state import editor_capabilities
 
 
@@ -75,7 +76,7 @@ class EditorWindow(QMainWindow):
         self.views = ViewPipeline(self.scene, self.camera, self.minimap, self.tasks.submit, self._rendered,
                                   cache_path=self.minimap.cache.path,
                                   map_updates=self.minimap.maps,
-                                  schedule=lambda callback: QTimer.singleShot(1, callback), failed=self._error,
+                                  schedule=lambda callback: QTimer.singleShot(8, callback), failed=self._error,
                                   retained_geometry=lambda: self.placement.view.geometry_bytes)
         self.panels = EditorPanels(self)
         self.panels.history.audit = self.audit
@@ -112,6 +113,10 @@ class EditorWindow(QMainWindow):
         self.materials = MaterialController(self.panels, self.navigation, show_operation=self.show_operation,
                                             available=lambda: self.capabilities.can_choose_material)
         self.overview = OverviewController(self)
+        self.streaming = WorldStreaming(self.world, lambda: self.overview.auto
+                                        and not self.overview.compatible() and not self.overview.worker.busy
+                                        and self.overview.blocked_target != self.overview._target() and not self.placement.active
+                                        and not self.repeat.active and self.document.pending is None and self.views.ready)
         self.views.prepare_scene = self.overview.prepare_document
         self.views.present_scene = self.overview.present_document
         self._create_menus()
@@ -424,6 +429,7 @@ class EditorWindow(QMainWindow):
         now = perf_counter()
         self.navigation.tick(now - self._last_tick)
         self.overview.tick()
+        self.streaming.tick(now)
         self.overlay.set_looking(self.navigation.looking)
         fly_text = "Cursor · Tab" if self.navigation.looking else "Look · Tab"
         if self.fly_button.text() != fly_text:
@@ -473,6 +479,7 @@ class EditorWindow(QMainWindow):
         self._sync()
 
     def _opened(self, session, *, rendered=None, fit=True, preserve_focus=False):
+        previous = self.document.session
         self.placement.cancel()
         self.paint.cancel()
         self.paint.active = False
@@ -495,6 +502,9 @@ class EditorWindow(QMainWindow):
         self.views.reset()
         if not preserve_focus:
             self.scene.clear()
+        elif previous is not None:
+            self.scene.shift(tuple(old - new for old, new in zip(previous.origin, session.origin)))
+            self.overview.scene.rebase(session.origin)
         self.panels.selection.set_document(session.size, session.origin)
         if not preserve_focus:
             self.navigation.stop()
@@ -539,11 +549,10 @@ class EditorWindow(QMainWindow):
         if self.planar.active:
             self.planar.pick(self.scene.hit_at(self.document.session, point))
             return
-        entity = self.scene.entity_at(self.document.session, point)
+        hit, entity = self.scene.target_at(self.document.session, point)
         if entity is not None:
             self.objects.select(entity, extend)
             return
-        hit = self.scene.hit_at(self.document.session, point)
         if self.connected.active:
             if hit is not None:
                 self.objects.keys.clear()
@@ -574,11 +583,21 @@ class EditorWindow(QMainWindow):
                 self.document.selected.preview = None
                 self._show_selection(self.document.selected.region)
             return
-        hit = self.scene.hit_at(self.document.session, point)
+        session = self.document.session
+        if self.planar.active:
+            hit, entity = self.scene.hit_at(session, point), None
+        else:
+            hit, entity = self.scene.target_at(session, point)
         if self.inspection.key is None:
-            self.inspection.hover(self.document.session, hit.position if hit else None,
-                                  self.scene.entity_at(self.document.session, point))
-        self.overlay.set_hover(hit.position if hit is not None else None)
+            self.inspection.hover(session, hit.position if hit else None, entity)
+        if entity is not None:
+            from .object_labels import entity_label
+
+            label = entity_label(session._entities[entity].unpack()["nbt"])
+            self.overlay.set_hover(None, bounds=self.scene.entity_bounds[entity], label=label)
+        else:
+            self.overlay.set_hover(hit.position if hit else None,
+                                   label=material_name(session.state_at(hit.position)) if hit else "")
         if self.document.selected.extending:
             previous = self.document.selected.preview
             if hit is None:
@@ -678,7 +697,7 @@ class EditorWindow(QMainWindow):
         canvas = self.minimap.canvas
         if (canvas.size_blocks, canvas.origin) != (state.size, state.origin):
             self.minimap.set_document(state)
-        canvas.entities = self.scene.entity_markers
+        canvas.set_entities(self.scene.entity_markers)
         canvas.update()
         self._guides_changed()
         self.objects.refresh()

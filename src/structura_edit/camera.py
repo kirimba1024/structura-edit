@@ -1,5 +1,6 @@
 import math
 from itertools import product
+from time import monotonic
 
 import numpy as np
 
@@ -12,15 +13,21 @@ class FreeCamera:
         self.plotter = plotter
         self.changed = changed
         self.needs_render = False
+        self.last_motion = 0
         self.plotter.camera.parallel_projection = False
         self.plotter.camera.view_angle = 60
 
+    @property
+    def moving(self):
+        return monotonic() - self.last_motion < .12
+
     def translate(self, delta):
+        self.last_motion = monotonic()
         camera = self.plotter.camera
         position = np.asarray(camera.position) + delta
         target = np.asarray(camera.focal_point) + delta
-        camera.position = position
-        camera.focal_point = target
+        camera.SetPosition(*position)
+        camera.SetFocalPoint(*target)
         self.needs_render = True
 
     def move_to(self, position):
@@ -39,6 +46,7 @@ class FreeCamera:
         self.render()
 
     def look(self, dx, dy):
+        self.last_motion = monotonic()
         camera = self.plotter.camera
         forward = np.asarray(camera.direction, dtype=float)
         forward /= np.linalg.norm(forward)

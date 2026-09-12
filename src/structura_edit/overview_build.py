@@ -18,9 +18,9 @@ from .height_slice import HeightSlice
 from .overview_maps import build_map_pyramid
 from .overview_model import OverviewNode, parent_key, tile_bounds
 from .overview_store import OVERVIEW_VERSION, OverviewStore, clip_overview_source, load_manifest
-from .preview import build_geometry
 from .resources import resolve_assets, texture_bank
 from .overview_cache import snapshot_build_slot
+from .preview import build_geometry
 
 
 MAX_OVERVIEW_NODES = 200_000
@@ -86,6 +86,7 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
                                created=time(), assets=str(assets), resources=resources, below_y=below_y,
                                name=world.name, chunks=len(columns), document_id=document_id, revision=revision,
                                height=asdict(height), assets_option=assets_option, volatile=bool(edits))
+            store.set_metadata(terrain_stamp=initial_stamp)
             for done, (cx, cz) in enumerate(columns, 1):
                 store.db.execute("INSERT INTO columns VALUES (?,?)", (cx, cz))
                 for section in terrain_sections(region, cx, cz, world.data_version):
@@ -113,15 +114,14 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
                     progress("Building detail", done, len(occupied))
                     continue
                 geometry = build_geometry(source, assets, ((1, 1, 1), (17, 17, 17)))
-                if len(notices) < 32:
-                    notices.update(geometry["warnings"][:32 - len(notices)])
-                for mesh in geometry["meshes"]:
+                notices.update(geometry['warnings'])
+                for mesh in geometry['meshes']:
                     mesh.points -= 1
-                for points, _, _ in geometry["flat"]:
+                for points, _, _ in geometry['flat']:
                     points -= 1
-                lod = colored_geometry(geometry["meshes"], geometry["flat"])
+                lod = colored_geometry(geometry['meshes'], geometry['flat'])
                 if len(lod.triangles):
-                    node = OverviewNode((0, *key), (), 0.0, geometry["geometry_bytes"])
+                    node = OverviewNode((0, *key), (), 0.0, geometry['geometry_bytes'])
                     nodes[node.key] = node
                     store.put_mesh(node, geometry, lod)
                 progress("Building detail", done, len(occupied))

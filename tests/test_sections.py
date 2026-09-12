@@ -52,15 +52,21 @@ def sample(name="stone"):
 
 
 def surfaces(data):
+    if 'packets' not in data:
+        from structura_edit.render_packets import prepare_geometry
+
+        data = prepare_geometry(data)
     groups = []
-    for mesh in data["meshes"]:
-        uv = mesh.uv[mesh.quads].mean(axis=1)
-        x = np.clip((uv[:, 0] * mesh.image.shape[1]).astype(int), 0, mesh.image.shape[1] - 1)
-        y = np.clip(((1 - uv[:, 1]) * mesh.image.shape[0]).astype(int), 0, mesh.image.shape[0] - 1)
-        groups.append((mesh.points[mesh.quads], mesh.image[y, x]))
-    for points, faces, color in data["flat"]:
-        quads = points[faces.reshape(-1, 5)[:, 1:]]
-        groups.append((quads, np.broadcast_to(color, (len(quads), 4))))
+    for packet in data['packets']:
+        quads = (packet.points + np.asarray(data['position'], np.float32))[packet.indices]
+        if packet.image is None:
+            colors = np.broadcast_to(packet.color, (len(quads), 4))
+        else:
+            uv = packet.uv[packet.indices].mean(axis=1)
+            x = np.clip((uv[:, 0] * packet.image.shape[1]).astype(int), 0, packet.image.shape[1] - 1)
+            y = np.clip(((1 - uv[:, 1]) * packet.image.shape[0]).astype(int), 0, packet.image.shape[0] - 1)
+            colors = packet.image[y, x]
+        groups.append((quads, colors))
     result = Counter()
     for quads, colors in groups:
         for quad, color in zip(quads, colors):
@@ -78,7 +84,7 @@ def combined(sections):
 
 
 @pytest.mark.parametrize('name', ['stone', 'water', 'kelp', 'oak_slab[waterlogged=true]'])
-@pytest.mark.parametrize('span,size', [(32, (96, 80, 96)), (32, (160, 160, 160))])
+@pytest.mark.parametrize('span,size', [(64, (160, 80, 96)), (64, (160, 160, 160))])
 def test_large_render_cells_keep_geometry_and_update_both_sides_of_seam(assets, name, span, size):
     from structura_core import parse_state
     from structura_edit.preview import build_preview, build_sections

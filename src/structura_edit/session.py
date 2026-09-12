@@ -8,7 +8,7 @@ from structura_core.nbt import parse_state, state_key
 
 from .document import Document
 from .history import DEFAULT_CACHE_BYTES, History
-from .entity_data import initial_entities, check_entities, write_entities
+from .entity_data import initial_entities, write_entities
 from .cell_set import CellSet
 from .changes import ChangeSet, EntityDelta, Selection, StaleChangeError, _Cell, _Delta, _position
 from .condition import Condition
@@ -18,6 +18,8 @@ from .saved_changes import SavedChanges
 
 
 class EditSession:
+    _missing_cell = None
+
     def __init__(self, document, *, history_cache_limit=500_000, history_cache_bytes=DEFAULT_CACHE_BYTES, operation_limit=500_000):
         if any(isinstance(v, bool) or not isinstance(v, int) or v <= 0 for v in (history_cache_limit, operation_limit)):
             raise ValueError("History and operation limits must be positive integers")
@@ -105,7 +107,21 @@ class EditSession:
         return _Cell(self._states[index], index, position in self._document.source.block_nbt, position)
 
     def _cell(self, position):
-        return self._cells[position] if position in self._cells else self._original(position)
+        cell = self._cells[position] if position in self._cells else self._original(position)
+        return cell if cell is not None else self._missing_cell
+
+    def _cell_matches(self, position, cell):
+        if type(self)._cell is not EditSession._cell or type(self)._original is not EditSession._original:
+            return self._cell(position) == cell
+        if position in self._cells:
+            current = self._cells[position]
+            return (current if current is not None else self._missing_cell) == cell
+        index = self._document.source.present.get(position)
+        if index is None:
+            return cell == self._missing_cell
+        return (type(cell) is _Cell and cell.state == self._states[index] and cell.variant == index
+                and cell.keep_nbt == (position in self._document.source.block_nbt)
+                and cell.origin == position and cell.data is None)
 
     def _canonical_cell(self, position, cell):
         original = self._original(position)
@@ -278,39 +294,9 @@ class EditSession:
         return export_selection(self, selection, path)
 
     def _check_change(self, change):
-        if change.document_id != self._id or change.base_revision != self.revision:
-            raise StaleChangeError("The document changed; create a fresh preview")
-        if len(change) > self.operation_limit:
-            raise ValueError("Change exceeds the changed-cell budget")
-        from .document_resize import check_resize
+        from .change_validation import check_change
 
-        lower, upper = check_resize(self, change.resize)
-        check_entities(self, change.entities, (lower, upper))
-        seen = set()
-        states = set()
-        bounds = self.select()
-        for delta in change.changes:
-            if delta.position in seen or not all(lo <= v < hi for lo, v, hi in zip(lower, delta.position, upper)):
-                raise ValueError("Invalid or duplicate change position")
-            self._check_destination(delta.position)
-            seen.add(delta.position)
-            if self._cell(delta.position) != delta.before:
-                raise StaleChangeError("The change no longer matches this document")
-            if delta.after.state not in states:
-                if state_key(parse_state(delta.after.state)) != delta.after.state:
-                    raise ValueError("Change states must be canonical")
-                states.add(delta.after.state)
-            origin = delta.after.origin
-            original = self._original(origin) if origin is not None and origin in bounds else None
-            if origin is not None and original is None:
-                raise ValueError("Change contains an invalid source cell")
-            if delta.after.variant is not None and (original is None or delta.after.variant != original.variant or delta.after.state != original.state):
-                raise ValueError("Change contains an invalid palette variant")
-            if delta.after.keep_nbt and delta.after.data is not None:
-                if not delta.after.data.nbt:
-                    raise ValueError("Change contains invalid block entity data")
-            elif delta.after.keep_nbt and not (original and original.keep_nbt and original.state.split("[", 1)[0] == delta.after.state.split("[", 1)[0]):
-                raise ValueError("Change contains invalid block entity data")
+        check_change(self, change)
 
     def _write(self, position, cell):
         if cell is None or cell == self._original(position):

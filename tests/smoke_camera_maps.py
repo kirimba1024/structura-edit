@@ -26,6 +26,9 @@ def check_maps(window, output):
     window.move_camera((8.5, 2.5, 8.5))
     settle(window)
     centered(canvas)
+    assert minimap.mode.text() == "Auto cave"
+    minimap.mode.click()
+    settle(window)
     assert canvas.map_cut is None and minimap.mode.text() == "Surface"
     surface = canvas.image_pixels["top"]
     window.move_camera((8.5, -2.5, 8.5))

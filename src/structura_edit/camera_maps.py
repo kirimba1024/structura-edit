@@ -1,43 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
-import sqlite3
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from .map_images import MAX_MAP_PIXELS, MapRenderer
+from .camera_map_render import context_key as context_key, render_camera_maps as render_camera_maps
 from .map_projection import camera_cut
-from .resources import refresh_resources, resolve_assets
-
-
-def context_key(request):
-    state = request.state
-    return state._id, state._state_id, state.origin, state.size, request.assets, request.height
-
-
-def render_camera_maps(request, cut, large, previous, cache_path):
-    from .map_cache import map_spec, store_maps
-
-    key = context_key(request)
-    if previous is None or previous[0] != key:
-        refresh_resources(request.assets)
-        renderer = MapRenderer(request.map_args()["source"], request.assets)
-    else:
-        renderer = previous[1]
-    budget = MAX_MAP_PIXELS if large else min(MAX_MAP_PIXELS, max(256_000, sum(
-        renderer.size[a] * renderer.size[b] * 2 for a, b in ((0, 1), (0, 2), (1, 2)))))
-    images = renderer.images(cut=cut, max_pixels=budget)
-    atlas, notice = None, ""
-    if large and request.height.mode == "all":
-        atlas = map_spec(request.state, resolve_assets(request.assets), cache_path, cut=cut, preview=bool(request.change))
-        if atlas is not None:
-            try:
-                images, atlas = store_maps(atlas, images)
-            except (OSError, ValueError, sqlite3.Error) as error:
-                atlas, notice = None, f"Map cache unavailable: {error}"
-    return (key, renderer), images, atlas, notice
+from .map_detail import detail_areas
 
 
 class CameraMaps(QObject):
     failed = Signal(str)
+    mode_changed = Signal(bool)
 
     def __init__(self, canvas, cache):
         super().__init__(canvas)
@@ -45,16 +17,18 @@ class CameraMaps(QObject):
         self.context = self.previous = self.future = self.shown = None
         self.active = True
         self.sliced = False
+        self.automatic = False
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="camera-maps")
         self.timer = QTimer(self)
         self.timer.setInterval(80)
         self.timer.timeout.connect(self.poll)
+        canvas.view_changed.connect(self.update)
 
     def target(self):
         if self.context is None:
             return None
-        cut = camera_cut(self.canvas.position, self.context.state.size) if self.sliced else None
-        return context_key(self.context), cut, self.canvas.layout.large
+        cut = camera_cut(self.canvas.position, self.context.state.size) if self.sliced or self.automatic else None
+        return context_key(self.context), cut, self.canvas.layout.large, detail_areas(self.canvas), self.automatic, (camera_cut(self.canvas.position, self.context.state.size)[1] if self.canvas.dimension else None)
 
     @property
     def busy(self):
@@ -70,18 +44,22 @@ class CameraMaps(QObject):
 
     def reset(self):
         self.context = self.previous = self.shown = None
+        self.canvas.set_details({})
 
     def poll(self):
         if self.future is not None and self.future.done():
             future, self.future = self.future, None
             target = self.running
             try:
-                previous, images, atlas, notice = future.result()
+                previous, images, atlas, notice, details, cut, cave_y = future.result()
                 if self.context is not None and target[0] == context_key(self.context):
                     self.previous = previous
-                    if self.active and target[2] == self.canvas.layout.large and (target[1] is not None) == self.sliced:
+                    if self.active and target == self.target():
                         self.canvas.set_images(images)
-                        self.canvas.map_cut = target[1]
+                        self.canvas.set_details(details)
+                        self.canvas.map_cut = cut
+                        self.canvas.cave_y = cave_y
+                        self.mode_changed.emit(cut is not None)
                         self.cache.set_source(atlas)
                         if notice:
                             self.canvas.setToolTip(notice)
@@ -93,7 +71,7 @@ class CameraMaps(QObject):
         target = self.target()
         if self.future is None and self.active and target is not None and target != self.shown:
             self.running = target
-            self.future = self.executor.submit(render_camera_maps, self.context, target[1], target[2], self.previous, self.cache.path)
+            self.future = self.executor.submit(render_camera_maps, self.context, target[1], target[2], self.previous, self.cache.path, target[3], target[4], target[5])
         if not self.busy:
             self.timer.stop()
 

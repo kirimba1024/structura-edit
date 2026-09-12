@@ -19,6 +19,7 @@ class MiniMap(QWidget):
     def __init__(self, parent, *, cache_dir=None):
         super().__init__(parent)
         self._collapsed = False
+        self.right_inset = 0
         self.setObjectName("minimap")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_LayoutOnEntireRect)
@@ -34,7 +35,9 @@ class MiniMap(QWidget):
         self.header = self._button("", "Map projections", self._header_clicked)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.center = self._button("F · Center", "Center the map on the camera (F)", self.recenter)
-        self.mode = self._button("Surface", "Surface: outer faces of the loaded area. Click for slices at the camera.", self.toggle_mode)
+        self.maps.automatic = True
+        self.mode = self._button("Auto", "Auto chooses surface or cave from the camera surroundings. Click for Surface or Slices.", self.toggle_mode)
+        self.maps.mode_changed.connect(self._mode_changed)
         self.expand = self._button("M +", "Expand map (M)", self.toggle_large)
         self.expand.setObjectName("mapExpand")
         self.world_mode = self._button("World", "Show the prepared world map", self._world_toggled)
@@ -51,6 +54,8 @@ class MiniMap(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addLayout(row)
+        self.radar = self._button("Entities: Auto", "Entity markers: Auto, Icons, Dots or Off", self.toggle_entities)
+        layout.addWidget(self.radar)
         layout.addWidget(self.map_stack)
         self.load_here = self._button("Load here · F5", "Load a fresh area around the camera (F5). Your edits stay. Hatched map areas have no map data.", self.load_requested)
         self.load_here.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -98,12 +103,26 @@ class MiniMap(QWidget):
         if self.isVisible():
             self.set_large(not self.large)
 
+    def toggle_entities(self):
+        modes = ("Auto", "Icons", "Dots", "Off")
+        self.canvas.entity_mode = modes[(modes.index(self.canvas.entity_mode) + 1) % len(modes)]
+        self.radar.setText("Entities: " + self.canvas.entity_mode)
+        self.canvas.update()
+
     def toggle_mode(self):
-        self.maps.sliced = not self.maps.sliced
-        self.mode.setText("Slices" if self.maps.sliced else "Surface")
-        self.mode.setToolTip("Slices: cut through the camera position. Click for the surface." if self.maps.sliced
-                             else "Surface: outer faces of the loaded area. Click for slices at the camera.")
+        if self.maps.automatic:
+            self.maps.automatic = False
+            self.maps.sliced = False
+        elif not self.maps.sliced:
+            self.maps.sliced = True
+        else:
+            self.maps.sliced = False
+            self.maps.automatic = True
+        self._mode_changed(self.maps.sliced)
         self.maps.update()
+
+    def _mode_changed(self, cave):
+        self.mode.setText(("Auto cave" if cave else "Auto") if self.maps.automatic else "Slices" if self.maps.sliced else "Surface")
 
     def set_large(self, large):
         if large == self.large:
@@ -118,6 +137,7 @@ class MiniMap(QWidget):
 
     def _update_layout(self):
         self.map_stack.setVisible(not self.collapsed)
+        self.radar.setVisible(not self.collapsed and not self.world_mode.isChecked())
         self.load_here.setVisible(not self.collapsed and bool(self.canvas.dimension))
         self.header.setText("Map" if self.large else "MAP +" if self.collapsed else "MAP −")
         self.expand.setText("M ×" if self.large else "M +")
@@ -129,7 +149,7 @@ class MiniMap(QWidget):
         self.expanded_changed.emit(not self.collapsed)
 
     def set_overview(self, snapshot):
-        active = self.world_mode.isChecked() if self.world_map.snapshot is not None else snapshot is not None
+        active = self.world_mode.isChecked()
         self.world_map.set_snapshot(snapshot)
         self.world_mode.setVisible(snapshot is not None)
         self.world_mode.setChecked(snapshot is not None and active)
@@ -143,12 +163,15 @@ class MiniMap(QWidget):
 
     def reposition(self):
         parent = self.parentWidget()
-        width = parent.width() if self.large else min(parent.width(), 288)
+        available = max(1, parent.width() - self.right_inset)
+        width = parent.width() if self.large else min(available, 288)
         height = parent.height() if self.large else MAP_HEADER_HEIGHT + (0 if self.collapsed else 2 * width // 3)
         if not self.large and not self.collapsed and self.canvas.dimension:
             height += MAP_HEADER_HEIGHT
+        if not self.large and not self.collapsed and not self.world_mode.isChecked():
+            height += MAP_HEADER_HEIGHT
         self.setFixedSize(width, height)
-        self.move(parent.width() - width, 0)
+        self.move(0 if self.large else available - width, 0)
         self.raise_()
         self.canvas.view_changed.emit()
 
@@ -163,12 +186,12 @@ class MiniMap(QWidget):
         self.canvas.images.clear()
         self.canvas.image_pixels.clear()
         self.canvas.map_cut = None
+        self.canvas.cave_y = None
         self.canvas.tiles.clear()
         self.canvas.selection = None
         if not same_source:
             self.canvas.layout.reset()
-        self.canvas.entities = [(tuple(float(v) for v in entity["pos"]), str(entity["nbt"].get("id", "")) == "minecraft:player")
-                                for entity in session._document.source.entities]
+        self.canvas.set_entities([])
         self._update_layout()
         self.show()
 

@@ -19,17 +19,12 @@ from structura_render.geometry import TexturedMesh
 from structura_render.lod_geometry import LodMesh
 
 from .overview_model import OverviewNode, TILE_SPAN
+from .array_codec import encode_arrays as encode_arrays
 
 
-OVERVIEW_VERSION = 3
+OVERVIEW_VERSION = 6
 MAX_SNAPSHOT_BYTES = 8 * 1024**3
 MAP_SPAN = 128
-
-
-def encode_arrays(**arrays):
-    stream = BytesIO()
-    np.savez_compressed(stream, **arrays)
-    return stream.getvalue()
 
 
 def decode_arrays(data):
@@ -153,7 +148,7 @@ class OverviewStore:
         if row is None:
             raise ValueError("Overview tile is missing; refresh the overview")
         arrays = decode_arrays(row[0])
-        if key[0]:
+        if key[0] or not len(arrays['textures']) and 'flat_0_points' not in arrays:
             return dict(lod=LodMesh(arrays["lod_points"], arrays["lod_triangles"], arrays["lod_colors"]))
         meshes = []
         for index, identity in enumerate(arrays["textures"]):

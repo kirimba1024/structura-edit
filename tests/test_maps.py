@@ -85,3 +85,35 @@ def test_default_map_preserves_original_sixteen_pixel_texture(tmp_path):
     images = build_source_maps(source, tmp_path)
     assert all(image.shape == (16, 16, 3) for image in images.values())
     assert np.array_equal(images["top"], texture)
+
+
+@pytest.mark.parametrize('view', VIEWS)
+def test_zoom_fetches_original_pixels_even_when_overview_is_reduced(tmp_path, view):
+    from structura_edit.map_images import MapRenderer
+
+    directory = tmp_path / 'textures/block'
+    directory.mkdir(parents=True)
+    texture = np.arange(16 * 16 * 3, dtype=np.uint8).reshape(16, 16, 3)
+    Image.fromarray(texture).save(directory / 'stone.png')
+    source = SimpleNamespace(size=(4, 4, 4), present={p: 0 for p in product(range(4), repeat=3)},
+                             palette=['minecraft:stone'], palette_raw=[parse_state('minecraft:stone')])
+    renderer = MapRenderer(source, tmp_path)
+    assert renderer.images(max_pixels=6 * 16)[view].shape == (4, 4, 3)
+    area = (1, 1, 3, 3)
+    actual_area, pixels = renderer.details(((view, area),))[view]
+    assert actual_area == area and pixels.shape == (32, 32, 3)
+    assert np.array_equal(pixels, np.tile(texture, (2, 2, 1)))
+
+
+def test_plant_uses_model_particle_texture_instead_of_solid_color(tmp_path):
+    import json
+    from structura_edit.map_images import MapRenderer
+
+    for directory in ('textures/block', 'blockstates', 'models/block'):
+        (tmp_path / directory).mkdir(parents=True)
+    Image.new('RGBA', (16, 16), (123, 45, 67, 255)).save(tmp_path / 'textures/block/peony_top.png')
+    (tmp_path / 'blockstates/peony.json').write_text(json.dumps({'variants': {'': {'model': 'block/flower'}}}))
+    (tmp_path / 'models/block/flower.json').write_text(json.dumps({'textures': {'particle': 'block/peony_top'}}))
+    source = SimpleNamespace(size=(1, 1, 1), present={(0, 0, 0): 0}, palette=['minecraft:peony'],
+                             palette_raw=[parse_state('minecraft:peony')])
+    assert np.all(MapRenderer(source, tmp_path).images()['top'] == (123, 45, 67))

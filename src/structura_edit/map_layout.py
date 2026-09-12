@@ -1,4 +1,5 @@
 from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtGui import QTransform
 
 from .map_projection import VIEWS, plane_size, project
 from .appearance import MAP_ICON_SIZE
@@ -69,9 +70,12 @@ class MapLayout:
         return QPointF(*project(position, (0, 0, 0), view))
 
     def to_screen(self, point, view):
+        return self.transform(view).map(point)
+
+    def transform(self, view):
         tile, area = self.tile_rect(view), self.area(view)
-        return QPointF(tile.left() + (point.x() - area.left()) * tile.width() / area.width(),
-                       tile.top() + (point.y() - area.top()) * tile.height() / area.height())
+        sx, sy = tile.width() / area.width(), tile.height() / area.height()
+        return QTransform(sx, 0, 0, sy, tile.left() - area.left() * sx, tile.top() - area.top() * sy)
 
     def from_screen(self, point, view):
         tile, area = self.tile_rect(view), self.area(view)

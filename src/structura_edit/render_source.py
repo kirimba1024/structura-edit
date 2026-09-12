@@ -73,7 +73,7 @@ class RenderSource:
                     if local in present:
                         block_nbt[local] = payload
         return SimpleNamespace(size=grid.shape, palette_raw=self.palette_raw, palette=self.palette,
-                               present=present, block_nbt=block_nbt, entities=[])
+                               present=present, block_nbt=block_nbt, entities=[], world=hasattr(self.session, "dimension"))
 
     def entity_records(self):
         result = {}
@@ -123,5 +123,5 @@ class RenderSource:
                     block_nbt[local] = payload
         return SimpleNamespace(size=tuple(hi - lo for lo, hi in zip(lower, upper)),
                                palette_raw=self.palette_raw, palette=self.palette,
-                               present=present, block_nbt=block_nbt,
+                               present=present, block_nbt=block_nbt, world=hasattr(self.session, "dimension"),
                                entities=list(self.entity_records().values()) if include_entities else [])

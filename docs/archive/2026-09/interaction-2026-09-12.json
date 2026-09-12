@@ -1,0 +1,500 @@
+{
+  "date": "2026-09-12",
+  "scope": "Interaction CPU in 2D/3D; map atlas reuse and reload identity; compact ChangeSet validation/IPC; CI configuration",
+  "baseline": "Current dirty workspace before this interaction pass; earlier render/cache work retained. No commits created.",
+  "constraints": [
+    "User deferred unlocking the Mac. Active native navigation, physical input and stable 60/120 Hz acceptance remain pending.",
+    "Benchmarks and tests ran sequentially; timing and profiling were separate runs.",
+    "World A was read-only. Overview and geometry caches were copied into isolated temporary data; personal drafts, recent files and caches were not changed.",
+    "Raw JSON, profiles and PNG files under /private/tmp are temporary; this file preserves the compact comparison."
+  ],
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "python": "3.9.6",
+    "qt": "6.10.2",
+    "vtk": "9.5.2",
+    "display": "Built-in Retina Display",
+    "refresh_hz": 120.0,
+    "device_pixel_ratio": 2.0,
+    "viewport": [
+      2760,
+      1600
+    ],
+    "navigation_timer_ms": 16,
+    "native_platform": "cocoa",
+    "foreground_required": false,
+    "active": false,
+    "interruptions": []
+  },
+  "map_canvas": {
+    "conditions": {
+      "entities": 512,
+      "frames": 120,
+      "random_seed": 4,
+      "compact_logical_size": [
+        288,
+        192
+      ],
+      "large_logical_size": [
+        1104,
+        700
+      ],
+      "focused_view": "top",
+      "device_pixel_ratio": 2
+    },
+    "method": "QWidget.render into QImage with a moving camera; no profiling. Wall and thread CPU measured separately. This is paint cost, not native input or WindowServer latency.",
+    "results": {
+      "before": {
+        "compact": {
+          "frame_ms": {
+            "p50": 6.4,
+            "p95": 6.6,
+            "p99": 6.871,
+            "p99_9": 7.08,
+            "max": 7.108
+          },
+          "cpu_median_ms": 6.183,
+          "cpu_max_ms": 6.824,
+          "pixels_sha256": "ece7ef3afe599b608617aee9c6f40792253f220e7cf4441c75d08bfb7d1c5cdb"
+        },
+        "large": {
+          "frame_ms": {
+            "p50": 8.408,
+            "p95": 8.654,
+            "p99": 8.785,
+            "p99_9": 8.864,
+            "max": 8.874
+          },
+          "cpu_median_ms": 7.549,
+          "cpu_max_ms": 7.95,
+          "pixels_sha256": "ac3bcc62f2cec8e240acad9e2f5aafd00b1993052133259ca1572f9864ca842c"
+        }
+      },
+      "after": {
+        "compact": {
+          "frame_ms": {
+            "p50": 1.684,
+            "p95": 1.801,
+            "p99": 1.91,
+            "p99_9": 1.95,
+            "max": 1.954
+          },
+          "cpu_median_ms": 1.461,
+          "cpu_max_ms": 1.701,
+          "pixels_sha256": "ece7ef3afe599b608617aee9c6f40792253f220e7cf4441c75d08bfb7d1c5cdb"
+        },
+        "large": {
+          "frame_ms": {
+            "p50": 4.213,
+            "p95": 4.383,
+            "p99": 4.419,
+            "p99_9": 4.603,
+            "max": 4.627
+          },
+          "cpu_median_ms": 3.379,
+          "cpu_max_ms": 3.698,
+          "pixels_sha256": "ac3bcc62f2cec8e240acad9e2f5aafd00b1993052133259ca1572f9864ca842c"
+        }
+      }
+    },
+    "pixels_identical": {
+      "compact": true,
+      "large": true
+    },
+    "command": "QT_QPA_PLATFORM=offscreen .venv-edit/bin/python libs/structura-edit/tests/benchmark_map_canvas.py --frames 120 --output /private/tmp/structura-map.json"
+  },
+  "flight_diagnostic": {
+    "status": "diagnostic",
+    "world": "A",
+    "radius": 6,
+    "viewport": [
+      2760,
+      1600
+    ],
+    "seconds_per_path": 6.0,
+    "paths": "world-a-flight-paths.json",
+    "issues": [],
+    "source_unchanged": true,
+    "final_overview_actors": 238,
+    "final_overview_geometry_bytes": 90557544,
+    "rotation_starts_no_jobs": true,
+    "latest_teleport_wins": true,
+    "map_paint_profiles": {
+      "before": {
+        "flight-cave": {
+          "calls": 272,
+          "paint_cumulative_ms_per_call": 5.202
+        },
+        "flight-detail_boundary": {
+          "calls": 100,
+          "paint_cumulative_ms_per_call": 19.766
+        },
+        "flight-forest": {
+          "calls": 388,
+          "paint_cumulative_ms_per_call": 3.178
+        },
+        "flight-turn": {
+          "calls": 111,
+          "paint_cumulative_ms_per_call": 18.956
+        },
+        "overview": {
+          "calls": 371,
+          "paint_cumulative_ms_per_call": 2.472
+        }
+      },
+      "after": {
+        "flight-cave": {
+          "calls": 300,
+          "paint_cumulative_ms_per_call": 3.402
+        },
+        "flight-detail_boundary": {
+          "calls": 145,
+          "paint_cumulative_ms_per_call": 8.721
+        },
+        "flight-forest": {
+          "calls": 388,
+          "paint_cumulative_ms_per_call": 1.736
+        },
+        "flight-turn": {
+          "calls": 159,
+          "paint_cumulative_ms_per_call": 9.09
+        },
+        "overview": {
+          "calls": 372,
+          "paint_cumulative_ms_per_call": 0.936
+        }
+      }
+    },
+    "limitation": "Inactive, profiled and short runs. Scheduling varied across paths; these are diagnostic function costs, not accepted frame-rate comparisons. Forest/cave path placement still needs visual confirmation.",
+    "command": ".venv-edit/bin/python libs/structura-edit/tests/benchmark_overview.py WORLD --reuse --diagnostic --profile --flight-seconds 6 --paths libs/structura-edit/docs/archive/2026-09/world-a-flight-paths.json --output /private/tmp/structura-flight-profile.json"
+  },
+  "changes": {
+    "conditions": {
+      "floors": 24,
+      "changed_cells": 57625,
+      "repeats": 7,
+      "pickle_protocol": 5
+    },
+    "results": {
+      "before": {
+        "pickle_bytes": 2519888,
+        "stages": {
+          "validate": {
+            "median_ms": 98.239,
+            "max_ms": 98.799
+          },
+          "encode": {
+            "median_ms": 68.545,
+            "max_ms": 181.913
+          },
+          "decode": {
+            "median_ms": 263.688,
+            "max_ms": 342.46
+          }
+        }
+      },
+      "after": {
+        "pickle_bytes": 2202998,
+        "stages": {
+          "validate": {
+            "median_ms": 71.962,
+            "max_ms": 72.924
+          },
+          "encode": {
+            "median_ms": 70.634,
+            "max_ms": 76.416
+          },
+          "decode": {
+            "median_ms": 90.693,
+            "max_ms": 118.076
+          }
+        }
+      }
+    },
+    "limitation": "Encode median is roughly unchanged; decode/validation and payload size improved. No model validation was bypassed.",
+    "command": ".venv-edit/bin/python libs/structura-edit/tests/benchmark_changes.py --output /private/tmp/structura-changes.json"
+  },
+  "edit_workflow": {
+    "conditions": {
+      "floors": 24,
+      "source_blocks": 28800,
+      "changed_cells": 57625,
+      "viewport": [
+        1104,
+        628
+      ],
+      "visible": false,
+      "profiled": false
+    },
+    "results": {
+      "before": {
+        "stages": {
+          "open": {
+            "elapsed_ms": 1709.22,
+            "gui_timer_max_gap_ms": 69.23,
+            "timer_samples": 102
+          },
+          "take_start": {
+            "elapsed_ms": 981.22,
+            "gui_timer_max_gap_ms": 68.01,
+            "timer_samples": 56
+          },
+          "take_review": {
+            "elapsed_ms": 2432.8,
+            "gui_timer_max_gap_ms": 210.86,
+            "timer_samples": 122
+          },
+          "take_apply": {
+            "elapsed_ms": 1732.71,
+            "gui_timer_max_gap_ms": 224.74,
+            "timer_samples": 85
+          },
+          "save": {
+            "elapsed_ms": 844.26,
+            "gui_timer_max_gap_ms": 91.02,
+            "timer_samples": 48
+          },
+          "undo_take": {
+            "elapsed_ms": 1019.93,
+            "gui_timer_max_gap_ms": 82.23,
+            "timer_samples": 58
+          },
+          "redo_take": {
+            "elapsed_ms": 812.21,
+            "gui_timer_max_gap_ms": 78.19,
+            "timer_samples": 44
+          }
+        },
+        "sampled_rss_mib": 1203.03
+      },
+      "after": {
+        "stages": {
+          "open": {
+            "elapsed_ms": 1722.34,
+            "gui_timer_max_gap_ms": 64.59,
+            "timer_samples": 103
+          },
+          "take_start": {
+            "elapsed_ms": 845.62,
+            "gui_timer_max_gap_ms": 73.11,
+            "timer_samples": 47
+          },
+          "take_review": {
+            "elapsed_ms": 1924.49,
+            "gui_timer_max_gap_ms": 207.08,
+            "timer_samples": 101
+          },
+          "take_apply": {
+            "elapsed_ms": 1478.85,
+            "gui_timer_max_gap_ms": 139.33,
+            "timer_samples": 69
+          },
+          "save": {
+            "elapsed_ms": 759.37,
+            "gui_timer_max_gap_ms": 39.41,
+            "timer_samples": 45
+          },
+          "undo_take": {
+            "elapsed_ms": 972.36,
+            "gui_timer_max_gap_ms": 108.74,
+            "timer_samples": 54
+          },
+          "redo_take": {
+            "elapsed_ms": 843.35,
+            "gui_timer_max_gap_ms": 73.17,
+            "timer_samples": 47
+          }
+        },
+        "sampled_rss_mib": 1148.19
+      }
+    },
+    "assertions": "Take/resize, Save and reload, Undo/Redo, block NBT, entities, bounds and untouched source",
+    "limitation": "Single controlled run per version; RSS sums shared pages twice. Apply gap improved; Preview still reached 207 ms and Undo gap increased. No general smoothness claim.",
+    "command": ".venv-edit/bin/python libs/structura-edit/tests/benchmark_edit_workflow.py --output /private/tmp/structura-workflow"
+  },
+  "checks": {
+    "targeted_maps_and_measurement": "109 passed",
+    "fast": {
+      "status": "passed",
+      "pytest": "1184 passed, 21 warnings",
+      "steps": {
+        "docs": "passed",
+        "ruff": "passed",
+        "mypy": "passed",
+        "qem_runtime": "passed",
+        "pytest": "passed"
+      },
+      "result": "/private/tmp/structura-interaction-fast-final-20260912/result.json"
+    },
+    "native": {
+      "status": "partial",
+      "steps": {
+        "building_workflow": "passed",
+        "placement_tools": "passed",
+        "object_search": "passed",
+        "nbt_batch": "passed",
+        "world_edit": "passed",
+        "camera_maps": "passed",
+        "visual_details": "passed",
+        "height_slice": "passed",
+        "overview": "passed"
+      },
+      "deferred": {
+        "navigation": "User deferred unlocking the Mac; real native focus and mouse capture require an unlocked session."
+      },
+      "result": "/private/tmp/structura-interaction-native-20260912/result.json"
+    },
+    "full": "Not completed: native navigation requires an unlocked session.",
+    "regressions": [
+      "All six marker projections, negative origins, slice/Cave depth, visible edge inclusion and painter order",
+      "Pan/zoom reuse, unchanged tile source, cache failure retry, F5 with the same revision, edits/resources invalidation",
+      "Malformed coordinates rejected atomically, source/palette/NBT checks, before-field equality, NumPy integer positions, custom session lookup and pickle/dataclass compatibility"
+    ]
+  },
+  "ci": {
+    "path": ".github/workflows/check-edit.yml",
+    "status": "Configured; YAML parsed locally; remote jobs not run",
+    "matrix": [
+      "ubuntu-22.04/Python 3.9",
+      "ubuntu-22.04/Python 3.11",
+      "macos-14/Python 3.11",
+      "windows-2022/Python 3.11"
+    ],
+    "limitation": "Needs published library changes and updated submodule refs; does not replace native input, minimum macOS or packaging checks.",
+    "action_documentation": [
+      "https://github.com/actions/checkout/releases",
+      "https://github.com/actions/setup-python/blob/main/README.md",
+      "https://github.com/actions/upload-artifact/blob/main/README.md"
+    ]
+  },
+  "source_sha256_after": {
+    "camera_map_render.py": "6ed7e2c6877d2a1af98d6b0fee168ac7504b9cc1f2b1e853f1ad3ebc24c610ce",
+    "camera_maps.py": "c36acb7ee153c5e87b4241af8af54fd1f46346630e6078cd13fa3e71a17a0624",
+    "map_canvas.py": "c16c642a461fc32ba647a698f09bc6458197b85fb96d03867317bc27641d6467",
+    "map_entities.py": "58010ee00b293e627b57837dcd02a70533e1d66621ad4c8d8c2486049e5f97ee",
+    "map_layout.py": "6aa56406fdd2661e937ae0169dc39bab12885e0ce300ab7139a3e8f817e02318",
+    "map_cache_ui.py": "3ec4af817a3ab12579c6c968a9b6896f9799933f1ccb5e861699c44e738bcba0",
+    "change_validation.py": "992c7bad1b1813e724bfd4b1266652f3ef94292039ad7e89ec3df06ca674992f",
+    "changes.py": "7a27a9720750b4210110ac2887a097b9bcd268a865aa3a272dcdb6d29ac231c1",
+    "session.py": "0ba54868bc7f312d0bad29c7a624b8dbdc4b146a3e4771f6ccc1f91080886b85",
+    "clipboard_placement.py": "5656b5d438e78070d3601901f0010995859a449a5e662fd2c0f2dd9edb4aa043",
+    "world_view.py": "786d9a05e5c20d96ab5e069db111263730bcb0baac0f1ba59b96aa4d6e39c7a8"
+  },
+  "released_dependencies": {
+    "status": "incompatible",
+    "core": "0.6.1",
+    "render": "0.8.1",
+    "method": "Downloaded published wheels without dependencies, installed into an isolated target, and prepended that target to PYTHONPATH. Both module __file__ values confirmed the wheel copies were imported. Workspace environment was not changed.",
+    "error": "ModuleNotFoundError: No module named 'structura_core.world_backup' while importing EditSession",
+    "other_missing_development_modules": [
+      "structura_core.block_array",
+      "structura_core.world_write",
+      "structura_core.world_terrain",
+      "structura_render.lod_geometry",
+      "structura_render.entity_icons",
+      "structura_render.packets"
+    ],
+    "wheels": {
+      "structura_render-0.8.1-py3-none-any.whl": "c5df458b8186f2232f0513b23ac74b20267fa5536fb0db179c87d98dfc83cefb",
+      "structura_core-0.6.1-py3-none-any.whl": "32770341f3141f5fe587523491104ae3e41a209d9fdf025a9b212b2a0fb821a8"
+    },
+    "next_step": "Publish matching library APIs and raise editor dependency bounds before a source release. Use current workspace sources for development and local packaging."
+  },
+  "packaging": {
+    "status": "passed",
+    "source": "Fresh core/render/edit workspace wheels; build dependencies reused with --skip-install",
+    "command": ".venv-edit/bin/python libs/structura-edit/packaging/build_macos.py --skip-install --output /private/tmp/structura-interaction-package-20260912",
+    "manifest": {
+      "app": "/private/tmp/structura-interaction-package-20260912/Structura Edit.app",
+      "archive": "Structura-Edit-macOS-arm64.zip",
+      "sha256": "820b3665317b26c615eae4eb48c432aea98202881bf0379339cfc9326bbb8f4b",
+      "python": "3.9.6",
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "signing": "Ad hoc; not notarized",
+      "installation_check": "passed",
+      "versions": {
+        "structura-edit": "0.1.0a1",
+        "structura-core": "0.6.1",
+        "structura-render": "0.8.1",
+        "PySide6-Essentials": "6.10.2",
+        "vtk": "9.5.2",
+        "meshoptimizer": "0.2.30a0"
+      },
+      "wheels": {
+        "structura_core-0.6.1-py3-none-any.whl": "d4b3ed4c8c00f4d9c5462d25405234532751d2accaa3e6c93f28abb01ca7564b",
+        "structura_render-0.8.1-py3-none-any.whl": "a7f57ad175ed49c14a39713d8016781f44ad3565fb347f204fd551ed9e112abc",
+        "structura_edit-0.1.0a1-py3-none-any.whl": "1dbed51e58ad0d9bfba6210cb65e70b3e1daadddc8f8fd4968f4c58836f4aa30"
+      }
+    },
+    "checks": [
+      "Bundled example",
+      "Qt and VTK scene",
+      "Worker spawn",
+      "NBT batch preview",
+      "Apply",
+      "Save and reload",
+      "Undo",
+      "World overview and native QEM",
+      "Teleport and cancellation",
+      "Load here",
+      "World map zoom"
+    ],
+    "archive_bytes": 159284727,
+    "limitation": "Local arm64 build on macOS 26.6.2 with ad hoc signing. Minimum macOS, other platforms, Developer ID and notarization were not verified. Matching version strings do not make these workspace wheels identical to published wheels."
+  },
+  "release": {
+    "versions": {
+      "structura-core": "0.6.2",
+      "structura-render": "0.8.2",
+      "structura-edit": "0.1.0a2"
+    },
+    "core": {
+      "release": "https://github.com/kirimba1024/structura-core/releases/tag/v0.6.2",
+      "pypi": "https://pypi.org/project/structura-core/0.6.2/",
+      "commit": "1dbea0991ca1761601d7eeb01655932643d69619",
+      "publish_ci": "https://github.com/kirimba1024/structura-core/actions/runs/34699756433",
+      "status": "published"
+    },
+    "render": {
+      "release": "https://github.com/kirimba1024/structura-render/releases/tag/v0.8.2",
+      "commit": "585e799e8ebea073785cd618e457b9ac57fcbddc",
+      "ci": "https://github.com/kirimba1024/structura-render/actions/runs/34700183954",
+      "publish_ci": "https://github.com/kirimba1024/structura-render/actions/runs/34700366035",
+      "status": "publishing"
+    },
+    "installed_checks": {
+      "environment": "/private/tmp/structura-release-env-20260912",
+      "core": {
+        "passed": 326,
+        "log": "/private/tmp/structura-published-core-matrix-full.log",
+        "source": "Published PyPI wheel 0.6.2; includes 20 additional format-matrix tests in current checkout"
+      },
+      "render": {
+        "passed": 436,
+        "skipped": 2,
+        "log": "/private/tmp/structura-render-release-tests.log"
+      },
+      "edit": {
+        "passed": 866,
+        "qt": "6.10.3",
+        "log": "/private/tmp/structura-edit-release-tests.log"
+      },
+      "twine": "All three wheels and sdists passed metadata validation; final editor artifacts come from its release commit"
+    },
+    "format_matrix": {
+      "supported_routes": 30,
+      "java_pairs": 16,
+      "bedrock_pairs": 9,
+      "legacy_inputs": 5,
+      "cycles_per_pair": 3,
+      "unsupported_legacy_outputs": 6,
+      "limits": [
+        "Legacy has no writer or return cycle",
+        "Cross-format tests compare mutually representable data, not every document field",
+        "Bedrock fixtures cover known states, waterlogging and authored air; arbitrary entities/NBT can lose information",
+        "No in-game format acceptance in this pass"
+      ]
+    },
+    "edit_pypi": "First project publisher is not configured; PyPI management requires account login. Publish editor wheel and app in GitHub Releases."
+  }
+}

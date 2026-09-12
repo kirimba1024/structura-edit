@@ -32,6 +32,8 @@ def check_drag(window, output):
     window.selection_actions.set_bounds((2, 0, 2), (3, 1, 3))
     placement.start("take")
     settle(window)
+    assert window.scene.cut.originals and all(not actor.GetVisibility() for actor in window.scene.cut.originals)
+    assert window.document.session.state_at((2, 0, 2)) == "minecraft:chest" and not window.document.session.dirty
     placement.set_position((5, 1, 5))
     view.camera.position = (22, 18, 25)
     view.camera.focal_point = (5, 1, 5)
@@ -87,6 +89,7 @@ def check_drag(window, output):
 def check_keep_placing(window, source, path, output):
     placement = window.placement
     placement.cancel()
+    assert not window.scene.cut.originals and not window.scene.cut.actors
     placement.start("duplicate")
     settle(window)
     actors = tuple(placement.view.actors)

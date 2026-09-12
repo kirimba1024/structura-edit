@@ -2,7 +2,7 @@ from time import monotonic
 from datetime import datetime
 
 from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QInputDialog
 
 
 class DraftController(QObject):
@@ -67,5 +67,5 @@ class DraftController(QObject):
             window.navigation.stop()
             self.latest = session.recovery_notice
             window.add_issues((session.recovery_notice, *getattr(session, "notices", ())))
-            QMessageBox.information(window, "Draft recovered", "The local edits are restored. Earlier Undo history is unavailable.\nThe source has not been written.")
+            window.status.setText("Draft recovered · earlier Undo history is unavailable · source not written")
         window.tasks.submit("draft_list", listed)

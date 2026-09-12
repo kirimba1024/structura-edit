@@ -103,15 +103,21 @@ def _overview_build(args, context):
 
 
 def _overview_open(args, context):
-    from .overview_store import load_manifest
+    from .overview_cache import open_snapshot
 
-    return load_manifest(args["path"])
+    return open_snapshot(args["path"])
 
 
 def _overview_read(args, context):
     from .overview_batches import read_batches
 
     return read_batches(args["path"], args["keys"])
+
+
+def _overview_select(args, context):
+    from .overview_batches import select_batches
+
+    return select_batches(args['path'], args['target'])
 
 
 def _overview_surface(args, context):
@@ -316,6 +322,7 @@ TASKS = {
     "overview_build": Task(_overview_build, "Preparing world overview…", resources=True),
     "overview_open": Task(_overview_open, "Opening world overview…"),
     "overview_read": Task(_overview_read, "Refining view…"),
+    "overview_select": Task(_overview_select, "Choosing detail…"),
     "overview_surface": Task(_overview_surface, "Preparing destination…"),
     "open": Task(_open, "Opening…", replaces_document=True),
     "world": Task(_world, "Loading world…", resources=True, replaces_document=True),

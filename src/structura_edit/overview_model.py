@@ -6,6 +6,7 @@ import heapq
 TILE_SPAN = 16
 DETAIL_BUDGET = 96 * 1024**2
 STAGING_BUDGET = DETAIL_BUDGET
+SELECTION_BUDGET = 88 * 1024**2
 SETTLE_MILLISECONDS = 350
 PIXEL_ERROR = 1.5
 
@@ -59,7 +60,7 @@ class DetailTarget:
         return node.error * scale / max(distance, 0.01)
 
 
-def select_detail(nodes, roots, target, budget=DETAIL_BUDGET, pixel_error=PIXEL_ERROR):
+def select_detail(nodes, roots, target, budget=SELECTION_BUDGET, pixel_error=PIXEL_ERROR):
     if not 1 <= target.fov < 179:
         raise ValueError("Field of view must be between 1 and 179 degrees")
     selected = set()

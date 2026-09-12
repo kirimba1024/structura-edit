@@ -1,0 +1,98 @@
+{
+  "date": "2026-09-12",
+  "hardware": "Mac16,8, M4 Pro 12 CPU cores, 24 GiB; VTK 9.5.2",
+  "world": {
+    "name": "A",
+    "chunks": 2601,
+    "version": 6,
+    "build_seconds": 166.505,
+    "disk_bytes": 355651584,
+    "original_unchanged": true
+  },
+  "method": "Read-only personal world. Full saved height, radius 6 (169 editable chunks), exact model leaves + QEM HLOD. Runs sequential, no profiler. Camera tick 16 ms, viewport 2760x1600.",
+  "cache": {
+    "cold_open_seconds": 9.968038084,
+    "warm_open_seconds": 3.8370685420000004,
+    "geometry_ram_mib": 192,
+    "geometry_disk_mib": 512,
+    "decoded_map_mib": 64,
+    "inspection_mib": 16,
+    "invalidation": "Section content + halo/NBT/bounds, normalized used palette, resource generation; overview terrain/resource stamps/version. Origin separate.",
+    "installed": true,
+    "primed_exact_geometry": true,
+    "cached_overview_seconds": 2.9573554170000005
+  },
+  "flight": {
+    "frames": 519,
+    "renders": 519,
+    "fps": 61.87314834517835,
+    "frame_ms": {
+      "mean": 16.162099824324326,
+      "p50": 15.8864585000007,
+      "p95": 22.570170600001568,
+      "p99": 37.35814971999987,
+      "p99_9": 40.033423089000536,
+      "max": 40.745375000000195
+    },
+    "render_ms": {
+      "mean": 6.0840747321773,
+      "p50": 5.072333999999401,
+      "p95": 11.460791700000247,
+      "p99": 26.297941379998843,
+      "p99_9": 29.315344006002114,
+      "max": 30.026083000002757
+    },
+    "gui_gap_ms": {
+      "mean": 5.640948965100672,
+      "p50": 5.441228999998771,
+      "p95": 11.243506099999845,
+      "p99": 17.46108050000032,
+      "p99_9": 32.53710012499973,
+      "max": 34.42562500000079
+    },
+    "frame_budget_ms": 16.666666666666668,
+    "frames_over_budget": 130,
+    "frames_over_double_budget": 9
+  },
+  "inspection": {
+    "first_preview_ms": 33.27487500000004,
+    "other_preview_ms": 16.583166000000205,
+    "cached_preview_ms": 1.700166000000003,
+    "original_texture_pixels": true,
+    "pig_icon": true,
+    "preview_viewport_reused": true,
+    "preview_actors_reused": true
+  },
+  "diagnostics": {
+    "swap_control_supported": false,
+    "normal_render_p99_ms": 26.274935459999682,
+    "without_swap_render_p99_ms": 27.70885200000272,
+    "without_oit_frame_p99_ms": 69.47787999999605,
+    "gc_max_ms": 0.2707080000021733,
+    "result": "Neither swap suppression nor disabling OIT improves tail; neither retained."
+  },
+  "validation": {
+    "fast": "1111 tests passed in the original workspace; documentation links, Ruff and mypy passed. git diff --check passed in root/core/render/edit.",
+    "render": "356 tests passed; 3 unchanged USD exporter modules excluded because GUI environment has no pxr.",
+    "native": "Building, placement, search, NBT, world edit, maps, exact texels/entity icons/preview reuse, height slices and overview passed. Original workspace visual-details and overview smokes also passed after integration.",
+    "navigation": "Blocked before input checks: no active native window; Computer Use reports Mac locked.",
+    "cache_content": "49 targeted cache/sections/preview tests passed after palette normalization.",
+    "world_visuals": "Read-only original workspace captures: exact forest, spectator view from solid ground exposing real caves, original map texels/pig icon, framebuffer inspection preview. No Issues."
+  },
+  "limits": [
+    "60 Hz p99/p99.9 gate is not met in these runs. macOS was not an active unlocked reference session; repeat foreground before attributing residual tails to backend.",
+    "Cached load includes disk decode, IPC and GPU publication; caching does not eliminate drawing cost or promise zero stalls.",
+    "HLOD colors preserve silhouettes; nearest exact atlas remains without unsafe automatic mips. Uniformly lossless detail at arbitrary distance is not claimed.",
+    "Historical 47-second colored-cube snapshot experiment was removed; it is not a like-for-like speedup for the delivered exact leaves.",
+    "Normal RSS sum includes shared process pages; it is not GPU memory. World files were not written."
+  ],
+  "sources": [
+    "https://maven.fabricmc.net/docs/yarn-1.21.1%2Bbuild.3/net/minecraft/client/render/chunk/ChunkBuilder.html",
+    "https://github.com/CaffeineMC/sodium/blob/dev/common/src/main/java/net/caffeinemc/mods/sodium/client/render/chunk/RenderSectionManager.java",
+    "https://vtk.org/doc/nightly/html/classvtkCellArray.html",
+    "https://vtk.org/doc/nightly/html/classvtkPolyDataMapper.html",
+    "https://docs.vtk.org/en/latest/api/python/vtkmodules/vtkmodules.util.numpy_support.html",
+    "https://doc.qt.io/qt-6/threads-modules.html",
+    "https://0fps.net/2013/07/09/texture-atlases-wrapping-and-mip-mapping/"
+  ]
+}

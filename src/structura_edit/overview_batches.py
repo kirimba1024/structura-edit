@@ -1,5 +1,6 @@
 from collections import defaultdict
 from contextlib import closing
+from functools import lru_cache
 
 import numpy as np
 
@@ -9,10 +10,26 @@ from structura_render.atlas import merge_mesh_atlases
 
 from .overview_model import tile_bounds
 from .overview_store import OverviewStore, texture_identity
+from .render_packets import prepare_geometry
 
 
 BATCH_LEVEL = 4
 BATCH_BYTES = 8 * 1024**2
+
+
+@lru_cache(maxsize=1)
+def _snapshot(path):
+    from .overview_store import load_manifest
+
+    return load_manifest(path)
+
+
+def select_batches(path, target):
+    from .overview_model import select_detail
+
+    snapshot = _snapshot(path)
+    selected = select_detail(snapshot['nodes'], snapshot['roots'], target)
+    return detail_batches(snapshot['nodes'], selected)
 
 
 def detail_batches(nodes, selection):
@@ -73,4 +90,4 @@ def read_batch(store, key, textures):
     meshes = merge_mesh_atlases(meshes)
     for mesh in meshes:
         mesh.texture_key = texture_identity(mesh.image)
-    return dict(origin=origin, colored=split_lod(merge_lods(lods)), meshes=meshes, flat=flat)
+    return prepare_geometry(dict(origin=origin, colored=split_lod(merge_lods(lods)), meshes=meshes, flat=flat))

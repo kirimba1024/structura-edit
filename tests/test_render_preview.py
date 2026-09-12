@@ -60,7 +60,7 @@ def test_world_preview_is_not_written_to_the_saved_map_cache(world_edit, tmp_pat
     change = world_edit.set_block((0, 0, 0), "minecraft:gold_block")
     request = ViewRequest(world_edit, change, assets, True, False)
     assert request.map_args(path)["atlas"]["volatile"]
-    _, _, atlas, notice = render_camera_maps(request, None, True, None, path)
+    _, _, atlas, notice, _, _, _ = render_camera_maps(request, None, True, None, path)
     assert atlas["volatile"] and not notice and not path.exists()
     assert not world_edit.dirty
 

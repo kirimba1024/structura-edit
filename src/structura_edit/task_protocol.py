@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 TaskKind = Literal[
-    'overview_build', 'overview_open', 'overview_read', 'overview_surface', 'open', 'world',
+    'overview_build', 'overview_open', 'overview_select', 'overview_read', 'overview_surface', 'open', 'world',
     'save', 'apply', 'history', 'render', 'render_preview', 'export_review', 'export', 'map',
     'objects', 'object_search', 'nbt_targets', 'nbt_batch', 'operation', 'paint', 'planar',
     'connected', 'fragment_save', 'fragment_list', 'fragment_load', 'draft_save', 'draft_list',

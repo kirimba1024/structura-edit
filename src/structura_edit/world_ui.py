@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from .world_view import WorldView
-from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, MAX_RADIUS, region_bounds, check_world_budget
+from .loading import DEFAULT_RADIUS, MAX_RADIUS, region_bounds, check_world_budget
 from .height_slice import HeightSlice
 from .world_preferences import load_distance, save_distance
 
@@ -56,9 +56,17 @@ class WorldController(QObject):
         return tuple(p + o for p, o in zip(self.plotter.camera.position, self.document.session.origin))
 
     def refresh(self):
-        if self.active and self.available() and self.document.pending is None:
-            self.center = self.camera_position()
-            self.request()
+        if not self.active:
+            return
+        if self.document.pending is not None:
+            self.message.emit("Apply or discard the preview before loading another area")
+            return
+        if not self.available():
+            self.message.emit("Finish the current action before loading another area")
+            return
+        self.center = self.camera_position()
+        self.message.emit("Loading columns around the camera…")
+        self.request()
 
     def request(self, *, recenter=False, preserve_edits=True):
         if not self.path:
@@ -162,7 +170,7 @@ class WorldController(QObject):
             recenter = dialog.dimension.currentText() != self.dimension or tuple(field.value() for field in dialog.coordinates) != tuple(round(v) for v in center)
             self.dimension = dialog.dimension.currentText()
             self.center = tuple(field.value() for field in dialog.coordinates)
-            self.radius, self.vertical_radius = dialog.radius.value(), dialog.vertical.value()
+            self.radius, self.vertical_radius = dialog.radius.value(), dialog.vertical.value() or None
             self.remember_distance = True
             self.request(recenter=recenter)
 
@@ -186,9 +194,11 @@ class WorldSettings(QDialog):
         self.radius.setRange(0, MAX_RADIUS)
         self.radius.setValue(radius)
         self.radius.setToolTip("Square of (2 × radius + 1) chunks; one chunk is 16 × 16 blocks")
-        self.vertical.setRange(16, 192)
+        self.vertical.setRange(0, 192)
+        self.vertical.setSpecialValueText("Full columns")
         self.vertical.setSingleStep(16)
-        self.vertical.setValue(vertical)
+        self.vertical.setValue(vertical or 0)
+        self.vertical.setToolTip("Full columns load every saved height. A vertical radius limits the editing area around the camera.")
         layout.addRow("View distance · chunks", self.radius)
         layout.addRow("Vertical radius · blocks", self.vertical)
         self.extent = QLabel()
@@ -198,11 +208,16 @@ class WorldSettings(QDialog):
         layout.addRow(buttons)
         def update_extent():
             center = tuple(field.value() for field in self.coordinates)
-            lower, upper = region_bounds(center, self.radius.value(), self.vertical.value())
-            sizes = tuple(hi - lo for lo, hi in zip(lower, upper))
-            message = f"{sizes[0]} × {sizes[2]} blocks · {(2 * self.radius.value() + 1) ** 2} chunks · height {sizes[1]}"
+            radius, vertical = self.radius.value(), self.vertical.value() or None
+            width = (2 * radius + 1) * 16
+            if vertical is None:
+                height = "all saved heights"
+            else:
+                lower, upper = region_bounds(center, radius, vertical)
+                height = f"height {upper[1] - lower[1]}"
+            message = f"{width} × {width} blocks · {(2 * radius + 1) ** 2} chunks · {height}"
             try:
-                check_world_budget(center, self.radius.value(), self.vertical.value())
+                check_world_budget(center, radius, vertical)
                 valid = True
             except ValueError as error:
                 message += "\n" + str(error)
@@ -214,7 +229,7 @@ class WorldSettings(QDialog):
         update_extent()
         def reset():
             self.radius.setValue(DEFAULT_RADIUS)
-            self.vertical.setValue(DEFAULT_VERTICAL_RADIUS)
+            self.vertical.setValue(0)
             self.dimension.setCurrentText(session.dimension)
             for field, value in zip(self.coordinates, center):
                 field.setValue(round(value))

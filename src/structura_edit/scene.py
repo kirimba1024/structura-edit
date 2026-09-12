@@ -4,13 +4,15 @@ import pyvista as pv
 from .picking import pick_block
 from .loading import replacement_sizes
 from .appearance import GHOST_OPACITY, REMOVAL, REMOVAL_OPACITY
-from .scene_geometry import add_geometry
+from .scene_geometry import add_geometry_steps, remove_geometry
 from .height_slice import HeightSlice
+from .source_cut import SourceCut
 
 
 class Scene:
     def __init__(self, plotter):
         self.plotter = plotter
+        self.cut = SourceCut(self)
         self.sections = {}
         self.section_bytes = {}
         self.signatures = {}
@@ -28,6 +30,7 @@ class Scene:
         return [actor for actors in self.sections.values() for actor in actors]
 
     def clear(self):
+        self.cut.clear()
         self._remove(self.actors)
         self.sections.clear()
         self.section_bytes.clear()
@@ -39,11 +42,19 @@ class Scene:
         self.entity_markers = []
         self.entity_boxes = np.empty((0, 2, 3))
 
+    def shift(self, offset):
+        if not any(offset):
+            return
+        for actor in self.actors:
+            actor.SetPosition(*(p + d for p, d in zip(actor.GetPosition(), offset)))
+        self.signatures.clear()
+
     def replace(self, data, revision):
         for _ in self.replace_steps(data, revision):
             pass
 
     def replace_steps(self, data, revision):
+        self.cut.clear()
         sizes = replacement_sizes(data, self.section_bytes)
         replacements = {}
         reused = set()
@@ -53,10 +64,11 @@ class Scene:
                 if section.get("signature") is not None and self.signatures.get(key) == section["signature"] and key in self.sections:
                     reused.add(key)
                     continue
-                replacements[key] = self._add_section(section)
-                for actor in replacements[key]:
+                replacements[key] = []
+                for actor in self._add_section_steps(section):
+                    replacements[key].append(actor)
                     actor.SetVisibility(False)
-                yield True
+                    yield True
             if data["reset"]:
                 self._remove(actor for key, actors in self.sections.items() if key not in reused for actor in actors)
                 self.sections = {key: self.sections[key] for key in reused}
@@ -88,15 +100,17 @@ class Scene:
     def _remove(self, actors):
         for actor in actors:
             self.ghost_actors.pop(actor, None)
-            self.plotter.remove_actor(actor, reset_camera=False, render=False)
+            remove_geometry(self.plotter, (actor,))
 
-    def _add_section(self, data):
-        actors = add_geometry(self.plotter, data)
+    def _add_section_steps(self, data):
+        actors = []
         try:
+            for actor in add_geometry_steps(self.plotter, data):
+                actors.append(actor)
+                yield actor
             for name, layer in data.get("layers", {}).items():
-                additions = self._add_section(layer)
-                actors.extend(additions)
-                for actor in additions:
+                for actor in self._add_section_steps(layer):
+                    actors.append(actor)
                     prop = actor.GetProperty()
                     self.ghost_actors[actor] = name, prop.GetOpacity(), actor.GetForceOpaque()
                     actor.SetForceOpaque(False)
@@ -108,10 +122,10 @@ class Scene:
                         prop.LightingOff()
                     else:
                         prop.SetOpacity(prop.GetOpacity() * GHOST_OPACITY)
+                    yield actor
         except Exception:
             self._remove(actors)
             raise
-        return actors
 
     def accept_preview(self):
         self.signatures.clear()
@@ -134,10 +148,15 @@ class Scene:
         return pick_block(session, *self.ray_at(point), height=self.height)
 
     def entity_at(self, session, point):
+        return self.target_at(session, point)[1]
+
+    def target_at(self, session, point):
         from .entity_picking import nearest_entity
 
         ray = self.ray_at(point)
-        return nearest_entity(self.entity_keys, self.entity_boxes, *ray, block=pick_block(session, *ray, height=self.height))
+        block = pick_block(session, *ray, height=self.height)
+        entity = nearest_entity(self.entity_keys, self.entity_boxes, *ray, block=block)
+        return (None, entity) if entity is not None else (block, None)
 
     def ray_at(self, point):
         renderer = self.plotter.renderer
@@ -150,4 +169,5 @@ class Scene:
             renderer.DisplayToWorld()
             value = renderer.GetWorldPoint()
             ray.append(np.asarray(value[:3]) / value[3])
-        return ray[0], ray[1] - ray[0]
+        origin = ray[0] if self.plotter.camera.parallel_projection else np.asarray(self.plotter.camera.position)
+        return origin, ray[1] - origin

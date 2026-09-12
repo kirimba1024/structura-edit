@@ -44,8 +44,12 @@ def test_packed_buffers_preserve_world_triangles_and_texture_coordinates(tmp_pat
             for mesh in data.get("meshes", ()):
                 expected_uv.update(textured_faces(mesh, origin))
         for data in read_batches(snapshot["path"], batches).values():
-            for solid, points, faces, colors in data["colored"]:
-                actual.update(triangles(points, faces.reshape(-1, 4)[:, 1:], data["origin"]))
-            for mesh in data["meshes"]:
-                actual_uv.update(textured_faces(mesh, data["origin"]))
+            for packet in data['packets']:
+                if packet.colors is not None:
+                    actual.update(triangles(packet.points, packet.indices, data['origin']))
+                if packet.image is not None:
+                    from types import SimpleNamespace
+
+                    mesh = SimpleNamespace(points=packet.points, quads=packet.indices, uv=packet.uv, image=packet.image)
+                    actual_uv.update(textured_faces(mesh, data['origin']))
         assert actual == expected and actual_uv == expected_uv

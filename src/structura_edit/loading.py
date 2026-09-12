@@ -4,9 +4,11 @@ from math import floor, prod
 CHUNK_SIZE = 16
 DEFAULT_RADIUS = 6
 MAX_RADIUS = 8
-DEFAULT_VERTICAL_RADIUS = 32
+DEFAULT_VERTICAL_RADIUS = None
 MAX_WORLD_CELLS = 8_000_000
 MAX_WORLD_BLOCKS = 2_000_000
+MAX_COLUMN_CELLS = 32_000_000
+MAX_COLUMN_BLOCKS = 16_000_000
 MAX_PENDING_BLOCKS = 500_000
 MAX_PREVIEW_CELLS = 8_000_000
 MAX_GEOMETRY_BYTES = 192 * 1024**2
@@ -26,14 +28,20 @@ def region_bounds(center, radius, vertical_radius):
 
 
 def check_world_budget(center, radius, vertical_radius):
+    if vertical_radius is None:
+        return
+    if not 16 <= vertical_radius <= 192:
+        raise ValueError("Choose Full columns or a vertical radius from 16 to 192 blocks")
     lower, upper = region_bounds(center, radius, vertical_radius)
     volume = prod(hi - lo for lo, hi in zip(lower, upper))
     if volume > MAX_WORLD_CELLS:
         raise ValueError(f"World view needs {volume:,} cells; the editor limit is {MAX_WORLD_CELLS:,}. Reduce the radius.")
 
 
-def check_preview_budget(size):
-    if prod(size) > MAX_PREVIEW_CELLS:
+def check_preview_budget(size, *, world=False):
+    if world and prod(size) > MAX_COLUMN_CELLS:
+        raise ValueError("World columns exceed 32 million cells; reduce the world radius")
+    if not world and prod(size) > MAX_PREVIEW_CELLS:
         raise ValueError("Preview exceeds 8 million cells; split the schematic or reduce the world radius")
 
 

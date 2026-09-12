@@ -89,7 +89,7 @@ class EditorPanels:
         self.docks = {}
         for name, title in (("operation", "Selection action"), ("selection", "Selection bounds"),
                             ("materials", "Materials"), ("recipe", "Python recipe"), ("history", "History")):
-            dock = QDockWidget(title, window)
+            dock = QDockWidget(title, window.plotter)
             dock.setWidget(getattr(self, name))
             title_bar = QWidget(dock)
             title_bar.setAttribute(Qt.WidgetAttribute.WA_LayoutOnEntireRect)
@@ -110,20 +110,37 @@ class EditorPanels:
             dock.setTitleBarWidget(title_bar)
             dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
             dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
-            window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+            dock.setWindowFlags(Qt.WindowType.Widget)
             dock.setFixedWidth(PANEL_WIDTH)
             dock.hide()
+            dock.visibilityChanged.connect(self.reposition)
             self.docks[name] = dock
+        self.minimap = window.minimap
+        self.focus_target.resized.connect(self.reposition)
         self.selection.dismissed.connect(lambda: self.close("selection"))
+
+    def reposition(self, *args):
+        if not hasattr(self, "minimap"):
+            return
+        visible = [dock for dock in self.docks.values() if not dock.isHidden()]
+        width = min(PANEL_WIDTH, self.focus_target.width())
+        for dock in visible:
+            dock.setGeometry(self.focus_target.width() - width, 0, width, self.focus_target.height())
+            dock.raise_()
+        self.minimap.right_inset = width if visible else 0
+        self.minimap.reposition()
+        self.minimap.expanded_changed.emit(not self.minimap.collapsed)
 
     def close(self, name):
         self.docks[name].hide()
         self.focus_target.setFocus(Qt.FocusReason.OtherFocusReason)
 
-    def show(self, name):
+    def show(self, name, *, focus=True):
         for key, dock in self.docks.items():
             dock.setVisible(key == name)
-        self.docks[name].widget().setFocus(Qt.FocusReason.OtherFocusReason)
+        self.reposition()
+        target = self.docks[name].widget() if focus else self.focus_target
+        target.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def dismiss(self):
         for dock in self.docks.values():

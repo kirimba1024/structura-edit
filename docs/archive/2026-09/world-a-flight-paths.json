@@ -1,0 +1,6 @@
+[
+  {"name": "forest", "position": [-10, 96, 40], "target": [-10, 94, 32], "travel": [8, 0, -4]},
+  {"name": "cave", "position": [24, -8, 24], "target": [24, -8, 16], "travel": [6, 0, -6]},
+  {"name": "turn", "position": [-10, 96, 40], "target": [-10, 94, 32], "yaw_degrees": 2160},
+  {"name": "detail_boundary", "position": [160, 118, 32], "target": [16, 94, 32], "travel": [-112, -16, 0]}
+]

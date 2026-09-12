@@ -6,6 +6,24 @@ from structura_edit.changes import Selection
 pv = pytest.importorskip("pyvista")
 
 
+def test_entity_hover_replaces_block_bounds_and_clears_its_label():
+    from structura_edit.scene_overlay import SceneOverlay
+
+    view = pv.Plotter(off_screen=True)
+    overlay = SceneOverlay(view)
+    try:
+        overlay.set_hover((0, 0, 3), label="Grass block")
+        bounds = ((.2, 0, 1), (.8, 1.4, 2))
+        overlay.set_hover(None, bounds=bounds, label="Ocelot")
+        assert overlay.hover.bounds == bounds
+        assert overlay.hover_label == "Ocelot"
+        overlay.set_hover(None)
+        assert overlay.hover.bounds is None
+        assert overlay.hover_label == ""
+    finally:
+        view.close()
+
+
 def test_selection_can_be_drawn_before_the_resized_scene_arrives():
     from structura_edit.cell_set import CellSet
     from structura_edit.scene_overlay import SceneOverlay

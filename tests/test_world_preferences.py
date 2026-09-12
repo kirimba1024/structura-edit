@@ -19,4 +19,4 @@ def test_distance_survives_restart_without_changing_cli_override(tmp_path, monke
     save_distance(8, 48)
     assert load_distance() == (8, 48)
     (tmp_path/'world-view.json').write_text('{bad')
-    assert load_distance() == (6, 32)
+    assert load_distance() == (6, None)

@@ -7,6 +7,25 @@ import portalocker
 from .overview_store import MAX_SNAPSHOT_BYTES
 
 
+def open_snapshot(path):
+    from structura_core.world import JavaWorld
+    from structura_core.world_terrain import terrain_stamp
+
+    from .file_state import resource_stamp
+    from .overview_store import load_manifest
+    from .resources import resolve_assets
+
+    snapshot = load_manifest(path)
+    metadata = snapshot['metadata']
+    world = JavaWorld(metadata['world'])
+    current = terrain_stamp(world.dimensions[metadata['dimension']] / 'region')
+    assets = resolve_assets(metadata['assets_option'])
+    if (current != tuple(map(tuple, metadata.get('terrain_stamp', ())))
+            or str(assets) != metadata['assets'] or json.dumps(resource_stamp(assets)) != json.dumps(metadata['resources'])):
+        raise ValueError('World or textures changed; prepare a fresh overview')
+    return snapshot
+
+
 def snapshot_lease(path):
     lease = portalocker.Lock(str(path) + ".lock", flags=portalocker.LOCK_SH | portalocker.LOCK_NB, timeout=0)
     lease.acquire()

@@ -1,8 +1,16 @@
+from importlib.metadata import version
 from pathlib import Path
+
+from packaging.version import Version
 
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules, copy_metadata
 
 
+release = Version(version('structura-edit'))
+bundle_version = release.base_version
+if release.pre:
+    stage, number = release.pre
+    bundle_version += f"{'fc' if stage == 'rc' else stage}{number}"
 packages = ('structura_edit', 'structura_core', 'structura_render', 'amulet', 'PyMCTranslate')
 datas = []
 hiddenimports = []
@@ -31,8 +39,8 @@ app = BUNDLE(
     collection, name='Structura Edit.app', bundle_identifier='io.github.kirimba1024.structura-edit',
     info_plist={
         'CFBundleDisplayName': 'Structura Edit',
-        'CFBundleShortVersionString': '0.1.0',
-        'CFBundleVersion': '0.1.0',
+        'CFBundleShortVersionString': release.base_version,
+        'CFBundleVersion': bundle_version,
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '13.0',
     },

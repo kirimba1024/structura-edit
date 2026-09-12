@@ -69,7 +69,7 @@ class PaintController(QObject):
         values = window.operation.values()
         target = values.get("target", window.operation.fields["target"].text())
         if window.edits.prepare("paint", points=tuple(points), target=target, radius=self.radius, condition=values.get("mask")):
-            window.panels.show("operation")
+            window.panels.show("operation", focus=False)
 
     def eventFilter(self, watched, event):
         if not self.active:

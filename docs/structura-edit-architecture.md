@@ -11,16 +11,17 @@
 | Область | Владелец и основной путь |
 |---|---|
 | Состояние редактора | `editor_document.py`: сессия, selection, preview, epoch/input tokens; `edit_workflow.py`: подготовка, Apply, history, Save |
-| Данные и история | `session.py`, `document.py`, `changes.py`, `history.py`; unsaved — `saved_changes.py`; resize — `document_resize.py` |
+| Данные и история | `session.py`, `document.py`, `changes.py`, `history.py`; проверка ChangeSet — `change_validation.py`; unsaved — `saved_changes.py`; resize — `document_resize.py` |
 | Мировая область | `source_loading.py`, `world_view.py`, `world_changes.py`; GUI — `source_ui.py`, `world_ui.py` |
 | Фоновая задача | `task_protocol.py` → `jobs.py` → `tasks.py`; lifecycle callback — `task_runner.py`; один снимок — `worker_document.py`, delta — `worker_delta.py` |
 | Команды и геометрические операции | `commands.py`, `operations.py`, `condition.py`, `mix.py`, `planar.py`, `paint.py` |
 | Перенос и повтор | `clipboard.py`, `clipboard_placement.py`, `clipboard_transform.py`; `placement_ui.py`/`placement_review.py`, `repeat_ui.py` |
 | NBT и сущности | `entity_data.py`, `object_edits.py`, `nbt_values.py`, `nbt_batch.py`; `object_ui.py`, `region_inspector.py`, `nbt_batch_ui.py` |
 | Поиск и инспекция | `object_search.py`, `object_search_ui.py`; `inspection.py`/`inspection_ui.py`; NBT-поиск — `nbt_search.py`/`nbt_search_ui.py` |
-| Сцена и preview | `render_source.py`, `sections.py`, `preview.py` → `view_pipeline.py` → `scene.py`; кэш — `section_cache.py` |
+| Сцена и preview | `render_source.py`, `sections.py`, `preview.py` → `render_packets.py` → `view_pipeline.py` → `scene.py`; кэши — `section_cache.py`, `geometry_cache.py` |
+| VTK-ресурсы | `scene_geometry.py`, `scene_textures.py`, `scene_retirement.py`: bounded static actors, shared textures и порционное удаление |
 | Обзор мира | `overview_model.py`, `overview_ui.py`; сборка/хранение — `overview_build.py`, `overview_store.py`; VTK — `overview_scene.py` |
-| Карты и срез | `height_slice.py`, `camera_maps.py`, `map_cache.py`, `map_canvas.py`; мировая карта — `world_map.py`, `overview_maps.py` |
+| Карты и срез | `height_slice.py`; очередь — `camera_maps.py`, worker — `camera_map_render.py`, атлас — `map_cache.py`, вид — `map_canvas.py`/`map_layout.py`; detail — `map_detail.py`, cave — `map_environment.py`, markers — `map_entities.py`; мировой кэш — `map_image_cache.py` |
 | Ввод и оформление | `navigation.py`, `mouse_look.py`, `cocoa_mouse.py`; общие значения — `appearance.py`, кожа — `theme.py`, `data/editor.qss` |
 | Локальные данные | `local_store.py`, `patch_codec.py`, `drafts.py`, `fragments.py`; диагностика — `action_log.py` |
 | Сборка GUI | `ui.py` связывает компоненты; меню — `menus.py`, capabilities и семантика Undo — `action_state.py` |
@@ -79,9 +80,11 @@ Clipboard сохраняет footprint, исходные позиции и пр�
   ключей и History. Поток обмена копирует словари и собирает EditSession, не исполняя
   операцию и не записывая SQLite повторно. Save/resize/entities/multi-step history,
   подклассы сессии и render сохраняют полный ответ. Копирование остаётся O(P).
-- `_Cell`/`_Delta` сериализуются аргументами конструктора без словаря полей на каждый
-  объект. Это сокращает IPC, не меняя модель. Полная проверка ChangeSet в GUI при
-  принятии большого Preview остаётся отдельной стоимостью; проверка не обходится.
+- `_Cell`/`_Delta` хранят поля в slots и сериализуются аргументами конструктора;
+  пустой воздух разделяет один неизменяемый `_Cell`. `change_validation.py` выполняет
+  полную проверку координат, before, состояний, palette/NBT, resize и entities.
+  Сравнение before читает поля базы без временной клетки; подклассы с собственным
+  lookup сохраняют свой путь. Большой Preview всё ещё требует синхронного прохода в GUI.
 - SQLite-путь создаёт родитель. Worker откладывает удаление redo-строк до следующего
   запроса с принятым снимком. Потеря ответа/ошибка сборки оставляют GUI прежнюю историю;
   новая orphan-строка может остаться до удаления временного журнала.
@@ -99,10 +102,22 @@ ViewPipeline принимает только текущий request. Новые 
 VTK работает в GUI-потоке; render-запросы объединяются одним Qt timer. Preview включает
 halo для соседних форм; Apply переиспользует принятую геометрию. Одновременная старая
 и новая сцена увеличивают peak памяти; один VTK-вызов может превысить целевую порцию.
+Worker готовит material-separated пакеты до 1 MiB/65 536 вершин; GUI не выполняет
+np.unique или преобразование connectivity. [Ресурсы и кэши](world-view.md#ограничения-ресурсов-и-установка).
+Inspector сохраняет viewport и actor LRU; ключ зависит от модели/state/NBT/ресурсов,
+а не позиции одинакового блока. Старый preview остаётся до готовности нового.
+Панели workbench располагаются поверх 3D и не меняют aspect ratio при открытии.
 
 HeightSlice принадлежит запросу вида. Scene принимает срез вместе с геометрией;
 picking использует показанный срез до замены. Карты проверяют известность внутри
 фактического slab, разделяют dimension/resources/depth; preview не загрязняет атлас.
+Контекст локальной карты включает идентичность Document: F5 с той же revision
+сбрасывает renderer и исключает старый ответ. Worker удерживает только последний
+опубликованный атлас и повторно использует его при неизменных spec и базовых изображениях;
+pan/zoom обновляет texture details, не переписывая весь атлас. Повторный spec не
+очищает готовые тайлы. `MapMarkers` проецирует сущности при смене набора, в кадре
+отбирает видимые NumPy-маской; порядок, глубина среза и Cave остаются прежними.
+Преобразование координат рассчитывается один раз на проекцию в кадре.
 Обзор мира — отдельный неизменяемый снимок и исполнитель, не второй владелец edits.
 [Выбор покрытия, публикация и телепорт](world-view.md).
 

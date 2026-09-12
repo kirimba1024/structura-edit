@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, MAX_WORLD_BLOCKS, check_world_budget
+from .loading import DEFAULT_RADIUS, DEFAULT_VERTICAL_RADIUS, MAX_WORLD_BLOCKS, MAX_COLUMN_BLOCKS, MAX_COLUMN_CELLS, MAX_WORLD_CELLS, check_world_budget
 from .session import EditSession
 from .world_view import WorldView
 from .file_state import fingerprint
@@ -56,7 +56,8 @@ def open_source(path, *, region=None, palette_index=0, center=None, dimension=No
     stamps = source_stamps(world.dimensions[dimension] / "region", center, radius)
     area = world.read_region(center, dimension=dimension, radius=radius,
                              vertical_radius=vertical_radius, include_entities=include_entities,
-                             max_blocks=MAX_WORLD_BLOCKS)
+                             max_blocks=MAX_COLUMN_BLOCKS if vertical_radius is None else MAX_WORLD_BLOCKS,
+                             max_cells=MAX_COLUMN_CELLS if vertical_radius is None else MAX_WORLD_CELLS)
     if world_changes is not None:
         world_changes.revision += 1
     session = WorldView(world, area, world_changes)

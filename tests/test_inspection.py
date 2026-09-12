@@ -49,3 +49,25 @@ def test_large_preview_is_bounded_but_counts_use_original_cells():
     assert max(result['source'].size) <= PREVIEW_SPAN
     assert len(result['source'].present) == PREVIEW_SPAN ** 2
     assert 'grouped 8 × 8 × 8' in result['note']
+
+
+def test_single_block_preview_does_not_scan_world_entities(edit):
+    class UnreadableEntity:
+        def unpack(self):
+            raise AssertionError("Unrelated world entities must not be decoded")
+
+    edit._entities = {'distant': UnreadableEntity()}
+    result = inspect_selection(edit, edit.select(((1, 0, 0), (2, 1, 1))))
+    assert result['title'] == 'Chest'
+    assert result['source'].entities == []
+
+
+def test_single_block_preview_key_ignores_position_but_keeps_state_and_nbt(edit):
+    from structura_edit.inspection import inspection_preview_key
+
+    def key(position):
+        return inspection_preview_key(edit, edit.select((position, tuple(v + 1 for v in position))), (), None)
+
+    edit.apply(edit.set_block((0, 1, 0), edit.state_at((0, 0, 0))))
+    assert key((0, 0, 0)) == key((0, 1, 0))
+    assert key((0, 0, 0)) != key((1, 0, 0))

@@ -28,6 +28,9 @@ class MapCacheView(QObject):
         canvas.view_changed.connect(self.request)
 
     def set_source(self, spec):
+        if spec == self.spec:
+            self.request()
+            return
         self.spec = spec
         self.current = None
         self.pending = None

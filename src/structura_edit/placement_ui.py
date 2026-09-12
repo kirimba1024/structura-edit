@@ -82,7 +82,7 @@ class PlacementController(QObject):
         self.submit("clipboard", lambda result: self._loaded(token, mode, initial, result),
                     session=self.session.fork(), selection=self.selection, assets=self.assets, path=path, source_options=source_options,
                     clipboard=self.clipboard if mode == "paste" else None,
-                    render=mode != "copy", scene_bytes=sum(self.scene.section_bytes.values()))
+                    render=mode != "copy", take=mode == "take", height=self.scene.height, scene_bytes=sum(self.scene.section_bytes.values()))
 
     def _loaded(self, token, mode, initial, result):
         if token != self.token:
@@ -102,6 +102,7 @@ class PlacementController(QObject):
             self.message.emit(f"Copied {clipboard.block_count:,} blocks · {len(clipboard.entities):,} entities · Paste is ready" + suffix)
         else:
             self.view.load(geometry)
+            self.scene.cut.load(geometry.get("source_cut"))
             self.model = Placement(clipboard, initial, take=mode == "take")
             self.navigation.placing = True
             self.refresh()
@@ -112,6 +113,7 @@ class PlacementController(QObject):
         self.drag.refresh()
         if self.model is not None:
             self.view.show(self.model, self.model.reason(self.session))
+            self.scene.cut.show(self.model.take and self.model.include_blocks and self.review is None)
         self.view.set_visible(self.visible and self.scene_ready and self.review is None)
         self.update_bar()
 
@@ -211,6 +213,7 @@ class PlacementController(QObject):
         offset = change.resize.offset if change.resize is not None else (0, 0, 0)
         bounds = tuple(tuple(v + d for v, d in zip(bound, offset)) for bound in self.model.bounds)
         self.committing = True
+        self.scene.cut.clear()
         self._commit(change, lambda session: self._applied(session, data, bounds, len(change)))
 
     def _applied(self, session, data, bounds, count):
@@ -242,6 +245,8 @@ class PlacementController(QObject):
         self.preparing = False
         self.navigation.placing = False
         self.view.clear()
+        self.scene.cut.clear()
+        self.scene.plotter.render()
         self.cancelled.emit()
         if active:
             self.message.emit("Placement cancelled")

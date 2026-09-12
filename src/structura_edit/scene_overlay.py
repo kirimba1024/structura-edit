@@ -48,6 +48,7 @@ class SceneOverlay:
         self.corners = ()
         self.entity_labels = ()
         self.block_label = ""
+        self.hover_label = ""
         self.actor = vtkOpenGLContextActor()
         self.actor.SetPickable(False)
         self.actor.SetUseBounds(False)
@@ -81,11 +82,15 @@ class SceneOverlay:
             self.entity_labels = labels
             self.plotter.render()
 
-    def set_hover(self, position):
-        bounds = (position, tuple(v + 1 for v in position)) if position is not None else None
+    def set_hover(self, position, *, bounds=None, label=""):
+        if position is not None:
+            bounds = position, tuple(v + 1 for v in position)
         if bounds == self.selection.bounds or self.temporary.bounds is not None:
             bounds = None
-        if self.hover.set_bounds(bounds):
+        label = label if bounds is not None else ""
+        changed = self.hover.set_bounds(bounds)
+        if changed or self.hover_label != label:
+            self.hover_label = label
             self.plotter.render()
 
     def set_looking(self, looking):
@@ -140,6 +145,10 @@ class SceneOverlay:
             position = tuple(p + 0.5 for p in self.selection.bounds[0])
             labels = [(f"A/B · {self.block_label}" if self.corners else self.block_label, position)]
         labels.extend(self.entity_labels)
+        if self.hover_label and self.hover.bounds is not None:
+            lower, upper = self.hover.bounds
+            position = ((lower[0] + upper[0]) / 2, upper[1] + 0.2, (lower[2] + upper[2]) / 2)
+            labels.insert(0, (self.hover_label, position))
         text = painter.GetTextProp()
         text.SetFontFamily(VTK_FONT_FILE)
         text.SetFontFile(str(Path(__file__).parent / "data/fonts/Monocraft.ttf"))

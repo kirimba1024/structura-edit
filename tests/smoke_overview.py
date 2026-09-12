@@ -116,6 +116,7 @@ def run(output, visible, *, assets=None):
                 assert np.allclose(canvas.world_at(cursor), before)
             report["zoom_anchor"] = True
             window.minimap.set_large(True)
+            window.minimap.world_mode.click()
             canvas.fit()
             wait_until(lambda: canvas.loaded == canvas.target and canvas.future is None)
             window.resize(1104, 700)
@@ -123,7 +124,7 @@ def run(output, visible, *, assets=None):
             window.grab().save(str(output.with_name(output.stem + "-map.png")))
             assert not window.issues, window.issues
             report["visible_tiles"] = len(overview.scene.visible)
-            report["geometry_bytes"] = sum(entry[2] for entry in overview.scene.entries.values())
+            report["geometry_bytes"] = sum(entry[1] for entry in overview.scene.entries.values())
             output.write_text(json.dumps(report, indent=2))
             print(json.dumps(report), flush=True)
             return report

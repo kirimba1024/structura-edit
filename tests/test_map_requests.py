@@ -19,7 +19,7 @@ def wait_for(condition):
     assert condition(), "Map request did not finish"
 
 
-@pytest.mark.parametrize("action", ["close_source", "replace_source", "pan_back"])
+@pytest.mark.parametrize("action", ["close_source", "replace_source", "pan_back", "same_source"])
 def test_slow_cache_read_respects_the_latest_source_and_view(qt_app, tmp_path, monkeypatch, action):
     started, release = threading.Event(), threading.Event()
     calls = []
@@ -42,6 +42,8 @@ def test_slow_cache_read_respects_the_latest_source_and_view(qt_app, tmp_path, m
             cache.set_source(None)
         elif action == "replace_source":
             cache.set_source({"space": "second"})
+        elif action == "same_source":
+            cache.set_source({"space": "first"})
         else:
             canvas.layout.pan("top", QPointF(1000, 0))
             canvas.view_changed.emit()
@@ -55,6 +57,10 @@ def test_slow_cache_read_respects_the_latest_source_and_view(qt_app, tmp_path, m
             color = next(iter(canvas.tiles.values())).pixelColor(0, 0)
             assert color.green() == (100 if action == "replace_source" else 0)
         assert calls == (["first", "second"] if action == "replace_source" else ["first"])
+        if action == "same_source":
+            images = canvas.tiles.copy()
+            cache.set_source({"space": "first"})
+            assert canvas.tiles == images and not cache.timer.isActive()
     finally:
         release.set()
         cache.close()

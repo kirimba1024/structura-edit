@@ -16,7 +16,7 @@ class Actor:
 @pytest.fixture
 def scene():
     actors = []
-    plotter = SimpleNamespace(remove_actor=lambda actor, **kwargs: actors.remove(actor))
+    plotter = SimpleNamespace(renderer=SimpleNamespace(RemoveActor=actors.remove))
     scene = Scene(plotter)
     def add(section):
         if section.get('fail'):
@@ -25,7 +25,7 @@ def scene():
         actors.append(actor)
         scene.ghost_actors[actor] = 'added', 1, True
         return [actor]
-    scene._add_section = add
+    scene._add_section_steps = add
     data = {'reset': True, 'sections': {'old': {'geometry_bytes': 1}}}
     scene.replace(data, 1)
     return scene, actors

@@ -3,6 +3,7 @@ from functools import lru_cache
 import numpy as np
 
 from structura_render.lod_geometry import average_rgba
+from structura_render.color_space import linear_to_srgb, srgb_to_linear
 
 from .overview_store import MAP_SPAN, encode_arrays, encode_image
 from .height_slice import HeightSlice
@@ -80,12 +81,11 @@ def build_map_pyramid(store, columns, bank, progress, below_y=None, height_slice
 
 def downsample_map(image):
     colors = image.astype(np.float64) / 255
-    linear = np.where(colors[..., :3] <= 0.04045, colors[..., :3] / 12.92,
-                      ((colors[..., :3] + 0.055) / 1.055)**2.4)
+    linear = srgb_to_linear(colors[..., :3])
     alpha = colors[..., 3:4]
     size = image.shape[0] // 2
     weights = alpha.reshape(size, 2, size, 2, 1).sum(axis=(1, 3))
     total = (linear * alpha).reshape(size, 2, size, 2, 3).sum(axis=(1, 3))
     linear = total / np.maximum(weights, 1e-12)
-    rgb = np.where(linear <= 0.0031308, linear * 12.92, 1.055 * linear**(1 / 2.4) - 0.055)
+    rgb = linear_to_srgb(linear)
     return np.rint(np.concatenate((rgb, weights / 4), axis=2).clip(0, 1) * 255).astype(np.uint8)

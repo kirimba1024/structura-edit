@@ -3,6 +3,7 @@ from math import prod
 from types import SimpleNamespace
 
 import numpy as np
+from structura_core.block_array import BlockArray
 
 from .loading import CHUNK_SIZE, check_preview_budget
 from .render_source import RenderSource, preview_session
@@ -43,20 +44,32 @@ def changed_positions(before, current):
     return (p for p in positions if before._cells.get(p) != current._cells.get(p))
 
 
+def occupied_sections(session, span):
+    base = session._document.source.present
+    if not isinstance(base, BlockArray):
+        return {section_key(position, span) for position in session.positions()}
+    keys = set()
+    for lower in product(*(range(0, size, span) for size in session.size)):
+        if np.any(base.array[tuple(slice(lo, lo + span) for lo in lower)] >= 0):
+            keys.add(section_key(lower, span))
+    keys.update(section_key(position, span) for position in session._cells)
+    return keys
+
+
 def prepare_sections(session, change=None, *, previous=None, include_entities=True, previous_entities=True,
                      ghost=None, original=None, height=HeightSlice(), previous_height=HeightSlice()):
     current = preview_session(session, change)
-    check_preview_budget(current.size)
-    span = CHUNK_SIZE * (2 if prod(current.size) >= LARGE_SCENE_CELLS else 1)
+    check_preview_budget(current.size, world=hasattr(current, "dimension"))
+    span = CHUNK_SIZE * (4 if prod(current.size) >= LARGE_SCENE_CELLS else 1)
     previous_session = preview_session(*previous) if previous else None
     reset = previous_session is None or previous_session._id != current._id
     reset = reset or previous_session.size != current.size or previous_session.origin != current.origin
     if reset:
-        keys = {section_key(position, span) for position in current.positions()}
+        keys = occupied_sections(current, span)
     else:
         keys = affected_sections(changed_positions(previous_session, current), current.size, span)
         if height != previous_height:
-            occupied = {section_key(position, span) for position in current.positions()}
+            occupied = occupied_sections(current, span)
             keys.update(slice_sections(occupied, previous_height.interval(previous_session),
                                        height.interval(current), current.size, span))
     source = RenderSource(current, height)

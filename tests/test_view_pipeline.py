@@ -200,6 +200,7 @@ def staged_pipeline(monkeypatch):
         finally:
             closed.append(data)
     view.scene.replace_steps = steps
+    view.scene.plotter = SimpleNamespace()
     view.schedule, view.failed = scheduled.append, failures.append
     return view, calls, frames, scheduled, closed, failures
 

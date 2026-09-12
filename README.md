@@ -12,10 +12,21 @@ number or pasting across versions is not a conversion.
 
 ## Install and launch
 
-Use Python 3.9–3.13 and the pinned core/render checkouts in the Structura workspace;
-published version ranges alone do not yet reproduce every development feature.
+Use Python 3.9–3.13. Edit 0.1.0a2 requires core 0.6.2 and render 0.8.2 or newer
+within their current minor series; older wheels are rejected during installation.
 The GUI includes Qt/VTK and optional format readers; the base import loads neither
 Qt nor VTK. Native GUI verification is currently on macOS.
+
+The [0.1.0a2 release](https://github.com/kirimba1024/structura-edit/releases/tag/v0.1.0a2)
+provides a Python wheel and a bundled Apple Silicon application. Install the
+downloaded wheel with its GUI extra:
+
+```bash
+python -m pip install './structura_edit-0.1.0a2-py3-none-any.whl[gui]'
+structura-edit
+```
+
+For development, install all three source packages from the workspace:
 
 ```bash
 git clone --recurse-submodules https://github.com/kirimba1024/structura.git

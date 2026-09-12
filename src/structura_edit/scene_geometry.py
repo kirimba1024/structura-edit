@@ -1,40 +1,86 @@
-import numpy as np
-import pyvista as pv
+from vtkmodules.util.numpy_support import numpy_to_vtk
+from vtkmodules.vtkCommonCore import vtkPoints
+from vtkmodules.vtkCommonDataModel import vtkCellArray, vtkPolyData
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
+
+from .scene_textures import texture_pool
 
 
 def remove_geometry(plotter, actors):
+    retirement = getattr(plotter, 'retirement', None)
+    if retirement is not None:
+        retirement.add(actors)
+        return
     for actor in actors:
-        plotter.remove_actor(actor, reset_camera=False, render=False)
+        plotter.renderer.RemoveActor(actor)
 
 
-def add_geometry(plotter, data, *, texture_factory=None):
+def add_geometry(plotter, data):
     actors = []
     try:
-        actors.extend(add_geometry_steps(plotter, data, texture_factory=texture_factory))
+        actors.extend(add_geometry_steps(plotter, data))
     except Exception:
         remove_geometry(plotter, actors)
         raise
     return actors
 
 
-def add_geometry_steps(plotter, data, *, texture_factory=None):
-    from structura_render.mesh import material_groups
+def packet_actor(packet, pool):
+    points = vtkPoints()
+    points.SetData(numpy_to_vtk(packet.points, deep=False))
+    cells = vtkCellArray()
+    cells.SetData(packet.indices.shape[1], numpy_to_vtk(packet.indices.ravel(), deep=False))
+    mesh = vtkPolyData()
+    mesh.SetPoints(points)
+    mesh.SetPolys(cells)
+    mapper = vtkPolyDataMapper()
+    mapper.SetInputData(mesh)
+    mapper.StaticOn()
+    actor = vtkActor()
+    actor.SetMapper(mapper)
+    actor._structura_packet = packet
+    prop = actor.GetProperty()
+    prop.SetAmbient(.35)
+    prop.SetDiffuse(1)
+    prop.SetInterpolationToFlat()
+    prop.SetBackfaceCulling(packet.cull)
+    prop.SetColor(*(value / 255 for value in packet.color[:3]))
+    prop.SetOpacity(packet.color[3] / 255)
+    if packet.colors is not None:
+        mesh.GetPointData().SetScalars(numpy_to_vtk(packet.colors, deep=False))
+        mapper.SetColorModeToDirectScalars()
+        mapper.SetScalarModeToUsePointData()
+    else:
+        mapper.ScalarVisibilityOff()
+    if packet.uv is not None:
+        mesh.GetPointData().SetTCoords(numpy_to_vtk(packet.uv, deep=False))
+        actor._structura_texture = pool.get(packet)
+        actor.SetTexture(actor._structura_texture)
+    actor.SetForceOpaque(packet.mode != 'BLEND')
+    return actor
 
-    for geometry in data["meshes"]:
-        if not len(geometry.quads):
-            continue
-        texture = texture_factory(geometry) if texture_factory else pv.Texture(geometry.image)
-        texture.SetInterpolate(False)
-        texture.mipmap = False
-        for mode, points, quads, uv in material_groups(geometry):
-            faces = np.column_stack((np.full(len(quads), 4), quads)).ravel()
-            mesh = pv.PolyData(points, faces)
-            mesh.active_texture_coordinates = uv
-            actor = plotter.add_mesh(mesh, texture=texture, smooth_shading=False,
-                                     ambient=0.35, reset_camera=False, render=False)
-            actor.SetForceOpaque(mode != "BLEND")
-            yield actor
-    for points, faces, rgba in data["flat"]:
-        if len(points):
-            yield plotter.add_mesh(pv.PolyData(points, faces), color=tuple(v / 255 for v in rgba[:3]),
-                                   opacity=rgba[3] / 255, ambient=0.35, reset_camera=False, render=False)
+
+def add_geometry_steps(plotter, data):
+    pool = texture_pool(plotter)
+    for packet in data['packets']:
+        actor = packet_actor(packet, pool)
+        actor.SetPosition(*data.get('position', (0, 0, 0)))
+        actor.SetPickable(False)
+        warm_actor(plotter, actor)
+        plotter.renderer.AddActor(actor)
+        yield actor
+
+
+def warm_actor(plotter, actor):
+    window = plotter.render_window
+    if window.GetNeverRendered():
+        return
+    window.MakeCurrent()
+    state = window.GetState()
+    state.Push()
+    try:
+        state.vtkglViewport(0, 0, 0, 0)
+        actor.RenderOpaqueGeometry(plotter.renderer)
+        actor.RenderTranslucentPolygonalGeometry(plotter.renderer)
+    finally:
+        state.Pop()

@@ -1,0 +1,4 @@
+include CHANGELOG.md
+recursive-include docs *.md *.json
+recursive-include tests *.py
+recursive-include packaging *.py *.spec *.txt *.md

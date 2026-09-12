@@ -8,6 +8,7 @@ pv = pytest.importorskip("pyvista")
 @pytest.mark.parametrize("mode,alpha", [(1, 255), (2, 128)])
 def test_mask_holes_preserve_depth_and_blend_stays_translucent(mode, alpha):
     from structura_edit.scene_geometry import add_geometry
+    from structura_edit.render_packets import prepare_geometry
 
     view = pv.Plotter(off_screen=True, window_size=(200, 200))
     view.set_background("blue")
@@ -20,7 +21,7 @@ def test_mask_holes_preserve_depth_and_blend_stays_translucent(mode, alpha):
                             np.array([[0, 1, 2, 3]]), np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=np.float32),
                             np.array([mode], dtype=np.uint8), image)
     try:
-        actor, = add_geometry(view, {"meshes": [geometry], "flat": []})
+        actor, = add_geometry(view, prepare_geometry({"meshes": [geometry], "flat": []}))
         actor.GetProperty().LightingOff()
         view.add_mesh(pv.Plane(center=(0, 0, -0.5), direction=(0, 0, 1), i_size=2, j_size=2),
                       color="red", lighting=False)

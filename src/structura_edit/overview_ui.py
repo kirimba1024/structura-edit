@@ -10,13 +10,13 @@ from PySide6.QtWidgets import QInputDialog, QMenu, QToolButton
 from .jobs import Worker
 from .task_protocol import TaskSuccess
 from .local_store import storage_root
-from .overview_model import DetailIntent, DetailTarget, SETTLE_MILLISECONDS, select_detail
+from .overview_model import DetailIntent, DetailTarget, SETTLE_MILLISECONDS
 from .overview_scene import OverviewScene
 from .overview_store import snapshot_directory
 from .task_progress import TaskProgress
 from .appearance import GRID
 from .overview_cache import snapshot_lease
-from .overview_batches import BATCH_BYTES, detail_batches
+from .overview_batches import BATCH_BYTES
 
 
 class OverviewController(QObject):
@@ -34,9 +34,11 @@ class OverviewController(QObject):
         self.identity = None
         self.job = None
         self.open_queued = False
+        self.build_queued = False
         self.uploads = deque()
         self.installation = None
         self.selection = {}
+        self.pending_selection = None
         self.satisfied = None
         self.last_position = None
         self.last_direction = None
@@ -108,6 +110,7 @@ class OverviewController(QObject):
         self.build()
 
     def build(self):
+        self.build_queued = False
         if not self.window.world.active or (self.job and self.job[0] == "overview_build"):
             return
         identity = self._world_identity()
@@ -167,6 +170,8 @@ class OverviewController(QObject):
         self.failed.emit(message)
 
     def cancel(self):
+        self.build_queued = False
+        self.pending_selection = None
         if self.intent.target is not None:
             self.blocked_target = self.intent.target
         self.intent.cancel()
@@ -196,13 +201,22 @@ class OverviewController(QObject):
         self.uploads.clear()
         self._cancel_installation()
         self.progress.start("Preparing destination" if destination is not None else "Preparing view")
-        try:
-            selected = select_detail(self.snapshot["nodes"], self.snapshot["roots"], target)
-            self.selection = detail_batches(self.snapshot["nodes"], selected)
-            self.scene.begin((self.snapshot["path"], key) for key in self.selection)
-        except ValueError as error:
-            self._failed(str(error))
+        self.pending_selection = generation, target
+        self._select()
+
+    def _select(self):
+        if self.pending_selection is None or self.worker.busy:
             return
+        generation, target = self.pending_selection
+        self.pending_selection = None
+        self._submit('overview_select', dict(path=self.snapshot['path'], target=target),
+                     lambda selection: self._selected(generation, selection))
+
+    def _selected(self, generation, selection):
+        if not self.intent.accepts(generation):
+            return
+        self.selection = selection
+        self.scene.begin((self.snapshot['path'], key) for key in selection)
         if not self.scene.missing():
             self._publish(generation)
 
@@ -278,6 +292,7 @@ class OverviewController(QObject):
         if identity != self.identity:
             self.cancel()
             self.snapshot = None
+            self.build_queued = False
             self.identity = identity
             self.map_below = 120 if identity and identity[1] == "minecraft:the_nether" else None
             self.window.minimap.set_overview(None)
@@ -302,6 +317,7 @@ class OverviewController(QObject):
         directory = snapshot_directory(storage_root(), *self.identity)
         pointer = directory / "current.json"
         if not pointer.is_file():
+            self.build_queued = self.auto
             return
         try:
             filename = json.loads(pointer.read_text(encoding="utf-8"))["file"]
@@ -342,9 +358,15 @@ class OverviewController(QObject):
                 except Exception as error:
                     self._failed(str(error))
             elif not success and current_job:
-                self._failed(payload)
+                if job[0] == "overview_open":
+                    self.build_queued = self.auto
+                    self.message.emit("Preparing a fresh overview…")
+                else:
+                    self._failed(payload)
         if self.open_queued and not self.worker.busy:
             self._open_cached()
+        if self.build_queued and not self.worker.busy and self.window.views.ready and not self.window.tasks.busy:
+            self.build()
         if (not self.compatible() or self.document_ready is not None or not self.window.world.active
                 or self.identity != self._world_identity()):
             return
@@ -366,6 +388,7 @@ class OverviewController(QObject):
         if self.document_preparation is None and self.intent.destination is None and self.surface is None:
             if self.intent.target is not None and current != self.intent.target:
                 self.intent.cancel()
+                self.pending_selection = None
                 self.uploads.clear()
                 self._cancel_installation()
                 self.scene.cancel()
@@ -373,7 +396,12 @@ class OverviewController(QObject):
             if (self.auto and now >= self.deadline and current != self.satisfied
                     and current != self.intent.target and current != self.blocked_target):
                 self.refine()
-        deadline = perf_counter() + 0.004
+        if self.window.camera.moving or self.window.plotter.retirement.busy:
+            return
+        if self.pending_selection is not None:
+            self._select()
+            return
+        deadline = perf_counter() + 0.002
         try:
             while (self.uploads or self.installation is not None) and perf_counter() < deadline:
                 if self.installation is None:

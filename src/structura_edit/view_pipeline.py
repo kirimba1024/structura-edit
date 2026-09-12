@@ -158,8 +158,12 @@ class ViewPipeline:
     def _install_next(self, request, data, steps):
         if steps is not self._installation:
             return
+        retirement = getattr(self.scene.plotter, 'retirement', None)
+        if getattr(self.camera, 'moving', False) or (retirement is not None and retirement.busy):
+            self.schedule(lambda: self._install_next(request, data, steps))
+            return
         try:
-            deadline = perf_counter() + 0.006
+            deadline = perf_counter() + 0.002
             while True:
                 if not next(steps, False):
                     self._installation = None

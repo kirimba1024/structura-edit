@@ -12,7 +12,7 @@ from structura_edit.overview_store import OverviewStore, surface_destination, re
 from structura_edit.overview_maps import downsample_map
 from structura_edit.height_slice import HeightSlice
 from structura_edit.source_loading import open_source
-from structura_edit.overview_cache import snapshot_build_slot, snapshot_lease
+from structura_edit.overview_cache import open_snapshot, snapshot_build_slot, snapshot_lease
 
 
 def test_full_snapshot_keeps_exact_blocks_and_publishes_only_complete_builds(tmp_path):
@@ -25,6 +25,9 @@ def test_full_snapshot_keeps_exact_blocks_and_publishes_only_complete_builds(tmp
     assert result["metadata"]["chunks"] == len(existing_chunks(world / "region")) == 6
     assert result["roots"] and result["maps"] and "Building map" in stages
     with closing(OverviewStore(result["path"])) as store:
+        leaves = [node for node in result['nodes'].values() if node.key[0] == 0]
+        assert leaves and all(node.error == 0 for node in leaves)
+        assert all('lod' not in store.read_mesh(node.key, {}) for node in leaves)
         source = store.read_region((-1, 0, -1), (17, 16, 17))
         assert source.palette[source.present[(1, 0, 1)]] == "minecraft:stone"
         assert source.palette[source.present[(1, 4, 1)]] == "minecraft:grass_block"
@@ -43,6 +46,10 @@ def test_full_snapshot_keeps_exact_blocks_and_publishes_only_complete_builds(tmp
     assert len(list(directory.glob("*.sqlite"))) == 1
     assert before == {path: path.read_bytes() for path in before}
     assert json.loads(pointer)["file"] == result["path"].split("/")[-1]
+    assert open_snapshot(result['path'])['path'] == result['path']
+    next((world / 'region').glob('*.mca')).touch()
+    with pytest.raises(ValueError, match='World or textures changed'):
+        open_snapshot(result['path'])
 
 
 def test_map_reduction_preserves_known_void_and_ignores_unknown_color():

@@ -8,17 +8,16 @@ from structura_core.compatibility import world_write_reason
 from structura_core.world_backup import pending_backups
 
 from .cell_data import detached_cell
-from .changes import ChangeSet, _Cell, _Delta
+from .changes import AIR_CELL, ChangeSet, _Delta
 from .document import Document
 from .session import EditSession
 from .world_changes import WorldChanges
 from .world_object_changes import loaded_entities, visible_entities, portable_entities, entity_patches
 
 
-AIR_CELL = _Cell("minecraft:air")
-
-
 class WorldView(EditSession):
+    _missing_cell = AIR_CELL
+
     def __init__(self, world, region, changes=None):
         super().__init__(Document(region.structure, path=world.path, readonly=bool(world_write_reason(region.structure.data_version))))
         self._document.source_format = "world"
@@ -41,9 +40,6 @@ class WorldView(EditSession):
     @property
     def dirty(self):
         return bool(self.world_changes.patch or self.world_changes.entities)
-
-    def _cell(self, position):
-        return super()._cell(position) or AIR_CELL
 
     def _sync_changes(self):
         state = self.world_changes

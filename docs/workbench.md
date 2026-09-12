@@ -78,7 +78,8 @@ filesystem and other external side effects cannot be rolled back.
 
 The selection strip exposes Move, Duplicate, Fill, Replace, Erase, Paste and Inspect;
 More contains Copy, Repeat and Export. Import schematic uses the same placement path.
-The ghost follows a face or the horizontal placement plane. Click pins it; drag X/Y/Z
+Move immediately lifts a ghost and hides the source visually; Cancel restores it.
+The document changes only when placing. The ghost follows a face or the horizontal placement plane. Click pins it; drag X/Y/Z
 handles or use exact coordinates and arrow nudges. Escape during a drag restores its
 start; releasing/focus loss ends the drag without placing. WASD still flies.
 
@@ -136,23 +137,30 @@ slash and `~0` tilde. New edits or Undo make targets stale. [API example](api.md
 
 ## Maps and world editing
 
-The compact map has six projections. **Surface** shows outer faces; **Slices** starts
-views at the camera's block. Click a projection to enlarge it, Map to restore the grid.
+The compact map has six views. **Auto** selects the surface or a cave floor near the
+camera's height. **Cave** replaces the old bottom projection. Surface and Slices remain
+available; Slices starts views at the camera's block. Click a view to enlarge it, Map to restore the grid.
 Drag/two-finger scroll pans, wheel/pinch zooms around the cursor, F recenters. Manual pan
 in the large map suspends following; compact mode always follows. Double-click a settled
 local projection moves the camera in that plane. Map gestures do not edit or fly underneath.
+Close zoom loads the original block texture for the visible area. **Entities** cycles
+Auto, Icons, Dots and Off. Auto uses dots at small scales and recognizable icons when
+zoomed in. Markers stay a readable screen size; they do not grow into block-sized squares.
 
 **Visible heights** offers all heights, hide above Y, or one layer. Y is world-space;
 Use camera height copies the current Y. Geometry, picking and all projections use the
 shown slice. It does not constrain editing to visible cells or create Undo.
 
 Java Open starts near the saved player or spawn. World view distance selects dimension,
-radius and vertical range. Default radius 6 covers 13×13 chunk columns; vertical radius
-is 32 blocks, section-aligned. F5/Load here loads around the camera, preserving pending
-edits/history and valid selection. Flight alone does not reload the editable area.
+radius and vertical range. Default radius 6 covers 13×13 chunk columns across all saved
+section heights, including caves. F5/Load here loads around the camera, preserving pending
+edits/history, world camera position and valid selection. With a prepared overview,
+flight refines cached geometry without reloading the editable area.
 World settings and F5 do not reopen an old world while a schematic is active.
 
 **Build / Update overview** prepares saved chunks as a persistent 3D/2D snapshot.
+Opening a world reuses a valid snapshot or starts its first preparation. Updates to
+world files, textures or the cache version invalidate the old snapshot on reopening.
 World map pan/zoom uses that snapshot; Go to/double-click prepares a destination before
 moving. Manual movement, another destination or Cancel cancels the pending teleport.
 Auto detail refines prepared geometry for a stable camera cell; it does not load editable

@@ -1,0 +1,53 @@
+import sqlite3
+from typing import NamedTuple
+
+from .map_images import MAX_MAP_PIXELS, MapRenderer
+from .resources import refresh_resources, resolve_assets
+
+
+class CameraMapState(NamedTuple):
+    key: tuple
+    renderer: MapRenderer
+    atlas_spec: object = None
+    atlas_source: object = None
+    atlas_result: object = None
+
+
+def context_key(request):
+    state = request.state
+    return (getattr(state, "_document", None), state._id, state._state_id, state.origin, state.size,
+            request.assets, request.height)
+
+
+def render_camera_maps(request, cut, large, previous, cache_path, areas=(), automatic=False, cave_y=None):
+    from .map_cache import map_spec, store_maps
+
+    key = context_key(request)
+    if previous is None or previous.key != key:
+        refresh_resources(request.assets)
+        previous = CameraMapState(key, MapRenderer(request.map_args()["source"], request.assets))
+    renderer = previous.renderer
+    if automatic:
+        cut = renderer.environment.cut(cut)
+    budget = MAX_MAP_PIXELS if large else min(MAX_MAP_PIXELS, max(256_000, sum(
+        renderer.size[a] * renderer.size[b] * 2 for a, b in ((0, 1), (0, 2), (1, 2)))))
+    images = renderer.images(cut=cut, max_pixels=budget, cave_y=cave_y)
+    atlas, notice = None, ""
+    state = CameraMapState(key, renderer)
+    if large and request.height.mode == "all" and cave_y is None:
+        atlas = map_spec(request.state, resolve_assets(request.assets), cache_path, cut=cut, preview=bool(request.change))
+        if atlas is not None:
+            if (previous.atlas_result is not None and previous.atlas_spec == atlas
+                    and images.keys() == previous.atlas_source.keys()
+                    and all(images[view] is previous.atlas_source[view] for view in images)):
+                state = previous
+                images, atlas = previous.atlas_result
+            else:
+                try:
+                    converted, published = store_maps(atlas, images)
+                    if published is not None:
+                        state = CameraMapState(key, renderer, atlas, images, (converted, published))
+                    images, atlas = converted, published
+                except (OSError, ValueError, sqlite3.Error) as error:
+                    atlas, notice = None, f"Map cache unavailable: {error}"
+    return state, images, atlas, notice, renderer.details(areas, cut=cut, cave_y=cave_y), cut, cave_y

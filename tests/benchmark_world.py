@@ -12,6 +12,7 @@ import numpy as np
 from PySide6.QtCore import QEventLoop, QTimer, Qt
 from PySide6.QtWidgets import QApplication
 
+from flight_metrics import FlightMetrics
 from smoke_gui import settle
 from structura_edit.ui import EditorWindow
 
@@ -50,15 +51,7 @@ def flight(window, seconds):
     window.camera.needs_render = True
     window.camera.render()
     settle(window)
-    starts, durations, ends = [], [], []
-    def finished(*args):
-        now = perf_counter()
-        if starts:
-            durations.append((now - starts[-1]) * 1000)
-            ends.append(now)
-    render_window = window.plotter.render_window
-    observers = (render_window.AddObserver('StartEvent', lambda *args: starts.append(perf_counter())),
-                 render_window.AddObserver('EndEvent', finished))
+    metrics = FlightMetrics(window.plotter)
     loop = QEventLoop()
     motion = QTimer()
     motion.setTimerType(Qt.TimerType.PreciseTimer)
@@ -71,13 +64,7 @@ def flight(window, seconds):
     QTimer.singleShot(round(seconds * 1000), loop.quit)
     loop.exec()
     motion.stop()
-    for observer in observers:
-        render_window.RemoveObserver(observer)
-    intervals = np.diff(ends) * 1000
-    assert durations and len(intervals), 'No completed render frames'
-    return dict(frames=len(ends), fps=float(1000 / np.mean(intervals)),
-                frame_ms_p95=float(np.percentile(intervals, 95)), render_ms_mean=float(np.mean(durations)),
-                render_ms_p95=float(np.percentile(durations, 95)), viewport=list(render_window.GetSize()),
+    return dict(metrics.finish(), viewport=list(window.plotter.render_window.GetSize()),
                 actors=len(window.scene.actors), geometry_bytes=sum(window.scene.section_bytes.values()))
 
 

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from structura_core import parse_state
 from structura_core.entity_positions import shift_entity
 
-from .cell_data import cell_payload
+from .cell_data import cell_payload, detached_cell
 from .object_labels import entity_label
 from .picking import EMPTY
 from .render_source import RenderSource
@@ -79,20 +79,21 @@ def inspect_selection(session, selection, keys=()):
         source = SimpleNamespace(size=(1, 1, 1), palette_raw=[], palette=[], present={}, block_nbt={}, entities=entities)
         note = f"First {PREVIEW_ENTITIES} entities shown" if len(records) > PREVIEW_ENTITIES else ""
         return dict(title=title, facts=facts, detail=detail, source=source, note=note)
+    if selection.volume == 1:
+        title, facts, detail = block_details(session, selection.lower)
+        source = RenderSource(session).region(selection.lower, selection.upper)
+        return dict(title=title, facts=facts, detail=detail, source=source, note="")
     counts = Counter({name: count for name, count in session.palette_counts(selection, by_state=False).items() if name not in EMPTY})
     total = sum(counts.values())
     size = tuple(hi - lo for lo, hi in zip(selection.lower, selection.upper))
-    if selection.volume == 1:
-        title, facts, detail = block_details(session, selection.lower)
-    else:
-        title = "{} × {} × {} blocks".format(*size)
-        facts = [f"{total:,} total · {quantity(len(counts), 'material')}"]
-        top = counts.most_common(3)
-        facts.extend(f"{material_name(name)} · {count:,} ({count / total:.0%})" for name, count in top)
-        other = total - sum(count for _, count in top)
-        if other:
-            facts.append(f"Other · {other:,} ({other / total:.0%})")
-        detail = "\n".join(f"{name} · {count:,}" for name, count in counts.most_common(12))
+    title = "{} × {} × {} blocks".format(*size)
+    facts = [f"{total:,} total · {quantity(len(counts), 'material')}"]
+    top = counts.most_common(3)
+    facts.extend(f"{material_name(name)} · {count:,} ({count / total:.0%})" for name, count in top)
+    other = total - sum(count for _, count in top)
+    if other:
+        facts.append(f"Other · {other:,} ({other / total:.0%})")
+    detail = "\n".join(f"{name} · {count:,}" for name, count in counts.most_common(12))
     step = max(1, ceil(max(size) / PREVIEW_SPAN))
     if step == 1:
         source = RenderSource(session).region(selection.lower, selection.upper)
@@ -125,6 +126,18 @@ def inspect_selection(session, selection, keys=()):
     return dict(title=title, facts=facts, detail=detail, source=source, note=note)
 
 
+def inspection_preview_key(session, selection, keys, assets):
+    if len(keys) == 1:
+        return "entity", assets, session._entities.get(next(iter(keys)))
+    if not keys and selection is not None and selection.volume == 1:
+        cell = session._cell(selection.lower)
+        if cell is None:
+            return "block", assets, None
+        cell = detached_cell(session._document.source, cell, selection.lower)
+        return "block", assets, cell.state, cell.data.nbt if cell.data else None
+    return None
+
+
 class InspectionBuilder:
     def __init__(self):
         self.assets = object()
@@ -134,10 +147,11 @@ class InspectionBuilder:
         from structura_render.assets import AssetContext
         from structura_render.textures import TextureBank
         from .preview import build_geometry
+        from .render_packets import prepare_geometry
 
         result = inspect_selection(session, selection, keys)
         if self.bank is None or self.assets != assets:
             self.bank = TextureBank(AssetContext(assets))
             self.assets = assets
-        result["geometry"] = build_geometry(result.pop("source"), assets, bank=self.bank)
+        result["geometry"] = prepare_geometry(build_geometry(result.pop("source"), assets, bank=self.bank))
         return result

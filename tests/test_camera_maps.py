@@ -99,14 +99,14 @@ def test_camera_requests_run_off_gui_with_one_pending_position_and_reject_old_so
     started, release = Event(), Event()
     calls = []
     gui_thread = get_ident()
-    def render(request, cut, large, previous, path):
+    def render(request, cut, large, previous, path, areas=(), automatic=False, cave_y=None):
         assert get_ident() != gui_thread
         calls.append((request.state._id, cut))
         if len(calls) == 1:
             started.set()
             assert release.wait(5)
         color = (200, 0, 0) if request.state._id == "first" else (0, 200, 0)
-        return (context_key(request), None), {"top": np.full((2, 2, 3), color, dtype=np.uint8)}, None, ""
+        return (context_key(request), None), {"top": np.full((2, 2, 3), color, dtype=np.uint8)}, None, "", {}, cut, cave_y
     monkeypatch.setattr("structura_edit.camera_maps.render_camera_maps", render)
     canvas = MapCanvas()
     cache = MapCacheView(canvas, tmp_path)

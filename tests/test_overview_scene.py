@@ -19,7 +19,7 @@ class Actor:
 @pytest.mark.parametrize("cancel", [False, True])
 def test_replacement_is_hidden_and_cancel_cannot_publish_a_partial_batch(monkeypatch, cancel):
     actors = []
-    plotter = SimpleNamespace(remove_actor=lambda actor, **kwargs: actors.remove(actor))
+    plotter = SimpleNamespace(renderer=SimpleNamespace(RemoveActor=actors.remove))
     scene = OverviewScene(plotter)
     def produce(*args, **kwargs):
         for _ in range(3):

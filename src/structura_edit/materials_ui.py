@@ -30,7 +30,7 @@ class MaterialController:
             materials.catalog_request()
 
     def dismiss(self):
-        self.panels.docks["materials"].hide()
+        self.panels.close("materials")
         if self.return_to_operation:
             self.panels.show("operation")
             self.panels.operation.fields[self.field].setFocus()

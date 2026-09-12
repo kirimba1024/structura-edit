@@ -1,6 +1,5 @@
 import argparse
 import json
-import time
 from pathlib import Path
 
 import numpy as np
@@ -8,6 +7,7 @@ from PySide6.QtCore import QEvent, QEventLoop, QPointF, QTimer, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
+from flight_metrics import FlightMetrics
 from smoke_gui import settle
 from structura_edit.ui import EditorWindow
 
@@ -40,18 +40,7 @@ def main():
             window.placement.start("duplicate")
             settle(window)
             window.placement.set_position((2, 1, 2))
-        frames = []
-        completed = []
-        durations = []
-        started = [0.0]
-        def start(*_):
-            started[0] = time.perf_counter()
-        def end(*_):
-            now = time.perf_counter()
-            completed.append(now)
-            durations.append(now - started[0])
-        window.plotter.render_window.AddObserver("StartEvent", start)
-        window.plotter.render_window.AddObserver("EndEvent", end)
+        metrics = FlightMetrics(window.plotter)
         window.plotter.setFocus()
         window.navigation.start_fly()
         window.navigation.speed = 1
@@ -60,8 +49,6 @@ def main():
         motion = QTimer(window)
         motion.setTimerType(Qt.TimerType.PreciseTimer)
         def move():
-            now = time.perf_counter()
-            frames.append(now)
             window.navigation.mouse_look.pending += QPointF(1.5, 0.1)
         motion.timeout.connect(move)
         motion.start(16)
@@ -70,14 +57,8 @@ def main():
         loop.exec()
         motion.stop()
         window.navigation.stop()
-        intervals = np.diff(frames)
-        actual = np.diff(completed)
-        report = dict(completed_frames=len(completed), rendered_fps=float(1 / actual.mean()) if len(actual) else 0,
-                      actual_render_ms_mean=float(np.mean(durations) * 1000) if durations else 0,
-                      blocks=len(window.document.session._document.source.present), actors=len(window.scene.actors),
-                      viewport=list(window.plotter.render_window.GetSize()), frames=len(frames),
-                      fps=float(1 / intervals.mean()), frame_ms_p95=float(np.percentile(intervals, 95) * 1000),
-                      actual_render_ms_p95=float(np.percentile(durations, 95) * 1000) if durations else 0,
+        report = dict(metrics.finish(), blocks=len(window.document.session._document.source.present),
+                      actors=len(window.scene.actors), viewport=list(window.plotter.render_window.GetSize()),
                       geometry_bytes=sum(window.scene.section_bytes.values()))
         Path(args.output).write_text(json.dumps(report, indent=2))
         print(json.dumps(report), flush=True)

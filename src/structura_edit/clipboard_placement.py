@@ -5,7 +5,7 @@ from numbers import Integral
 from structura_core.compatibility import transfer_reason
 
 from .cell_data import detached_cell
-from .changes import ChangeSet, StaleChangeError, _Cell, _Delta, _position
+from .changes import AIR_CELL, ChangeSet, StaleChangeError, _Delta, _position
 from .document_resize import placement_extent
 from .destination_rule import DestinationRule
 from .clipboard_entities import place_entities
@@ -85,7 +85,7 @@ def take_targets(clipboard, cells, position, accepted):
             skipped += 1
             if source in incoming:
                 protected.append(incoming[source])
-    targets = {source: _Cell("minecraft:air") for target, source in incoming.items() if target in accepted}
+    targets = {source: AIR_CELL for target, source in incoming.items() if target in accepted}
     targets.update(accepted)
     return targets, skipped
 
@@ -124,7 +124,7 @@ def plan_placement(edit, clipboard, positions, *, take=False, include_air=False,
     targets = {}
     for position in positions:
         if include_blocks and include_air:
-            targets.update((p, _Cell("minecraft:air")) for p in _air_targets(clipboard, position))
+            targets.update((p, AIR_CELL) for p in _air_targets(clipboard, position))
         targets.update((tuple(p + d for p, d in zip(local, position)), cell) for local, cell in cells)
     accepted, skipped = filter_destinations(edit, targets, destination)
     reasons = [("destination rule", skipped)]

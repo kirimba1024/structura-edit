@@ -61,20 +61,34 @@ class Selection:
         return product(*(range(lo, hi) for lo, hi in zip(self.lower, self.upper)))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class _Cell:
+    __slots__ = ("state", "variant", "keep_nbt", "origin", "data")
+
     state: str
-    variant: Optional[int] = None
-    keep_nbt: bool = False
-    origin: Optional[Position] = None
-    data: Optional[CellData] = None
+    variant: Optional[int]
+    keep_nbt: bool
+    origin: Optional[Position]
+    data: Optional[CellData]
+
+    def __init__(self, state, variant=None, keep_nbt=False, origin=None, data=None):
+        object.__setattr__(self, "state", state)
+        object.__setattr__(self, "variant", variant)
+        object.__setattr__(self, "keep_nbt", keep_nbt)
+        object.__setattr__(self, "origin", origin)
+        object.__setattr__(self, "data", data)
 
     def __reduce__(self):
         return type(self), (self.state, self.variant, self.keep_nbt, self.origin, self.data)
 
 
+AIR_CELL = _Cell("minecraft:air")
+
+
 @dataclass(frozen=True)
 class _Delta:
+    __slots__ = ("position", "before", "after")
+
     position: Position
     before: Optional[_Cell]
     after: _Cell

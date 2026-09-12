@@ -1,17 +1,20 @@
 from concurrent.futures import ThreadPoolExecutor
-from math import cos, radians, sin, sqrt
-from time import monotonic
+from math import cos, radians, sin
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import GRID, SCENE_BACKGROUND
 from .controls import CellLabel
-from .inspection import InspectionBuilder, block_details, entity_details
-from .scene_geometry import add_geometry
+from .inspection import InspectionBuilder, block_details, entity_details, inspection_preview_key
+from .inspection_scene import InspectionScene
+from .section_cache import SectionCache
+from .viewport import SceneView
 
 
 class InspectionCard(QWidget):
+    completed = Signal(object)
+
     def __init__(self, plotter, minimap, inspect):
         super().__init__(plotter)
         self.plotter, self.minimap = plotter, minimap
@@ -28,7 +31,14 @@ class InspectionCard(QWidget):
             self.layout.addWidget(label)
         self.note = CellLabel()
         self.layout.addWidget(self.note)
-        self.preview = None
+        self.preview = SceneView(self, axes=False)
+        self.scene = InspectionScene(self.preview)
+        self.preview.setFixedHeight(128)
+        self.preview.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.preview.set_background(SCENE_BACKGROUND)
+        self.preview.enable_depth_peeling(number_of_peels=4)
+        self.layout.insertWidget(1, self.preview)
+        self.preview.hide()
         self.buttons = QWidget()
         row = QHBoxLayout(self.buttons)
         row.setContentsMargins(0, 0, 0, 0)
@@ -44,12 +54,15 @@ class InspectionCard(QWidget):
         self.layout.addWidget(self.buttons)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inspection")
         self.builder = InspectionBuilder()
+        self.cache = SectionCache(limit=16 * 1024 ** 2, max_entries=32)
+        self.completed.connect(self._receive, Qt.ConnectionType.QueuedConnection)
+        self.closed = False
         self.future = None
         self.key = self.ready_key = self.running_key = None
+        self.preview_key = self.running_cache_key = None
         self.hover_key = None
         self.context = None
         self.allowed = False
-        self.changed_at = 0
         self.angle = 35
         self.radius = 5
         self.center = (0, 0, 0)
@@ -69,10 +82,10 @@ class InspectionCard(QWidget):
         if key != self.key:
             self.hover_key = None
             self.key = key
-            self.changed_at = monotonic()
+            self.preview_key = inspection_preview_key(session, selection, keys, assets) if key else None
             self.ready_key = None
-            self.has_geometry = False
-            if self.preview:
+            if key is None:
+                self.has_geometry = False
                 self.preview.hide()
             if key:
                 if keys:
@@ -87,10 +100,11 @@ class InspectionCard(QWidget):
                 self.show_details(title, facts, detail)
                 self.note.setText("Building preview…")
                 self.note.show()
-            self.buttons.hide()
+            self.buttons.setVisible(self.has_geometry)
         self.inspect.setVisible(bool(keys) or selection is not None)
         self.setVisible(self.allowed and key is not None)
         self.reposition()
+        self._request()
 
     def hover(self, session, position=None, entity=None):
         if session is None:
@@ -102,7 +116,7 @@ class InspectionCard(QWidget):
         if key == self.hover_key and self.isVisible():
             return
         self.hover_key = key
-        if entity:
+        if entity is not None:
             title, facts, detail, _ = entity_details(session, (entity,))
         elif position is not None:
             title, facts, detail = block_details(session, position)
@@ -125,56 +139,68 @@ class InspectionCard(QWidget):
             label.setText(facts[index] if index < len(facts) else "")
         self.setToolTip("\n".join((title, *facts, detail)))
 
-    def tick(self):
-        if self.future is not None and self.future.done():
-            future, self.future = self.future, None
-            try:
-                result = future.result()
-                if self.running_key == self.key:
-                    self.ready_key = self.key
-                    self.show_details(result["title"], result["facts"], result["detail"])
-                    self.note.setText(result["note"])
-                    self.note.setVisible(bool(result["note"]))
-                    self.install_geometry(result["geometry"])
-                    self.reposition()
-            except Exception as error:
-                if self.running_key == self.key:
-                    self.ready_key = self.key
-                    self.has_geometry = False
-                    if self.preview:
-                        self.preview.hide()
-                    self.note.setText("Preview unavailable · see details")
-                    self.note.setToolTip(str(error))
-                    self.note.show()
-                    self.buttons.hide()
-                    self.reposition()
-        if self.future is None and self.isVisible() and self.context and self.ready_key != self.key and monotonic() - self.changed_at >= .15:
+    def _request(self):
+        if self.closed or not self.isVisible() or not self.context or self.ready_key == self.key:
+            return
+        cached = self.cache.get(self.preview_key or self.key)
+        if cached is not None:
+            self._install(cached)
+        elif self.future is None:
             session, selection, keys, assets = self.context
             self.running_key = self.key
+            self.running_cache_key = self.preview_key or self.key
             self.future = self.executor.submit(self.builder, session.fork(), selection, keys, assets)
+            self.future.add_done_callback(self._completed)
+
+    def _completed(self, future):
+        if not self.closed:
+            try:
+                self.completed.emit(future)
+            except RuntimeError:
+                pass
+
+    def _receive(self, future):
+        if self.closed or future is not self.future:
+            return
+        key = self.running_key
+        self.future = None
+        try:
+            result = future.result()
+            self.cache.put(self.running_cache_key, dict(result, geometry_bytes=result["geometry"]["geometry_bytes"]))
+            if key == self.key:
+                self._install(result)
+        except Exception as error:
+            if key == self.key:
+                self.ready_key = key
+                self.has_geometry = False
+                self.preview.hide()
+                self.note.setText("Preview unavailable · see details")
+                self.note.setToolTip(str(error))
+                self.note.show()
+                self.buttons.hide()
+                self.reposition()
+        self._request()
+
+    def _install(self, result):
+        self.ready_key = self.key
+        if self.preview_key is None:
+            self.show_details(result["title"], result["facts"], result["detail"])
+        self.note.setText(result["note"])
+        self.note.setToolTip("")
+        self.note.setVisible(bool(result["note"]))
+        self.install_geometry(result["geometry"])
+        self.reposition()
+
+    def tick(self):
         if self.isVisible() and self.window().isActiveWindow() and self.has_geometry and not self.rotate.isChecked():
             self.angle = (self.angle + 3) % 360
             self.update_camera()
 
     def install_geometry(self, data):
-        if self.preview is None:
-            from .viewport import SceneView
-
-            self.preview = SceneView(self, axes=False)
-            self.preview.setFixedHeight(128)
-            self.preview.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            self.preview.set_background(SCENE_BACKGROUND)
-            self.preview.enable_depth_peeling(number_of_peels=4)
-            self.layout.insertWidget(1, self.preview)
-        self.preview.clear()
-        actors = add_geometry(self.preview, data)
-        self.has_geometry = bool(actors)
+        self.has_geometry, self.center, self.radius = self.scene.show(self.preview_key or self.key, data)
         self.preview.setVisible(self.has_geometry)
         self.buttons.setVisible(self.has_geometry)
-        if actors:
-            bounds = self.preview.bounds
-            self.center = tuple((bounds[i] + bounds[i + 1]) / 2 for i in (0, 2, 4))
-            self.radius = max(1, sqrt(sum((bounds[i + 1] - bounds[i]) ** 2 for i in (0, 2, 4)))) * 2.0
+        if self.has_geometry:
             self.update_camera()
         else:
             self.note.setText("Empty selection")
@@ -193,11 +219,13 @@ class InspectionCard(QWidget):
         self.adjustSize()
         below = self.minimap.y() + self.minimap.height() + GRID if self.minimap.isVisible() else GRID
         fits = below + self.height() <= self.plotter.height() - 100
-        self.move(self.plotter.width() - self.width() - GRID if fits else int(self.plotter.width() * .085) + GRID, below if fits else GRID)
+        self.move(max(GRID, self.minimap.x() + self.minimap.width() - self.width() - GRID) if fits else int(self.plotter.width() * .085) + GRID, below if fits else GRID)
         self.raise_()
 
     def shutdown(self):
+        self.closed = True
         self.timer.stop()
         self.executor.shutdown(wait=False, cancel_futures=True)
         if self.preview:
+            self.scene.clear()
             self.preview.close()
