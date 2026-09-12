@@ -388,10 +388,11 @@ class OverviewController(QObject):
                 self.cancel()
         current = self._target()
         if current != self.observed_target:
+            if self.observed_target is None or self.observed_target == self.satisfied:
+                self.deadline = now + SETTLE_MILLISECONDS / 1000
             self.observed_target = current
-            self.deadline = now + SETTLE_MILLISECONDS / 1000
         if self.document_preparation is None and self.intent.destination is None and self.surface is None:
-            if self.intent.target is not None and current != self.intent.target:
+            if self.intent.superseded_by(current):
                 self.intent.cancel()
                 self.pending_selection = None
                 self.uploads.clear()
@@ -399,16 +400,15 @@ class OverviewController(QObject):
                 self.scene.cancel()
                 self.progress.finish()
             if (self.auto and now >= self.deadline and current != self.satisfied
-                    and current != self.intent.target and current != self.blocked_target):
+                    and self.intent.target in (None, self.satisfied) and current != self.blocked_target):
                 self.refine()
-        if self.window.camera.moving or self.window.plotter.retirement.busy:
-            return
         if self.pending_selection is not None:
             self._select()
             return
+        uploading = not self.window.camera.moving and not self.window.plotter.retirement.busy
         deadline = perf_counter() + 0.002
         try:
-            while (self.uploads or self.installation is not None) and perf_counter() < deadline:
+            while uploading and (self.uploads or self.installation is not None) and perf_counter() < deadline:
                 if self.installation is None:
                     generation, key, data = self.uploads.popleft()
                     if not self.intent.accepts(generation):
@@ -419,12 +419,12 @@ class OverviewController(QObject):
         except Exception as error:
             self._failed(str(error))
             return
-        if self.intent.target is not None and (self.progress.delay.isActive() or self.progress.isVisible()):
+        if self.intent.target is not None and (self.progress.delay.isActive() or self.progress.requested):
             if not self.job or self.job[0] == "overview_read":
                 total = len(self.scene.wanted)
                 label = "Preparing destination" if self.intent.destination is not None else "Preparing view"
                 self.progress.set_progress(label, total - len(self.scene.missing()), total)
-        if self.worker.busy or self.uploads or self.installation is not None:
+        if self.worker.busy or self.installation is not None:
             return
         if self.surface is not None:
             position = self.surface
@@ -438,6 +438,12 @@ class OverviewController(QObject):
             missing = sorted(self.scene.missing())
             if not missing:
                 self._publish(self.intent.generation)
+                return
+            if sum(data['geometry_bytes'] for _, _, data in self.uploads) >= 32 * 1024**2:
+                return
+            queued = {key for _, key, _ in self.uploads}
+            missing = [(path, key) for path, key in missing if key not in queued]
+            if not missing:
                 return
             keys, size = [], 0
             for _, key in missing:

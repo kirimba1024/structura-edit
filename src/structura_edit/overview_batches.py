@@ -5,16 +5,18 @@ from functools import lru_cache
 import numpy as np
 
 from structura_render.geometry import TexturedMesh
-from structura_render.lod_geometry import merge_lods, split_lod
+from structura_render.lod_geometry import merge_lods
 from structura_render.atlas import merge_mesh_atlases
 
 from .overview_model import tile_bounds
 from .overview_store import OverviewStore, texture_identity
 from .render_packets import prepare_geometry
+from .section_cache import SectionCache
 
 
 BATCH_LEVEL = 4
 BATCH_BYTES = 8 * 1024**2
+_prepared = SectionCache(limit=96 * 1024**2, max_entries=512)
 
 
 @lru_cache(maxsize=1)
@@ -56,7 +58,15 @@ def detail_batches(nodes, selection):
 def read_batches(path, keys):
     with closing(OverviewStore(path)) as store:
         textures = {}
-        return {key: read_batch(store, key, textures) for key in keys}
+        result = {}
+        for key in keys:
+            identity = str(store.path), key
+            data = _prepared.get(identity)
+            if data is None:
+                data = read_batch(store, key, textures)
+                _prepared.put(identity, data)
+            result[key] = data
+        return result
 
 
 def read_batch(store, key, textures):
@@ -90,4 +100,4 @@ def read_batch(store, key, textures):
     meshes = merge_mesh_atlases(meshes)
     for mesh in meshes:
         mesh.texture_key = texture_identity(mesh.image)
-    return prepare_geometry(dict(origin=origin, colored=split_lod(merge_lods(lods)), meshes=meshes, flat=flat))
+    return prepare_geometry(dict(origin=origin, lod=merge_lods(lods), meshes=meshes, flat=flat))

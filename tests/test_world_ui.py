@@ -17,6 +17,7 @@ def world_window(world_edit):
         document=document, assets=None,
         tasks=SimpleNamespace(busy=False, submit=lambda kind, callback, **args: requests.append((callback, args))),
         placement=SimpleNamespace(active=False),
+        views=SimpleNamespace(preparing=False),
         slicing=SimpleNamespace(value=HeightSlice()),
         entities_action=SimpleNamespace(isChecked=lambda: True),
         plotter=SimpleNamespace(camera=SimpleNamespace(position=(2, 1, 2))),

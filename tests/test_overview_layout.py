@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QLabel
 from structura_edit.ui import EditorWindow
 
 
-def test_both_progress_rows_fit_without_moving_the_viewport(qt_app):
+def test_progress_stays_in_status_bar_without_moving_the_viewport(qt_app):
     window = EditorWindow(off_screen=True)
     window.resize(1104, 700)
     window.workbench.setCurrentIndex(1)
@@ -21,20 +21,24 @@ def test_both_progress_rows_fit_without_moving_the_viewport(qt_app):
         qt_app.processEvents()
         assert window.plotter.geometry() == viewport
         assert window.size() == QSize(1104, 700)
-        window.grab().save("/private/tmp/structura-overview-progress-layout.png")
         rects = []
-        for widget in (window.overview.button, window.refresh_button, window.save_button, window.progress, window.overview.progress):
+        for widget in (window.overview.button, window.refresh_button, window.save_button, window.progress):
             rect = QRect(widget.mapTo(window, QPoint()), widget.size())
             assert window.rect().contains(rect), (type(widget).__name__, rect, window.rect())
+            status_rect = QRect(widget.mapTo(window.statusBar(), QPoint()), widget.size())
+            assert window.statusBar().rect().contains(status_rect)
             assert all(not rect.intersects(other) for other in rects), (type(widget).__name__, rect, rects)
             rects.append(rect)
         for progress in (window.progress, window.overview.progress):
-            assert progress.isVisible() and window.progress_panel.isVisible()
-            assert QLabel.text(progress.label) == "Building detail"
-            assert QLabel.text(progress.count) == "12,345/62,424"
-        window.grab().save("/private/tmp/structura-overview-progress-layout.png")
+            assert progress.label.text() == "Building detail"
+            assert progress.label.toolTip() == "Building detail"
+        assert QLabel.text(window.progress.count) == "12,345/62,424"
+        assert window.progress.isVisible() and not window.overview.progress.isVisible()
+        assert window.progress_panel.parent() is window.status_content
         window.progress.finish()
+        qt_app.processEvents()
         assert window.overview.progress.isVisible() and window.progress_panel.isVisible()
+        assert QLabel.text(window.overview.progress.count) == "12,345/62,424"
         window.overview.progress.finish()
         assert not window.progress_panel.isVisible()
     finally:

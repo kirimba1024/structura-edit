@@ -149,6 +149,10 @@ class MiniMap(QWidget):
         self.expanded_changed.emit(not self.collapsed)
 
     def set_overview(self, snapshot):
+        self.canvas.overview = self.world_map._images(snapshot["maps"]) if snapshot else {}
+        self.canvas.overview_surface = bool(snapshot and snapshot['metadata']['height']['mode'] == 'all'
+                                            and snapshot['metadata']['below_y'] is None)
+        self.canvas.update()
         active = self.world_mode.isChecked()
         self.world_map.set_snapshot(snapshot)
         self.world_mode.setVisible(snapshot is not None)
@@ -176,10 +180,11 @@ class MiniMap(QWidget):
         self.canvas.view_changed.emit()
 
     def set_document(self, session):
-        self.cache.set_source(None)
         self.maps.reset()
         same_source = getattr(self, "source", None) == (session.path, getattr(session, "dimension", None))
         self.source = session.path, getattr(session, "dimension", None)
+        if not same_source:
+            self.cache.set_source(None)
         self.canvas.size_blocks = session.size
         self.canvas.origin = session.origin
         self.canvas.dimension = getattr(session, "dimension", None)
@@ -187,7 +192,6 @@ class MiniMap(QWidget):
         self.canvas.image_pixels.clear()
         self.canvas.map_cut = None
         self.canvas.cave_y = None
-        self.canvas.tiles.clear()
         self.canvas.selection = None
         if not same_source:
             self.canvas.layout.reset()

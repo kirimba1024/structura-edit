@@ -78,3 +78,17 @@ def test_failed_atlas_write_can_retry(map_request, tmp_path, monkeypatch, atlas_
     monkeypatch.setattr(cache, "store_maps", store)
     second = render_camera_maps(map_request, None, True, first[0], tmp_path / "cache")
     assert len(atlas_writes) == 1 and second[2] is not None and not second[3]
+
+
+@pytest.mark.parametrize('cut', [None, (1, 1, 1)])
+def test_cave_height_does_not_disable_or_rewrite_surface_atlas(map_request, tmp_path, atlas_writes, cut):
+    from structura_edit.map_projection import VIEWS
+
+    first = render_camera_maps(map_request, cut, True, None, tmp_path / 'cache', cave_y=1)
+    second = render_camera_maps(map_request, cut, True, first[0], tmp_path / 'cache', cave_y=2)
+    expected = set(VIEWS) - ({'top', 'bottom'} if cut else {'bottom'})
+    assert set(second[2]['slabs']) == expected
+    assert len(atlas_writes) == 1
+    assert all(first[1][view] is second[1][view] for view in expected)
+    assert second[1]['bottom'] is second[0].renderer.rendered['bottom'][1]
+    assert first[1]['bottom'] is not second[1]['bottom']

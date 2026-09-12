@@ -1,13 +1,13 @@
 from concurrent.futures import ThreadPoolExecutor
-from math import cos, radians, sin
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QVBoxLayout, QWidget
 
 from .appearance import GRID, SCENE_BACKGROUND
 from .controls import CellLabel
 from .inspection import InspectionBuilder, block_details, entity_details, inspection_preview_key
 from .inspection_scene import InspectionScene
+from .preview_orbit import PreviewOrbit
 from .section_cache import SectionCache
 from .viewport import SceneView
 
@@ -63,14 +63,10 @@ class InspectionCard(QWidget):
         self.hover_key = None
         self.context = None
         self.allowed = False
-        self.angle = 35
         self.radius = 5
         self.center = (0, 0, 0)
         self.has_geometry = False
-        self.timer = QTimer(self)
-        self.timer.setInterval(100)
-        self.timer.timeout.connect(self.tick)
-        self.timer.start()
+        self.orbit = PreviewOrbit(self.preview, self.rotating, self.update_camera)
         plotter.resized.connect(self.reposition)
         minimap.expanded_changed.connect(self.reposition)
         self.hide()
@@ -191,10 +187,10 @@ class InspectionCard(QWidget):
         self.install_geometry(result["geometry"])
         self.reposition()
 
-    def tick(self):
-        if self.isVisible() and self.window().isActiveWindow() and self.has_geometry and not self.rotate.isChecked():
-            self.angle = (self.angle + 3) % 360
-            self.update_camera()
+    def rotating(self):
+        navigation = getattr(self.window(), "navigation", None)
+        return (self.isVisible() and self.window().isActiveWindow() and self.has_geometry
+                and not self.rotate.isChecked() and not getattr(navigation, "moving", False))
 
     def install_geometry(self, data):
         self.has_geometry, self.center, self.radius = self.scene.show(self.preview_key or self.key, data)
@@ -207,9 +203,7 @@ class InspectionCard(QWidget):
             self.note.show()
 
     def update_camera(self):
-        angle = radians(self.angle)
-        x, y, z = self.center
-        self.preview.camera_position = [(x + sin(angle) * self.radius, y + self.radius * .55, z + cos(angle) * self.radius), self.center, (0, 1, 0)]
+        self.preview.camera_position = [self.orbit.orientation.position(self.center, self.radius * 1.14), self.center, (0, 1, 0)]
         self.preview.reset_camera_clipping_range()
         self.preview.render()
 
@@ -224,7 +218,7 @@ class InspectionCard(QWidget):
 
     def shutdown(self):
         self.closed = True
-        self.timer.stop()
+        self.orbit.close()
         self.executor.shutdown(wait=False, cancel_futures=True)
         if self.preview:
             self.scene.clear()

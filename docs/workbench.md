@@ -121,7 +121,8 @@ or duplicate groups. Hanging anchors follow supported transforms. Region selecti
 in the worker; selecting the entire loaded entity set needs no NBT traversal.
 
 Inspect a region through searchable Blocks/Block data/Entities tabs, or open an exact
-object. The selection card shows precise counts and a bounded rotating preview.
+object. The selection card shows precise counts and a bounded rotating preview. Hover to
+pause it; drag with the left mouse button in Cursor mode to rotate it yourself.
 **Structure** displays typed NBT in pages. **Find** searches unexpanded fields too;
 **Edit value…** preserves number types and exact int64 values. **Inventories** finds
 nested id/count records, including mods; **Edit count…** and **Open item…** address them.
@@ -140,6 +141,8 @@ slash and `~0` tilde. New edits or Undo make targets stale. [API example](api.md
 The compact map has six views. **Auto** selects the surface or a cave floor near the
 camera's height. **Cave** replaces the old bottom projection. Surface and Slices remain
 available; Slices starts views at the camera's block. Click a view to enlarge it, Map to restore the grid.
+In the enlarged view, click a block or visible entity icon to select it; the icon takes
+priority over the block beneath it. Shift-click extends selection.
 Drag/two-finger scroll pans, wheel/pinch zooms around the cursor, F recenters. Manual pan
 in the large map suspends following; compact mode always follows. Double-click a settled
 local projection moves the camera in that plane. Map gestures do not edit or fly underneath.
@@ -154,8 +157,8 @@ shown slice. It does not constrain editing to visible cells or create Undo.
 Java Open starts near the saved player or spawn. World view distance selects dimension,
 radius and vertical range. Default radius 6 covers 13×13 chunk columns across all saved
 section heights, including caves. F5/Load here loads around the camera, preserving pending
-edits/history, world camera position and valid selection. With a prepared overview,
-flight refines cached geometry without reloading the editable area.
+edits/history, world camera position and valid selection. Auto loads the editing
+area around the camera while refining the prepared overview from its cache.
 World settings and F5 do not reopen an old world while a schematic is active.
 
 **Build / Update overview** prepares saved chunks as a persistent 3D/2D snapshot.
@@ -163,7 +166,8 @@ Opening a world reuses a valid snapshot or starts its first preparation. Updates
 world files, textures or the cache version invalidate the old snapshot on reopening.
 World map pan/zoom uses that snapshot; Go to/double-click prepares a destination before
 moving. Manual movement, another destination or Cancel cancels the pending teleport.
-Auto detail refines prepared geometry for a stable camera cell; it does not load editable
+Auto detail prepares nearby geometry while moving. Auto also follows the camera
+with the exact editing area, making nearby blocks selectable. The overview itself does not contain editable
 blocks. Load here does that separately. Update overview* marks an older snapshot.
 Nether's map defaults below Y=120; Map below Y changes display, not import limits.
 Unknown chunks and known empty space remain distinct. [Implementation limits](world-view.md).

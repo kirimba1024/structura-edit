@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from .map_layout import MapLayout, projection_rect
 from .map_entities import MapMarkers, icon_mode
 from .loading import MAP_TILE_SIZE
+from .overview_store import MAP_SPAN
 from .map_projection import LABELS, VIEWS, depth_axis, project, unproject, slice_bounds
 from .appearance import ACCENT, BORDER, MAP_BACKGROUND, MAP_CAMERA, MAP_ENTITY, MAP_PLAYER, PANEL_BACKGROUND, REMOVAL, TEXT
 
@@ -14,6 +15,7 @@ from .appearance import ACCENT, BORDER, MAP_BACKGROUND, MAP_CAMERA, MAP_ENTITY, 
 class MapCanvas(QWidget):
     navigate = Signal(object)
     view_changed = Signal()
+    picked = Signal(str, object, object, bool)
 
     def __init__(self):
         super().__init__()
@@ -23,6 +25,9 @@ class MapCanvas(QWidget):
         self.map_cut = None
         self.cave_y = None
         self.tiles = {}
+        self.overview = {}
+        self.overview_surface = False
+        self.height_mode = 'all'
         self.origin = (0, 0, 0)
         self.dimension = None
         self.layout = MapLayout(self)
@@ -34,11 +39,13 @@ class MapCanvas(QWidget):
         self.direction = (0, 0, -1)
         self.selection = None
         self.entities = []
+        self.entity_keys = ()
         self.markers = MapMarkers([])
         self.entity_mode = "Auto"
         self.entity_icons = {}
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setToolTip("M: expand / close · Click: enlarge view\n"
+        self.setToolTip("M: expand / close · Click a view: enlarge\n"
+                       "In enlarged view: click to select · Shift-click to extend\n"
                        "Drag / two fingers: pan · Wheel / pinch: zoom\n"
                        "F: center on camera · Double-click: go here")
 
@@ -50,14 +57,15 @@ class MapCanvas(QWidget):
         self.image_pixels = images
         self.update()
 
-    def set_entities(self, records):
+    def set_entities(self, records, keys=()):
+        self.entity_keys = tuple(keys)
         self.entities = [(position, player, label, QImage(pixels.data, pixels.shape[1], pixels.shape[0], pixels.strides[0],
                           QImage.Format.Format_RGBA8888).copy() if pixels is not None else None)
                          for position, player, label, pixels in records]
         self.markers = MapMarkers([record[0] for record in self.entities])
         self.update()
 
-    def draw_entities(self, painter, view, rect):
+    def marker_rects(self, view, rect):
         if self.entity_mode == "Off" or not self.entities:
             return
         area = self.layout.area(view)
@@ -69,19 +77,35 @@ class MapCanvas(QWidget):
         visible = (area.left() - 8 / scale_x, area.top() - 8 / scale_y,
                    area.right() + 8 / scale_x, area.bottom() + 8 / scale_y)
         indices, points = self.markers.visible(view, self.origin, visible, (lower, upper), self.cave_y)
-        painter.setPen(QPen(QColor(TEXT), 1))
         for index, (u, v) in zip(indices, points):
             _, player, _, icon = self.entities[index]
             point = QPointF(rect.left() + (u - area.left()) * scale_x, rect.top() + (v - area.top()) * scale_y)
             if icons and icon is not None:
                 target = QRectF(round(point.x()) - 8, round(point.y()) - 8, 16, 16)
+            else:
+                target = QRectF(round(point.x()) - 2, round(point.y()) - 2, 4, 4)
+            yield index, target, icons and icon is not None
+
+    def draw_entities(self, painter, view, rect):
+        painter.setPen(QPen(QColor(TEXT), 1))
+        for index, target, icons in self.marker_rects(view, rect):
+            _, player, _, icon = self.entities[index]
+            if icons:
                 painter.fillRect(target, QColor(PANEL_BACKGROUND))
                 painter.drawImage(target, icon)
                 painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.drawRect(target)
             else:
                 painter.setBrush(QColor(MAP_PLAYER if player else MAP_ENTITY))
-                painter.drawRect(QRectF(round(point.x()) - 2, round(point.y()) - 2, 4, 4))
+                painter.drawRect(target)
+
+    def pick(self, view, point, extend=False):
+        entity = next((self.entity_keys[index] for index, rect, _ in reversed(list(self.marker_rects(view, self.tile_rect(view))))
+                       if rect.contains(point) and index < len(self.entity_keys)), None)
+        projected = self.layout.from_screen(point, view)
+        world = tuple(p + o for p, o in zip(self.position, self.origin))
+        target = unproject((projected.x(), projected.y()), world, (0, 0, 0), view)
+        self.picked.emit(view, tuple(p - o for p, o in zip(target, self.origin)), entity, extend)
 
     def tile_rect(self, view):
         return self.layout.tile_rect(view)
@@ -111,6 +135,12 @@ class MapCanvas(QWidget):
             painter.setClipRect(rect)
             if self.dimension:
                 painter.fillRect(rect, QBrush(QColor(BORDER), Qt.BrushStyle.BDiagPattern))
+            if view == "top" and self.map_cut is None and self.height_mode == 'all' and self.overview_surface:
+                for (level, x, z), image in self.overview.items():
+                    span = MAP_SPAN * 2**level
+                    target = transform.mapRect(QRectF(x * span, z * span, span, span))
+                    if target.intersects(rect):
+                        painter.drawImage(target, image)
             if self.layout.large:
                 for (tile_view, x, y), image in self.tiles.items():
                     if tile_view == view:
@@ -220,6 +250,8 @@ class MapCanvas(QWidget):
                 self.focus_time = monotonic()
                 self.view_changed.emit()
                 self.update()
+            elif not self.dragging:
+                self.pick(view, event.position(), bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier))
             self.press = None
             self.unsetCursor()
         event.accept()

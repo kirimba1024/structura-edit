@@ -10,6 +10,7 @@ from PySide6.QtTest import QTest
 
 from structura_edit.map_canvas import MapCanvas
 from structura_edit.map_cache_ui import MapCacheView
+from structura_edit.map_projection import VIEWS
 
 
 def wait_for(condition):
@@ -35,15 +36,17 @@ def test_slow_cache_read_respects_the_latest_source_and_view(qt_app, tmp_path, m
     canvas.resize(600, 400)
     canvas.layout.large = True
     cache = MapCacheView(canvas, tmp_path)
+    first = dict(space='first', path=str(cache.path), slabs={view: view for view in VIEWS}, stamps={})
+    second = dict(first, space='second')
     try:
-        cache.set_source({"space": "first"})
+        cache.set_source(first)
         wait_for(started.is_set)
         if action == "close_source":
             cache.set_source(None)
         elif action == "replace_source":
-            cache.set_source({"space": "second"})
+            cache.set_source(second)
         elif action == "same_source":
-            cache.set_source({"space": "first"})
+            cache.set_source(first)
         else:
             canvas.layout.pan("top", QPointF(1000, 0))
             canvas.view_changed.emit()
@@ -59,7 +62,7 @@ def test_slow_cache_read_respects_the_latest_source_and_view(qt_app, tmp_path, m
         assert calls == (["first", "second"] if action == "replace_source" else ["first"])
         if action == "same_source":
             images = canvas.tiles.copy()
-            cache.set_source({"space": "first"})
+            cache.set_source(first)
             assert canvas.tiles == images and not cache.timer.isActive()
     finally:
         release.set()

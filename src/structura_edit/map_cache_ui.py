@@ -31,10 +31,17 @@ class MapCacheView(QObject):
         if spec == self.spec:
             self.request()
             return
+        previous = self.spec
+        retained = set()
+        if (previous is not None and spec is not None and not previous.get('volatile') and not spec.get('volatile')
+                and previous['space'] == spec['space'] and previous['path'] == spec['path']
+                and all(spec['stamps'].get(path) == stamp for path, stamp in previous['stamps'].items())):
+            retained = {view for view in previous['slabs'].keys() & spec['slabs'].keys()
+                        if previous['slabs'][view] == spec['slabs'][view]}
         self.spec = spec
         self.current = None
         self.pending = None
-        self.canvas.tiles.clear()
+        self.canvas.tiles = {key: image for key, image in self.canvas.tiles.items() if key[0] in retained}
         self.request()
 
     def request(self):
@@ -45,13 +52,15 @@ class MapCacheView(QObject):
         areas = {}
         scales = {}
         for view in views:
+            if view not in self.spec['slabs']:
+                continue
             rect = self.canvas.layout.area(view)
             areas[view] = (floor(rect.left() / TILE_SIZE) * TILE_SIZE, floor(rect.top() / TILE_SIZE) * TILE_SIZE,
                            ceil(rect.right() / TILE_SIZE) * TILE_SIZE, ceil(rect.bottom() / TILE_SIZE) * TILE_SIZE)
             pixels = self.canvas.tile_rect(view).width() * self.canvas.devicePixelRatioF() / rect.width()
             scales[view] = min(MAP_TEXTURE_SIZE, 2 ** ceil(log2(max(1, pixels))))
         request = self.spec, areas, scales
-        self.pending = request if request != self.current or self.future is not None else None
+        self.pending = request if areas and (request != self.current or self.future is not None) else None
         if self.pending is not None and not self.timer.isActive():
             self.timer.start()
 
@@ -65,11 +74,19 @@ class MapCacheView(QObject):
                 self.canvas.setToolTip(f"Map cache unavailable: {error}")
                 pixels = {}
             self.future = None
-            if self.current is not None and self.current == self.pending and self.spec == self.current[0]:
-                self.canvas.tiles = {key: QImage(data.data, data.shape[1], data.shape[0], data.strides[0],
-                                               QImage.Format.Format_RGBA8888).copy() for key, data in pixels.items()}
+            if self.current is not None and self.spec == self.current[0]:
+                for key, data in pixels.items():
+                    self.canvas.tiles.pop(key, None)
+                    self.canvas.tiles[key] = QImage(data.data, data.shape[1], data.shape[0], data.strides[0],
+                                                   QImage.Format.Format_RGBA8888).copy()
+                size = sum(image.sizeInBytes() for image in self.canvas.tiles.values())
+                while self.canvas.tiles and size > 64 * 1024**2:
+                    size -= self.canvas.tiles.pop(next(iter(self.canvas.tiles))).sizeInBytes()
                 self.canvas.update()
-                self.pending = None
+                if self.current == self.pending:
+                    self.pending = None
+                else:
+                    self.current = None
             else:
                 self.current = None
         if self.pending is not None and self.pending != self.current:

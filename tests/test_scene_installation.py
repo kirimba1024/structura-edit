@@ -8,6 +8,13 @@ from structura_edit.scene import Scene
 class Actor:
     def __init__(self):
         self.visible = True
+        self.position = (0, 0, 0)
+
+    def GetPosition(self):
+        return self.position
+
+    def SetPosition(self, *position):
+        self.position = position
 
     def SetVisibility(self, visible):
         self.visible = visible
@@ -66,3 +73,18 @@ def test_cancelled_or_failed_installation_keeps_old_scene(scene, fail):
     assert actors == scene.actors == [old] and old.visible
     assert scene.display_revision == 1 and scene.section_bytes == {'old': 1}
     assert set(scene.ghost_actors) == {old}
+
+
+def test_origin_shift_keeps_matching_actors_and_entity_picking_bounds(scene):
+    scene, actors = scene
+    old = actors[0]
+    scene.signatures['old'] = ('content', (0, 0, 0))
+    scene.entity_bounds = {'bat': ((1, 2, 3), (2, 3, 4))}
+    scene.shift((-48, 0, 16))
+    assert old.position == (-48, 0, 16)
+    assert scene.entity_bounds['bat'] == ((-47, 2, 19), (-46, 3, 20))
+    assert scene.entity_boxes.tolist() == [[[-47, 2, 19], [-46, 3, 20]]]
+    scene.replace({'reset': True, 'sections': {'old': {
+        'geometry_bytes': 1, 'signature': ('content', (-48, 0, 16))}}}, 2)
+    assert actors == [old] and scene.actors == [old] and old.visible
+    assert scene.display_revision == 2

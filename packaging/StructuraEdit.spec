@@ -3,7 +3,7 @@ from pathlib import Path
 
 from packaging.version import Version
 
-from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules, copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 
 release = Version(version('structura-edit'))
@@ -18,14 +18,14 @@ for package in packages:
     datas.extend(collect_data_files(package))
     hiddenimports.extend(collect_submodules(package))
 for distribution in ('structura-edit', 'structura-core', 'structura-render', 'amulet-core', 'PyMCTranslate',
-                     'pyvistaqt', 'PySide6-Essentials', 'meshoptimizer'):
+                     'pyvistaqt', 'PySide6-Essentials'):
     datas.extend(copy_metadata(distribution, recursive=True))
 
 a = Analysis(
     [str(Path(SPECPATH) / 'launcher.py')],
     pathex=[str(Path(SPECPATH).parent / 'tests')],
     datas=datas,
-    binaries=collect_dynamic_libs('meshoptimizer', search_patterns=['_meshoptimizer*.so', '_meshoptimizer*.pyd']),
+    binaries=[],
     hiddenimports=hiddenimports,
     excludes=['PyQt5', 'PyQt6', 'PySide2', 'tkinter', 'pytest', 'IPython', 'jupyter'],
 )

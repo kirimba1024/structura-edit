@@ -4,9 +4,9 @@ import heapq
 
 
 TILE_SPAN = 16
-DETAIL_BUDGET = 96 * 1024**2
+DETAIL_BUDGET = 192 * 1024**2
 STAGING_BUDGET = DETAIL_BUDGET
-SELECTION_BUDGET = 88 * 1024**2
+SELECTION_BUDGET = 176 * 1024**2
 SETTLE_MILLISECONDS = 350
 PIXEL_ERROR = 1.5
 
@@ -122,6 +122,10 @@ class DetailIntent:
     def cancel(self):
         self.generation += 1
         self.target = self.destination = None
+
+    def superseded_by(self, target):
+        return (self.target is not None and (self.target.excluded != target.excluded
+                or max(abs(a - b) for a, b in zip(self.target.cell, target.cell)) > 4))
 
     def accepts(self, generation):
         return self.target is not None and generation == self.generation

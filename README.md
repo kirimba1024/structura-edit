@@ -12,7 +12,7 @@ number or pasting across versions is not a conversion.
 
 ## Install and launch
 
-Use Python 3.9–3.13. Edit 0.1.0a2 requires core 0.6.2 and render 0.8.2 or newer
+Use Python 3.9–3.13. Edit 0.1.0a3 requires core 0.6.2 and render 0.8.3 or newer
 within their current minor series; older wheels are rejected during installation.
 The GUI includes Qt/VTK and optional format readers; the base import loads neither
 Qt nor VTK. Native GUI verification is currently on macOS.

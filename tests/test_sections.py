@@ -326,3 +326,41 @@ def test_dense_large_preview_keeps_removed_nbt_ghosts_and_resize(assets, monkeyp
             assert surfaces(data) == pytest.approx(surfaces(expected['sections'][key]['layers'][layer]))
     assert any(section['layers'].get('removed') for section in actual['sections'].values())
     assert edit.snapshot().block_nbt == source.block_nbt and not edit.dirty
+
+
+@pytest.mark.parametrize('dense', [False, True])
+def test_world_grid_keeps_negative_origin_seams_and_height_updates(world_edit, assets, dense):
+    from structura_core.block_array import BlockArray
+    from structura_edit.height_slice import HeightSlice
+    from structura_edit.preview import build_geometry, build_sections
+    from structura_edit.render_source import RenderSource
+
+    source = world_edit._document.source
+    source.size = (160, 160, 96)
+    source.block_nbt = {}
+    world_edit._document.origin = (-80, -80, -48)
+    world_edit.loaded_chunks = frozenset((x, z) for x in range(-5, 5) for z in range(-3, 3))
+    world_edit.loaded_sections = frozenset((x, y, z) for x, z in world_edit.loaded_chunks for y in range(-5, 5))
+    source.present = {(x, y, 49): 0 for x in (15, 16, 79, 80, 143, 144) for y in (15, 16, 79, 80)}
+    if dense:
+        grid = np.full(source.size, -1, np.int32)
+        for position, index in source.present.items():
+            grid[position] = index
+        source.present = BlockArray(grid)
+    prepared = prepare_sections(world_edit, include_entities=False)
+    assert set(prepared['sections']) == {(x, y, 0) for x in (-2, -1, 0, 1) for y in (-2, -1, 0)} | {'entities'}
+    sections = build_sections(**prepared, assets=assets)['sections']
+    height = HeightSlice()
+    for next_height in (HeightSlice('below', -1), HeightSlice('layer', 0), HeightSlice()):
+        update = prepare_sections(world_edit, height=next_height, previous_height=height,
+                                  previous=(world_edit, None), include_entities=False, previous_entities=False)
+        sections.update(build_sections(**update, assets=assets)['sections'])
+        expected = build_geometry(RenderSource(world_edit, next_height).region(), assets)
+        assert combined(sections) == pytest.approx(surfaces(expected))
+        height = next_height
+    before = world_edit.fork()
+    world_edit.apply(world_edit.set_block((79, 79, 49), 'minecraft:air'))
+    update = prepare_sections(world_edit, previous=(before, None), include_entities=False, previous_entities=False)
+    assert set(update['sections']) == {(x, y, 0) for x in (-1, 0) for y in (-1, 0)}
+    sections.update(build_sections(**update, assets=assets)['sections'])
+    assert combined(sections) == pytest.approx(surfaces(build_geometry(RenderSource(world_edit).region(), assets)))

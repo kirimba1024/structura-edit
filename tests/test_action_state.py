@@ -33,6 +33,13 @@ def test_capability_matrix_obeys_edit_and_protected_task_invariants():
             assert caps.can_discard and not caps.can_apply
 
 
+def test_selection_stays_available_during_read_only_background_work(edit):
+    state = editor_capabilities(edit, busy=True, selection_busy=False, scene_ready=True, selected=True)
+    assert state.can_select and state.can_keep_selecting
+    assert not state.can_operate and not state.can_save and not state.can_apply
+    assert not editor_capabilities(edit, busy=True, selection_busy=True).can_select
+
+
 def test_world_save_requires_changes_and_copy_waits_for_display():
     session = SimpleNamespace(readonly=False, dirty=False)
     assert not editor_capabilities(session, world=True).can_save

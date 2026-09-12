@@ -5,7 +5,7 @@ from PIL import Image, ImageColor
 
 from .appearance import MAP_BACKGROUND
 from .loading import MAX_COLUMN_CELLS, check_preview_budget
-from .map_projection import VIEWS, plane_size, slice_bounds
+from .map_projection import VIEWS, cave_view, plane_size, slice_bounds
 from .resources import texture_bank
 
 
@@ -30,6 +30,13 @@ def _composite(data, tiles):
         remaining[active] *= 1 - layer[..., 3:4]
         depth[active] += 1
         active = active[(depth[active] < data.shape[-1]) & (remaining[active] > 1 / 255).any(axis=(1, 2, 3))]
+        pending = active
+        while pending.size:
+            row, column = np.divmod(pending, data.shape[1])
+            pending = pending[~occupied[row, column, depth[pending]]]
+            depth[pending] += 1
+            pending = pending[depth[pending] < data.shape[-1]]
+        active = active[depth[active] < data.shape[-1]]
     return colors, remaining
 
 
@@ -84,14 +91,14 @@ class MapRenderer:
         scale = max(1, min(MAP_TEXTURE_SIZE, int(math.sqrt(max_pixels / max(1, pixels)))))
         images = {}
         for view in VIEWS:
-            cave = cave_y is not None and (view == "bottom" or view == "top" and cut is not None)
+            cave = cave_view(view, cut, cave_y)
             bounds = slice_bounds(self.size, cut, view)
             key = scale, bounds, cave_y if cave else None
             if view not in self.rendered or self.rendered[view][0] != key:
                 cached = self.tiles.get(view)
-                if cached is None or cached[0] != scale:
+                if cached is None or cached[0] != (scale, cave):
                     tiles = map_tiles(self.palette, self.faces, "top" if cave else view, scale)
-                    self.tiles[view] = scale, tiles
+                    self.tiles[view] = (scale, cave), tiles
                 else:
                     tiles = cached[1]
                 if cave:
@@ -108,14 +115,15 @@ class MapRenderer:
     def details(self, areas, *, cut=None, cave_y=None):
         result = {}
         for view, area in areas:
-            cave = cave_y is not None and (view == "bottom" or view == "top" and cut is not None)
-            if view not in self.detail_tiles:
-                self.detail_tiles[view] = map_tiles(self.palette, self.faces, "top" if cave else view, MAP_TEXTURE_SIZE)
+            cave = cave_view(view, cut, cave_y)
+            key = view, cave
+            if key not in self.detail_tiles:
+                self.detail_tiles[key] = map_tiles(self.palette, self.faces, "top" if cave else view, MAP_TEXTURE_SIZE)
             if cave:
                 state, heights = self.environment.floor(cave_y)
-                pixels = render_map(state, "top", (0, 1), self.detail_tiles[view], area=area, heights=heights)
+                pixels = render_map(state, "top", (0, 1), self.detail_tiles[key], area=area, heights=heights)
             else:
-                pixels = render_map(self.state, view, slice_bounds(self.size, cut, view), self.detail_tiles[view], area=area)
+                pixels = render_map(self.state, view, slice_bounds(self.size, cut, view), self.detail_tiles[key], area=area)
             result[view] = area, pixels
         return result
 

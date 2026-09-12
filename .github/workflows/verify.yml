@@ -95,8 +95,9 @@ jobs:
           import structura_core, structura_render, structura_edit
           from structura_core.block_array import BlockArray
           from structura_core.world_backup import restore_backup
-          from structura_render.packets import polygon_packets
-          import meshoptimizer
+          from structura_render.packets import lod_packets, polygon_packets
+          from structura_render.lod_geometry import spatially_order_lod
+          from structura_render.lod_rectangles import merge_rectangles
           for module in (structura_core, structura_render, structura_edit):
               assert "site-packages" in module.__file__, module.__file__
               assert module.__version__ == importlib.metadata.version(module.__name__.replace("_", "-"))

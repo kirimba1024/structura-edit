@@ -15,16 +15,16 @@ ENTITIES = "entities"
 LARGE_SCENE_CELLS = 512_000
 
 
-def section_key(position, span=CHUNK_SIZE):
-    return tuple(value // span for value in position)
+def section_key(position, span=CHUNK_SIZE, origin=(0, 0, 0)):
+    return tuple((value + offset) // span for value, offset in zip(position, origin))
 
 
-def affected_sections(positions, size, span=CHUNK_SIZE):
+def affected_sections(positions, size, span=CHUNK_SIZE, origin=(0, 0, 0)):
     keys = set()
     for position in positions:
-        ranges = (range(max(0, value - 1) // span,
-                        min(length - 1, value + 1) // span + 1)
-                  for value, length in zip(position, size))
+        ranges = (range((max(0, value - 1) + offset) // span,
+                        (min(length - 1, value + 1) + offset) // span + 1)
+                  for value, length, offset in zip(position, size, origin))
         keys.update(product(*ranges))
     return keys
 
@@ -44,15 +44,17 @@ def changed_positions(before, current):
     return (p for p in positions if before._cells.get(p) != current._cells.get(p))
 
 
-def occupied_sections(session, span):
+def occupied_sections(session, span, origin=(0, 0, 0)):
     base = session._document.source.present
     if not isinstance(base, BlockArray):
-        return {section_key(position, span) for position in session.positions()}
+        return {section_key(position, span, origin) for position in session.positions()}
     keys = set()
-    for lower in product(*(range(0, size, span) for size in session.size)):
-        if np.any(base.array[tuple(slice(lo, lo + span) for lo in lower)] >= 0):
-            keys.add(section_key(lower, span))
-    keys.update(section_key(position, span) for position in session._cells)
+    ranges = (range(offset // span, (offset + size - 1) // span + 1) for offset, size in zip(origin, session.size))
+    for key in product(*ranges):
+        lower = tuple(value * span - offset for value, offset in zip(key, origin))
+        if np.any(base.array[tuple(slice(max(0, lo), min(size, lo + span)) for lo, size in zip(lower, session.size))] >= 0):
+            keys.add(key)
+    keys.update(section_key(position, span, origin) for position in session._cells)
     return keys
 
 
@@ -60,18 +62,20 @@ def prepare_sections(session, change=None, *, previous=None, include_entities=Tr
                      ghost=None, original=None, height=HeightSlice(), previous_height=HeightSlice()):
     current = preview_session(session, change)
     check_preview_budget(current.size, world=hasattr(current, "dimension"))
+    world = hasattr(current, 'dimension')
     span = CHUNK_SIZE * (4 if prod(current.size) >= LARGE_SCENE_CELLS else 1)
+    origin = current.origin if world else (0, 0, 0)
     previous_session = preview_session(*previous) if previous else None
     reset = previous_session is None or previous_session._id != current._id
     reset = reset or previous_session.size != current.size or previous_session.origin != current.origin
     if reset:
-        keys = occupied_sections(current, span)
+        keys = occupied_sections(current, span, origin)
     else:
-        keys = affected_sections(changed_positions(previous_session, current), current.size, span)
+        keys = affected_sections(changed_positions(previous_session, current), current.size, span, origin)
         if height != previous_height:
-            occupied = occupied_sections(current, span)
+            occupied = occupied_sections(current, span, origin)
             keys.update(slice_sections(occupied, previous_height.interval(previous_session),
-                                       height.interval(current), current.size, span))
+                                       height.interval(current), current.size, span, origin))
     source = RenderSource(current, height)
     dense = len(keys) * span ** 3 > 32 * CHUNK_SIZE ** 3
     if dense:
@@ -93,8 +97,9 @@ def prepare_sections(session, change=None, *, previous=None, include_entities=Tr
     sections = {}
     ghosts = {}
     for key in sorted(keys):
-        lower = tuple(value * span for value in key)
-        upper = tuple(min(value + span, length) for value, length in zip(lower, current.size))
+        start = tuple(value * span - offset for value, offset in zip(key, origin))
+        lower = tuple(max(0, value) for value in start)
+        upper = tuple(min(value + span, length) for value, length in zip(start, current.size))
         start = tuple(max(0, value - 1) for value in lower)
         stop = tuple(min(value + 1, length) for value, length in zip(upper, current.size))
         bounds = tuple(tuple(value - origin for value, origin in zip(bound, start)) for bound in (lower, upper))
