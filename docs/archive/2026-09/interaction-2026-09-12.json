@@ -517,7 +517,7 @@
         "qt_6_10_2": "8 passed",
         "qt_6_8_3": "8 passed"
       },
-      "publication_block": "Automatic approval review rejected the source-only push after the user clarified scope, stating that trusted user content must explicitly name the destination repository. No application or package was uploaded. Local source changes remain unpublished until destination confirmation."
+      "publication_block": "Resolved: user explicitly confirmed source publication to kirimba1024/structura-edit and the workspace reference in kirimba1024/structura. Application and package uploads remain excluded."
     },
     "packaging": {
       "status": "passed",
