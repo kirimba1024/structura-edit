@@ -64,6 +64,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
+      - name: Install Windows software OpenGL
+        if: runner.os == 'Windows'
+        uses: pyvista/setup-headless-display-action@9c1c7435d9635423c90d2c37489588c81673274a
+        with:
+          pyvista: false
+          mesa3d-release: "24.3.0"
       - uses: actions/download-artifact@v8
         with:
           name: dist
