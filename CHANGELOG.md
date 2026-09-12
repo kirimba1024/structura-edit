@@ -10,7 +10,8 @@
   stale maps after reloading a document with the same revision.
 - Preserve exact map textures, entity icons and cave slices; keep overlays from
   resizing the 3D viewport.
-- Keep placement transform rows fixed when adjacent explanatory text wraps.
+- Keep placement controls fixed when adjacent explanatory text wraps and reserve
+  space for the destination rule beside repeat actions on Windows.
 - Reject a completed teleport if the camera moved or turned while its destination
   was being prepared, including a cached result arriving before the next GUI tick.
 - Synchronize Windows recovery bundles through writable handles, retain UTF-8

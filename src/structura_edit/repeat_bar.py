@@ -42,6 +42,7 @@ class RepeatBar(OverlayBar):
         self.destination = DestinationButton()
         self.destination.changed.connect(self.changed)
         layout.addWidget(self.destination, 1, 3)
+        layout.setColumnMinimumWidth(3, self.destination.minimumWidth())
         for name, label, signal, column in (("preview", "Preview", self.preview_requested, 4),
                                             ("apply", "Place copies", self.apply_requested, 5),
                                             ("cancel", "Cancel", self.cancel_requested, 6)):

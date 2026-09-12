@@ -36,13 +36,16 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
         widgets = (bar.info, bar.follow, bar.repeat, bar.air, bar.apply, bar.cancel, bar.more, bar.destination,
                    *bar.coordinates, *bar.transforms, bar.hint, bar.content.blocks, bar.content.entities, bar.content.note)
         widgets = [widget for widget in widgets if widget.isVisible()]
-        def rectangles():
-            return [QRect(widget.mapTo(bar.placement, QPoint()), widget.size()) for widget in widgets]
+        def rectangles(items=widgets):
+            return [QRect(widget.mapTo(bar.placement, QPoint()), widget.size()) for widget in items]
         fixed = (bar.info, bar.follow, bar.repeat, bar.apply, bar.cancel, bar.more, bar.destination, *bar.transforms[:2])
         fixed_geometry = [widget.geometry() for widget in fixed]
+        top = tuple(widget for widget in fixed if widget is not bar.repeat)
+        top_geometry = rectangles(top)
         bar.content.set_clipboard(SimpleNamespace(block_count=500_000, entities=range(500_000), excluded_players=1))
         QTest.qWait(30)
         assert [widget.geometry() for widget in fixed] == fixed_geometry
+        assert rectangles(top) == top_geometry
         for field in (bar.content.blocks, bar.content.entities):
             option = QStyleOptionButton()
             field.initStyleOption(option)
@@ -60,6 +63,7 @@ def test_placement_cells_stay_put_for_long_text_numbers_and_state_changes(qt_app
             QTest.qWait(30)
             current = rectangles()
             assert [widget.geometry() for widget in fixed] == fixed_geometry
+            assert rectangles(top) == top_geometry
             assert host.size() == viewport
             assert len({widget.height() for widget in widgets if widget not in (bar.hint, bar.content.note)}) == 1
             for field in bar.coordinates:
