@@ -353,20 +353,21 @@
   },
   "ci": {
     "path": ".github/workflows/check-edit.yml",
-    "status": "Executed on all four jobs; last workspace run passed macOS and failed only layout checks on Linux/Windows. Final local layout fixes await push and rerun.",
+    "status": "passed",
     "matrix": [
       "ubuntu-22.04/Python 3.9",
       "ubuntu-22.04/Python 3.11",
       "macos-14/Python 3.11",
       "windows-2022/Python 3.11"
     ],
-    "limitation": "Final layout fixes are not yet tested remotely. Does not replace native input, minimum macOS or packaging checks.",
+    "limitation": "Source release verification passed all four jobs. Native input, stable 60/120 Hz, minimum macOS and distributed application checks are separate.",
     "action_documentation": [
       "https://github.com/actions/checkout/releases",
       "https://github.com/actions/setup-python/blob/main/README.md",
       "https://github.com/actions/upload-artifact/blob/main/README.md"
     ],
-    "run": "https://github.com/kirimba1024/structura/actions/runs/34701744256"
+    "run": "https://github.com/kirimba1024/structura/actions/runs/34703989075",
+    "commit": "c86ccd9b7d60d3ac0c07505d9600a5158a5e17d9"
   },
   "source_sha256_after": {
     "camera_map_render.py": "6ed7e2c6877d2a1af98d6b0fee168ac7504b9cc1f2b1e853f1ad3ebc24c610ce",
@@ -485,7 +486,94 @@
         "log": "/private/tmp/structura-alpha2-reviewed-installed-tests.log",
         "source": "Local release wheel from 1b47f4a, installed with published core 0.6.2/render 0.8.2 wheels; all module locations are site-packages."
       },
-      "twine": "Core/render release artifacts and final editor wheel/sdist passed metadata validation; editor artifacts come from the prepared code commit 1b47f4a."
+      "twine": "Core/render release artifacts and final editor wheel/sdist passed metadata validation; editor artifacts come from the prepared code commit 1b47f4a.",
+      "editor_ci": {
+        "run": "https://github.com/kirimba1024/structura-edit/actions/runs/34703978269",
+        "source_commit": "a73d635281e917bf58ef494190ce522fe3766cc8",
+        "results": {
+          "tests-macos-14-py3.11": {
+            "tests": 874,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 2,
+            "passed": 872,
+            "repeat_widths": [
+              {
+                "requested_width": 1104,
+                "initial_width": 1104,
+                "available_width": 1920
+              },
+              {
+                "requested_width": 1380,
+                "initial_width": 1380,
+                "available_width": 1920
+              }
+            ]
+          },
+          "tests-ubuntu-22.04-py3.11": {
+            "tests": 874,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 2,
+            "passed": 872,
+            "repeat_widths": [
+              {
+                "requested_width": 1104,
+                "initial_width": 1104,
+                "available_width": 1920
+              },
+              {
+                "requested_width": 1380,
+                "initial_width": 1380,
+                "available_width": 1920
+              }
+            ]
+          },
+          "tests-ubuntu-22.04-py3.9": {
+            "tests": 874,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 2,
+            "passed": 872,
+            "repeat_widths": [
+              {
+                "requested_width": 1104,
+                "initial_width": 1104,
+                "available_width": 1920
+              },
+              {
+                "requested_width": 1380,
+                "initial_width": 1380,
+                "available_width": 1920
+              }
+            ]
+          },
+          "tests-windows-2022-py3.11": {
+            "tests": 874,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 2,
+            "passed": 872,
+            "repeat_widths": [
+              {
+                "requested_width": 1104,
+                "initial_width": 1028,
+                "available_width": 1024
+              },
+              {
+                "requested_width": 1380,
+                "initial_width": 1028,
+                "available_width": 1024
+              }
+            ]
+          }
+        },
+        "skipped": [
+          "test_render_icons_uses_item_models",
+          "test_item_icons_task_round_trip"
+        ],
+        "skip_reason": "Minecraft client assets are not installed in CI; both tests passed locally."
+      }
     },
     "format_matrix": {
       "supported_routes": 30,
@@ -503,21 +591,12 @@
     },
     "edit_pypi": "Editor publication is source-only. No new PyPI upload or publisher setup is planned.",
     "edit": {
-      "status": "Source publication pending; final layout fixes are local. Desktop app and binary release uploads are cancelled.",
-      "code_commit": "1b47f4a1a81dd9dd7d0e4d9422a4f6e04d8c4c52",
-      "previous_ci": "https://github.com/kirimba1024/structura-edit/actions/runs/34701740874",
-      "previous_ci_results": {
-        "macos-14/3.11": "passed",
-        "ubuntu-22.04/3.9": "2 failed, 870 passed, 2 skipped",
-        "ubuntu-22.04/3.11": "2 failed, 870 passed, 2 skipped",
-        "windows-2022/3.11": "4 failed, 868 passed, 2 skipped"
-      },
-      "remaining_remote_checks": "Placement control position with wrapped hints; repeat destination column overlap. Fixed locally in 1b47f4a; Linux/Windows confirmation awaits push.",
-      "local_layout_checks": {
-        "qt_6_10_2": "8 passed",
-        "qt_6_8_3": "8 passed"
-      },
-      "publication_block": "Resolved: user explicitly confirmed source publication to kirimba1024/structura-edit and the workspace reference in kirimba1024/structura. Application and package uploads remain excluded."
+      "status": "published; source code only",
+      "code_commit": "a73d635281e917bf58ef494190ce522fe3766cc8",
+      "release": "https://github.com/kirimba1024/structura-edit/releases/tag/v0.1.0a2",
+      "ci": "https://github.com/kirimba1024/structura-edit/actions/runs/34703978269",
+      "ci_status": "passed",
+      "final_local_layout_checks": "8 passed on Qt 6.10.2; final Windows/Linux Qt 6.8 coverage passed in CI"
     },
     "packaging": {
       "status": "passed",
@@ -615,12 +694,28 @@
       "Teleport rechecks camera position and direction before publishing a ready result; deterministic regression failed 4 cases before the fix and passed all 6 after.",
       "Worker cancellation checks pipe readiness instead of waiting indefinitely for a silent peer; the new regression failed before the fix.",
       "Recovery fsync uses writable handles on Windows and read-only handles on POSIX; JSON is UTF-8 and manifest paths use POSIX separators.",
-      "Placement hint growth has its own row; repeat destination has an explicit column minimum. Geometry tests also compare positions relative to the placement panel."
+      "Placement hint growth has its own row. Repeat test now enforces the requested supported width and records JUnit screen/window dimensions; Windows initially reduced both windows to 1028 px on a 1024 px screen. The redundant destination column minimum was removed."
     ],
     "publication": {
       "scope": "Source code only, as explicitly clarified by the user. GitHub commits/tags and automatic source archives; no uploaded application, wheel, sdist, build manifest or checksums.",
       "local_artifacts": "Application and Python packages are retained locally for compatibility checks, not for distribution.",
-      "release_assets": []
+      "release_assets": [],
+      "status": "published",
+      "release": "https://github.com/kirimba1024/structura-edit/releases/tag/v0.1.0a2",
+      "published_at": "2026-09-12T16:10:53Z",
+      "tag": "v0.1.0a2",
+      "commit": "a73d635281e917bf58ef494190ce522fe3766cc8"
+    },
+    "workspace_ci": {
+      "run": "https://github.com/kirimba1024/structura/actions/runs/34703989075",
+      "commit": "c86ccd9b7d60d3ac0c07505d9600a5158a5e17d9",
+      "status": "passed",
+      "jobs": [
+        "Linux/Python 3.9",
+        "Linux/Python 3.11",
+        "macOS/Python 3.11",
+        "Windows/Python 3.11"
+      ]
     }
   }
 }
