@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("PySide6.QtWidgets")
@@ -17,7 +19,7 @@ def test_open_accepts_schematic_files_and_level_dat(qt_app, tmp_path, name):
         dialog.selectFile(str(path))
         dialog.accept()
         assert dialog.result() == QDialog.DialogCode.Accepted
-        assert dialog.path == str(path)
+        assert Path(dialog.path) == path
     finally:
         dialog.deleteLater()
 
@@ -39,7 +41,7 @@ def test_open_accepts_world_folder_or_current_world_directory(qt_app, tmp_path, 
         assert dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Open).isEnabled()
         dialog.accept()
         assert dialog.result() == QDialog.DialogCode.Accepted
-        assert dialog.path == str(world if select_folder else world / "level.dat")
+        assert Path(dialog.path) == (world if select_folder else world / "level.dat")
     finally:
         dialog.close()
         dialog.deleteLater()
@@ -55,7 +57,7 @@ def test_open_browses_regular_directories_without_accepting_them(qt_app, tmp_pat
         dialog.accept()
         assert dialog.result() == QDialog.DialogCode.Rejected
         assert dialog.path is None
-        assert dialog.directory().absolutePath() == str(folder)
+        assert Path(dialog.directory().absolutePath()) == folder
     finally:
         dialog.deleteLater()
 

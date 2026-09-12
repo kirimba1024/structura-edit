@@ -111,7 +111,7 @@ def test_repeat_panel_fits_long_values_without_overflow(qt_app, width):
     try:
         QTest.qWait(30)
         bar.reposition()
-        widgets = [widget for widget in bar.findChildren(QWidget) if widget.parentWidget() is bar]
+        widgets = [bar.layout().itemAt(index).widget() for index in range(bar.layout().count())]
         geometry = [widget.geometry() for widget in widgets]
         bar.copies.setValue(500_000)
         bar.gap.setValue(30_000_000)
@@ -121,7 +121,9 @@ def test_repeat_panel_fits_long_values_without_overflow(qt_app, width):
         assert bar.width() == host.width() and bar.height() == 100
         for index, rect in enumerate(geometry):
             assert bar.rect().contains(rect)
-            assert not any(rect.intersects(other) for other in geometry[index + 1:])
+            overlaps = [(type(widgets[index]).__name__, rect, type(widgets[other_index]).__name__, other)
+                        for other_index, other in enumerate(geometry) if other_index > index and rect.intersects(other)]
+            assert not overlaps, overlaps
         for field in (bar.copies, bar.gap):
             assert field.fontMetrics().horizontalAdvance(field.text()) < field.lineEdit().contentsRect().width()
     finally:

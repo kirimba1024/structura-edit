@@ -21,7 +21,12 @@ def read_json(path):
     path = Path(path)
     if path.stat().st_size > MAX_RECORD_BYTES:
         raise ValueError("Local record exceeds 128 MiB")
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _sync_file(path):
+    with path.open("r+b" if os.name == "nt" else "rb") as stream:
+        os.fsync(stream.fileno())
 
 
 def publish_bundle(root, key, write):
@@ -31,13 +36,12 @@ def publish_bundle(root, key, write):
     with TemporaryDirectory(prefix=".writing-", dir=directory) as temporary:
         stage = Path(temporary)
         metadata = write(stage)
-        files = {str(path.relative_to(stage)): digest(path) for path in stage.rglob("*") if path.is_file()}
+        files = {path.relative_to(stage).as_posix(): digest(path) for path in stage.rglob("*") if path.is_file()}
         metadata = dict(metadata, schema=1, files=files)
-        (stage / "record.json").write_text(json.dumps(metadata, ensure_ascii=False))
+        (stage / "record.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
         for file in stage.rglob("*"):
             if file.is_file():
-                with file.open("rb") as stream:
-                    os.fsync(stream.fileno())
+                _sync_file(file)
         sync_directory(stage)
         installed = directory / identifier
         stage.rename(installed)
@@ -45,8 +49,7 @@ def publish_bundle(root, key, write):
     pointer = directory / "current.json"
     old = read_json(pointer).get("current") if pointer.exists() else None
     atomic_write(pointer, json.dumps({"current": identifier, "previous": old}).encode())
-    with pointer.open("rb") as stream:
-        os.fsync(stream.fileno())
+    _sync_file(pointer)
     sync_directory(directory)
     sync_directory(directory.parent)
     for child in directory.iterdir():

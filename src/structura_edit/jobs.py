@@ -132,6 +132,10 @@ class Worker:
                     return
                 connection.send(TaskRequest(task_id, prepared))
                 while True:
+                    if closing.is_set():
+                        return
+                    if not connection.poll(0.05):
+                        continue
                     result = connection.recv()
                     if not isinstance(result, (TaskProgress, TaskSuccess, TaskFailure)):
                         raise ValueError('Invalid worker response')

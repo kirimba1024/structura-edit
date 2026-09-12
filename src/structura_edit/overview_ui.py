@@ -244,6 +244,11 @@ class OverviewController(QObject):
     def _publish(self, generation):
         if not self.intent.accepts(generation):
             return
+        if self.intent.destination is not None and (
+                self.window.world.camera_position() != self.last_position
+                or tuple(self.window.plotter.camera.direction) != self.last_direction):
+            self.cancel()
+            return
         if self.document_preparation is not None:
             request, ready = self.document_preparation
             self.document_preparation = None

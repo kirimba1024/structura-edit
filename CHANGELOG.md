@@ -11,6 +11,10 @@
 - Preserve exact map textures, entity icons and cave slices; keep overlays from
   resizing the 3D viewport.
 - Keep placement transform rows fixed when adjacent explanatory text wraps.
+- Reject a completed teleport if the camera moved or turned while its destination
+  was being prepared, including a cached result arriving before the next GUI tick.
+- Synchronize Windows recovery bundles through writable handles, retain UTF-8
+  metadata, and allow cancellation to stop waiting for an unresponsive worker pipe.
 - Reduce ChangeSet allocations and decoding cost while retaining atomic validation,
   NBT/entities, Save, Undo/Redo and stale-worker rejection.
 - Add reproducible flight/map benchmarks and checks for installed packages.

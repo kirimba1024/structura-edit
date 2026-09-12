@@ -1,5 +1,6 @@
 from contextlib import closing
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -45,7 +46,7 @@ def test_full_snapshot_keeps_exact_blocks_and_publishes_only_complete_builds(tmp
     assert (directory / "current.json").read_bytes() == pointer
     assert len(list(directory.glob("*.sqlite"))) == 1
     assert before == {path: path.read_bytes() for path in before}
-    assert json.loads(pointer)["file"] == result["path"].split("/")[-1]
+    assert json.loads(pointer)["file"] == Path(result["path"]).name
     assert open_snapshot(result['path'])['path'] == result['path']
     next((world / 'region').glob('*.mca')).touch()
     with pytest.raises(ValueError, match='World or textures changed'):

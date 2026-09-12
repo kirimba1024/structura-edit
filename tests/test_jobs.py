@@ -1,5 +1,7 @@
 import time
+import multiprocessing
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -23,6 +25,24 @@ def wait_stopped(worker):
     while worker.stopping and time.monotonic() < end:
         time.sleep(0.001)
     assert not worker.stopping
+
+
+def test_cancellation_does_not_wait_for_a_silent_pipe_peer():
+    connection, peer = multiprocessing.Pipe()
+    worker = Worker()
+    worker._process = Mock()
+    worker._process.is_alive.return_value = True
+    worker._connection = connection
+    try:
+        worker.submit("overview_open", path="unanswered.sqlite")
+        assert peer.poll(2)
+        worker.close()
+        wait_stopped(worker)
+        assert not worker.busy
+    finally:
+        peer.close()
+        worker.close()
+        wait_stopped(worker)
 
 
 def test_recipe_failure_is_atomic(edit):

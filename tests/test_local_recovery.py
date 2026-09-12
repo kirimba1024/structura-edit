@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import pytest
 
@@ -7,6 +8,24 @@ from structura_edit.changes import _Cell
 from structura_edit.drafts import list_drafts, restore_draft, save_draft
 from structura_edit.fragments import list_fragments, load_fragment, save_fragment
 from structura_edit.placement import Placement
+
+
+def test_bundle_preserves_unicode_metadata_and_synchronizes_portably(tmp_path):
+    from structura_edit.local_store import publish_bundle, read_bundle
+
+    def write(stage):
+        file = stage / "Сборка-🌍.nbt"
+        file.write_bytes(b"preserved payload")
+        if os.name != "nt":
+            file.chmod(0o444)
+        return {"name": "Сборка 🌍"}
+
+    saved = publish_bundle(tmp_path, "fixture", write)
+    metadata = read_bundle(saved)
+    assert metadata["name"] == "Сборка 🌍"
+    assert list(metadata["files"]) == ["Сборка-🌍.nbt"]
+    assert (saved / "Сборка-🌍.nbt").read_bytes() == b"preserved payload"
+    assert "Сборка 🌍" in (saved / "record.json").read_bytes().decode("utf-8")
 
 
 def test_draft_recovers_nbt_bounds_saved_delta_without_old_history(edit, tmp_path):
