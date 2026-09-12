@@ -501,9 +501,9 @@
         "No in-game format acceptance in this pass"
       ]
     },
-    "edit_pypi": "First project publisher is not configured; PyPI management requires account login. Publish editor wheel and app in GitHub Releases.",
+    "edit_pypi": "Editor publication is source-only. No new PyPI upload or publisher setup is planned.",
     "edit": {
-      "status": "Built locally; final layout fixes are not pushed and no GitHub release is created",
+      "status": "Source publication pending; final layout fixes are local. Desktop app and binary release uploads are cancelled.",
       "code_commit": "1b47f4a1a81dd9dd7d0e4d9422a4f6e04d8c4c52",
       "previous_ci": "https://github.com/kirimba1024/structura-edit/actions/runs/34701740874",
       "previous_ci_results": {
@@ -517,7 +517,7 @@
         "qt_6_10_2": "8 passed",
         "qt_6_8_3": "8 passed"
       },
-      "publication_block": "Automatic approval review rejected push and release asset upload, including a retry after public repository/admin and diff verification. It requires explicit user approval naming the public destinations and payload."
+      "publication_block": "Automatic approval review rejected the source-only push after the user clarified scope, stating that trusted user content must explicitly name the destination repository. No application or package was uploaded. Local source changes remain unpublished until destination confirmation."
     },
     "packaging": {
       "status": "passed",
@@ -608,13 +608,19 @@
         "Load here",
         "World map zoom"
       ],
-      "limitation": "Ad hoc signing, not notarized; checked on macOS 26.6.2 arm64 only. Minimum macOS 13, real native input and stable frame-time acceptance remain pending."
+      "limitation": "Ad hoc signing, not notarized; checked on macOS 26.6.2 arm64 only. Minimum macOS 13, real native input and stable frame-time acceptance remain pending.",
+      "distribution": "Local verification only; excluded from GitHub release assets by user instruction."
     },
     "regressions": [
       "Teleport rechecks camera position and direction before publishing a ready result; deterministic regression failed 4 cases before the fix and passed all 6 after.",
       "Worker cancellation checks pipe readiness instead of waiting indefinitely for a silent peer; the new regression failed before the fix.",
       "Recovery fsync uses writable handles on Windows and read-only handles on POSIX; JSON is UTF-8 and manifest paths use POSIX separators.",
       "Placement hint growth has its own row; repeat destination has an explicit column minimum. Geometry tests also compare positions relative to the placement panel."
-    ]
+    ],
+    "publication": {
+      "scope": "Source code only, as explicitly clarified by the user. GitHub commits/tags and automatic source archives; no uploaded application, wheel, sdist, build manifest or checksums.",
+      "local_artifacts": "Application and Python packages are retained locally for compatibility checks, not for distribution.",
+      "release_assets": []
+    }
   }
 }

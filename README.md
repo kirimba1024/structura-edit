@@ -17,15 +17,9 @@ within their current minor series; older wheels are rejected during installation
 The GUI includes Qt/VTK and optional format readers; the base import loads neither
 Qt nor VTK. Native GUI verification is currently on macOS.
 
-Available downloads are listed in [GitHub Releases](https://github.com/kirimba1024/structura-edit/releases).
-Install a downloaded Python wheel with its GUI extra:
-
-```bash
-python -m pip install './structura_edit-0.1.0a2-py3-none-any.whl[gui]'
-structura-edit
-```
-
-For development, install all three source packages from the workspace:
+GitHub contains source code. Releases identify source versions; desktop application
+bundles and binary packages are not distributed there. Install all three source
+packages from the workspace:
 
 ```bash
 git clone --recurse-submodules https://github.com/kirimba1024/structura.git
@@ -37,8 +31,8 @@ structura-edit
 ```
 
 On Windows activate with `.venv-edit\Scripts\activate`. For headless use omit
-`gui` and choose core's optional readers as needed. A bundled Apple Silicon app
-and its installation check are described in [packaging](packaging/README.md).
+`gui` and choose core's optional readers as needed. An optional local Apple Silicon
+build for installation checks is described in [packaging](packaging/README.md).
 
 ```bash
 structura-edit house.nbt --assets /path/to/client.jar
