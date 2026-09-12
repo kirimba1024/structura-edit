@@ -10,6 +10,7 @@
   stale maps after reloading a document with the same revision.
 - Preserve exact map textures, entity icons and cave slices; keep overlays from
   resizing the 3D viewport.
+- Keep placement transform rows fixed when adjacent explanatory text wraps.
 - Reduce ChangeSet allocations and decoding cost while retaining atomic validation,
   NBT/entities, Save, Undo/Redo and stale-worker rejection.
 - Add reproducible flight/map benchmarks and checks for installed packages.

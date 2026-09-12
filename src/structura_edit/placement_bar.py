@@ -111,7 +111,7 @@ class PlacementBar(OverlayBar):
                 button.setAccessibleName(button.toolTip())
                 self.transforms.append(button)
                 grid.addWidget(button, row, column)
-        layout.addWidget(self.transform_grid, 1, 0, 3, 4, Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.transform_grid, 1, 0, 3, 4, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.more = self._button("Options…", lambda: None)
         self.more.setToolTip("Exact position, Copy air and repeated placement")
         self.more.setCheckable(True)
