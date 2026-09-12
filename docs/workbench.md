@@ -138,8 +138,9 @@ slash and `~0` tilde. New edits or Undo make targets stale. [API example](api.md
 
 ## Maps and world editing
 
-The compact map has six views. **Auto** selects the surface or a cave floor near the
-camera's height. **Cave** replaces the old bottom projection. Surface and Slices remain
+The compact map follows the camera from above, using prepared surface tiles.
+Expand with M for six projections. **Auto** selects the surface or a cave floor near the
+camera's height. **Cave** replaces the bottom projection. Surface and Slices remain
 available; Slices starts views at the camera's block. Click a view to enlarge it, Map to restore the grid.
 In the enlarged view, click a block or visible entity icon to select it; the icon takes
 priority over the block beneath it. Shift-click extends selection.
@@ -162,8 +163,10 @@ area around the camera while refining the prepared overview from its cache.
 World settings and F5 do not reopen an old world while a schematic is active.
 
 **Build / Update overview** prepares saved chunks as a persistent 3D/2D snapshot.
-Opening a world reuses a valid snapshot or starts its first preparation. Updates to
-world files, textures or the cache version invalidate the old snapshot on reopening.
+Opening a world waits for its prepared snapshot and visible scene. A valid snapshot is reused.
+Updates to world files, textures or the cache version produce a new snapshot; unchanged
+sections and compatible map tiles are reused. Surface tiles preserve block texture pixels
+and prepared zoom levels across the saved dimension.
 World map pan/zoom uses that snapshot; Go to/double-click prepares a destination before
 moving. Manual movement, another destination or Cancel cancels the pending teleport.
 Auto detail prepares nearby geometry while moving. Auto also follows the camera

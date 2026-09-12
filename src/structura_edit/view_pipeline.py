@@ -89,10 +89,13 @@ class ViewPipeline:
         self.scene.accept_preview()
         self.scene.display_revision = session.revision
         self.displayed = replace(self.displayed, session=session.fork(), change=None)
+        self.scene.display_state = self.displayed.state
         return True
 
     def rebase(self, session):
         self.current = self.displayed = replace(self.current, session=session.fork(), change=None, fit=False)
+        self.scene.display_state = self.displayed.state
+        self.scene.display_revision = session.revision
         self.map_queued = True
 
     def flush(self):
@@ -189,6 +192,7 @@ class ViewPipeline:
 
     def _presented(self, request, data):
         self.scene.height = request.height
+        self.scene.display_state = request.state
         if self.present_scene is not None:
             self.present_scene(request)
         if self.displayed is not None and self.displayed.state._id == request.state._id:

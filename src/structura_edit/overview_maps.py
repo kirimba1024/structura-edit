@@ -1,73 +1,64 @@
-from functools import lru_cache
-
 import numpy as np
 
-from structura_render.lod_geometry import average_rgba
 from structura_render.color_space import linear_to_srgb, srgb_to_linear
 
-from .overview_store import MAP_SPAN, encode_arrays, encode_image
+from .overview_store import MAP_SPAN, clip_overview_source, encode_arrays, encode_image
 from .height_slice import HeightSlice
+from .map_images import MAP_TEXTURE_SIZE, map_faces, map_tiles, render_map
 
 
 EMPTY_HEIGHT = np.iinfo(np.int32).min
-VOID_COLOR = (27, 33, 42)
+MAP_MIN_LEVEL = -4
 
 
-def build_map_pyramid(store, columns, bank, progress, below_y=None, height_slice=HeightSlice()):
-    from structura_render.block_colours import block_color
-    from structura_render.atlas import face_texture_key
+def column_image(store, cx, cz, bank, below_y, height_slice):
+    low, high = store.db.execute("SELECT MIN(y), MAX(y) FROM blocks WHERE x BETWEEN ? AND ? AND z BETWEEN ? AND ?",
+                                (cx - 1, cx, cz - 1, cz)).fetchone()
+    height = np.full((16, 16), EMPTY_HEIGHT, np.int32)
+    if low is None:
+        return np.zeros((256, 256, 4), np.uint8), height
+    low, high = low * 16, (high + 1) * 16
+    source = store.read_region((cx * 16 - 1, low, cz * 16 - 1), (cx * 16 + 16, high, cz * 16 + 16))
+    clip_overview_source(source, low, height_slice)
+    if below_y is not None:
+        source.present.array[:, max(0, below_y - low):, :] = -1
+    tiles = map_tiles(source.palette, map_faces(source, bank), "top", MAP_TEXTURE_SIZE)
+    pixels = render_map(source.present.array, "top", (0, source.size[1]), tiles, area=(1, 1, 17, 17))
+    visible = (tiles[..., 3] > 0).any(axis=(1, 2))[source.present.array[1:, ::-1, 1:]]
+    height[visible.any(axis=1)] = (high - visible.argmax(axis=1))[visible.any(axis=1)]
+    image = np.full((*pixels.shape[:2], 4), 255, np.uint8)
+    image[..., :3] = pixels
+    return image, height
 
-    @lru_cache(maxsize=8192)
-    def color_for(name):
-        faces = bank.resolve(name) or {}
-        image = faces.get(face_texture_key("up", faces)) if faces else None
-        return average_rgba(image) if image is not None else np.asarray((*block_color(name, "family"), 255), np.uint8)
 
-    groups = {}
-    for x, z in columns:
-        groups.setdefault((x // 8, z // 8), []).append((x, z))
-    for done, ((tx, tz), chunks) in enumerate(sorted(groups.items()), 1):
-        image = np.zeros((MAP_SPAN, MAP_SPAN, 4), np.uint8)
-        for cx, cz in chunks:
-            colors = np.zeros((16, 16, 3), np.float64)
-            remaining = np.ones((16, 16), np.float64)
-            height = np.full((16, 16), EMPTY_HEIGHT, np.int32)
-            sections = store.db.execute("SELECT y FROM blocks WHERE x=? AND z=? ORDER BY y DESC", (cx, cz)).fetchall()
-            for (sy,) in sections:
-                if below_y is not None and sy * 16 >= below_y:
-                    continue
-                source = store.read_region((cx * 16, sy * 16, cz * 16), (cx * 16 + 16, sy * 16 + 16, cz * 16 + 16))
-                palette = np.asarray([*(color_for(name) for name in source.palette), (0, 0, 0, 0)], np.float64)
-                for ly in range(15, -1, -1):
-                    y = sy * 16 + ly
-                    if below_y is not None and y >= below_y:
-                        continue
-                    if height_slice.mode != "all" and (y > height_slice.y or (height_slice.mode == "layer" and y < height_slice.y)):
-                        continue
-                    pixels = palette[source.present.array[:, ly, :]]
-                    alpha = pixels[..., 3] / 255
-                    visible = alpha > 0
-                    height[(height == EMPTY_HEIGHT) & visible] = y + 1
-                    colors += pixels[..., :3] * (remaining * alpha)[..., None]
-                    remaining *= 1 - alpha
-                if (remaining < 1 / 255).all():
-                    break
-            colors += remaining[..., None] * VOID_COLOR
-            result = np.full((16, 16, 4), 255, np.uint8)
-            result[..., :3] = np.rint(colors).clip(0, 255).astype(np.uint8)
-            x, z = (cx % 8) * 16, (cz % 8) * 16
-            image[z:z + 16, x:x + 16] = result.transpose(1, 0, 2)
-            store.db.execute("INSERT INTO surfaces VALUES (?,?,?)", (cx, cz, encode_arrays(height=height)))
-        store.db.execute("INSERT INTO maps VALUES (?,?,?,?)", (0, tx, tz, encode_image(image)))
-        progress("Building map", done, len(groups))
-    if not groups:
+def build_map_pyramid(store, columns, bank, progress, below_y=None, height_slice=HeightSlice(), *, reuse=None):
+    keys = set()
+    for done, (cx, cz) in enumerate(columns, 1):
+        if reuse is not None and reuse.column(cx, cz):
+            keys.update((cx * 2 + dx, cz * 2 + dz) for dx in range(2) for dz in range(2))
+            progress("Building map", done, len(columns))
+            continue
+        image, height = column_image(store, cx, cz, bank, below_y, height_slice)
+        for dx in range(2):
+            for dz in range(2):
+                key = cx * 2 + dx, cz * 2 + dz
+                pixels = image[dz * MAP_SPAN:(dz + 1) * MAP_SPAN, dx * MAP_SPAN:(dx + 1) * MAP_SPAN]
+                store.db.execute("INSERT INTO maps VALUES (?,?,?,?)", (MAP_MIN_LEVEL, *key, encode_image(pixels)))
+                keys.add(key)
+        store.db.execute("INSERT INTO surfaces VALUES (?,?,?)", (cx, cz, encode_arrays(height=height)))
+        progress("Building map", done, len(columns))
+        if done % 64 == 0:
+            store.db.commit()
+    if not keys:
         return 0
+    groups = {(x // 8, z // 8) for x, z in columns}
     extent = max(max(p[axis] for p in groups) - min(p[axis] for p in groups) + 1 for axis in (0, 1))
     maximum = max(1, (extent - 1).bit_length())
-    keys = set(groups)
-    for level in range(1, maximum + 1):
+    for level in range(MAP_MIN_LEVEL + 1, maximum + 1):
         parents = {(x // 2, z // 2) for x, z in keys}
         for x, z in sorted(parents):
+            if reuse is not None and reuse.map((level, x, z)):
+                continue
             image = np.zeros((MAP_SPAN * 2, MAP_SPAN * 2, 4), np.uint8)
             for dx in range(2):
                 for dz in range(2):
@@ -76,6 +67,7 @@ def build_map_pyramid(store, columns, bank, progress, below_y=None, height_slice
                         image[dz * MAP_SPAN:(dz + 1) * MAP_SPAN, dx * MAP_SPAN:(dx + 1) * MAP_SPAN] = child
             store.db.execute("INSERT INTO maps VALUES (?,?,?,?)", (level, x, z, encode_image(downsample_map(image))))
         keys = parents
+        progress("Building map scales", level - MAP_MIN_LEVEL, maximum - MAP_MIN_LEVEL)
     return maximum
 
 

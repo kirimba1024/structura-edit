@@ -69,6 +69,26 @@ def test_callback_can_start_next_task_without_losing_its_state(runner):
     assert ("progress", "Open", 1, 2) in events
 
 
+@pytest.mark.parametrize("kind", ["world", "render", "map", "item_icons", "catalog", "changes", "object_search"])
+def test_background_reading_keeps_selection_available(runner, kind):
+    tasks, _ = runner
+    tasks.submit(kind, lambda value: None)
+    assert tasks.busy and not tasks.selection_busy
+    tasks.worker.complete(None)
+    tasks.poll()
+    assert not tasks.selection_busy
+
+
+@pytest.mark.parametrize("kind", ["apply", "history", "open", "paint", "connected", "operation"])
+def test_document_and_selection_changes_hold_selection_until_finished(runner, kind):
+    tasks, _ = runner
+    tasks.submit(kind, lambda value: None)
+    assert tasks.selection_busy
+    tasks.worker.complete(None)
+    tasks.poll()
+    assert not tasks.selection_busy
+
+
 def test_start_failure_reports_error_and_allows_retry(runner):
     tasks, events = runner
     tasks.worker.error = OSError("Cannot start process")

@@ -22,7 +22,7 @@ from .overview_model import OverviewNode, TILE_SPAN
 from .array_codec import encode_arrays as encode_arrays
 
 
-OVERVIEW_VERSION = 7
+OVERVIEW_VERSION = 8
 MAX_SNAPSHOT_BYTES = 8 * 1024**3
 MAP_SPAN = 128
 

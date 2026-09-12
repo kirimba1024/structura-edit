@@ -77,8 +77,8 @@ def test_small_map_always_centers_camera_even_after_manual_large_map_pan(qt_app)
     try:
         for position in ((0.25, 1.5, 20.5), (-23.1, 83.5, 112.5)):
             canvas.position = position
-            for view in VIEWS:
-                assert (canvas.screen_point(position, view) - canvas.tile_rect(view).center()).manhattanLength() < 1e-8
+            assert (canvas.screen_point(position, "top") - canvas.tile_rect("top").center()).manhattanLength() < 1e-8
+            assert all(canvas.tile_rect(view).isEmpty() for view in VIEWS if view != "top")
         canvas.layout.large = True
         canvas.layout.pan("top", QPointF(30, 20))
         assert canvas.screen_point(canvas.position, "top") != canvas.tile_rect("top").center()
@@ -109,6 +109,7 @@ def test_camera_requests_run_off_gui_with_one_pending_position_and_reject_old_so
         return (context_key(request), None), {"top": np.full((2, 2, 3), color, dtype=np.uint8)}, None, "", {}, cut, cave_y
     monkeypatch.setattr("structura_edit.camera_maps.render_camera_maps", render)
     canvas = MapCanvas()
+    canvas.layout.large = True
     cache = MapCacheView(canvas, tmp_path)
     maps = CameraMaps(canvas, cache)
     maps.sliced = True

@@ -49,28 +49,33 @@ def build_source_maps(source, assets=None, max_pixels=MAX_MAP_PIXELS, *, progres
     return MapRenderer(source, assets).images(cut=cut, max_pixels=max_pixels, progress=progress)
 
 
+def map_faces(source, bank):
+    from structura_render.block_model import particle_texture
+    from structura_render.textures import tint_for
+
+    faces = []
+    with bank.context.activate():
+        for name, raw in zip(source.palette, source.palette_raw):
+            textures = bank.resolve(name)
+            if not textures:
+                props = {key: str(value) for key, value in raw.get('Properties', {}).items()}
+                texture = particle_texture(name, props)
+                image = bank.read_texture(texture, tint_for(name, props)) if texture else None
+                textures = {'all': image} if image is not None else {}
+            faces.append(textures)
+    return faces
+
+
 class MapRenderer:
     def __init__(self, source, assets=None):
         from structura_render.mesh import voxel_state
-        from structura_render.block_model import particle_texture
-        from structura_render.textures import tint_for
 
         world = getattr(source, "world", False)
         check_preview_budget(source.size, world=world)
         self.size = source.size
         self.state, _, _, _ = voxel_state(source, **({"max_voxels": MAX_COLUMN_CELLS} if world else {}))
         self.palette = source.palette
-        bank = texture_bank(assets)
-        self.faces = []
-        with bank.context.activate():
-            for name, raw in zip(source.palette, source.palette_raw):
-                textures = bank.resolve(name)
-                if not textures:
-                    props = {key: str(value) for key, value in raw.get('Properties', {}).items()}
-                    texture = particle_texture(name, props)
-                    image = bank.read_texture(texture, tint_for(name, props)) if texture else None
-                    textures = {'all': image} if image is not None else {}
-                self.faces.append(textures)
+        self.faces = map_faces(source, texture_bank(assets))
         self.tiles = {}
         self.detail_tiles = {}
         self.rendered = {}
@@ -84,13 +89,13 @@ class MapRenderer:
             self._environment = MapEnvironment(self.state, self.palette)
         return self._environment
 
-    def images(self, *, cut=None, max_pixels=MAX_MAP_PIXELS, progress=None, cave_y=None):
-        pixels = sum(math.prod(plane_size(self.size, view)) for view in VIEWS)
+    def images(self, *, cut=None, max_pixels=MAX_MAP_PIXELS, progress=None, cave_y=None, views=VIEWS):
+        pixels = sum(math.prod(plane_size(self.size, view)) for view in views)
         if pixels > max_pixels:
             raise ValueError("Map projections exceed the pixel budget; reduce the loaded region")
         scale = max(1, min(MAP_TEXTURE_SIZE, int(math.sqrt(max_pixels / max(1, pixels)))))
         images = {}
-        for view in VIEWS:
+        for view in views:
             cave = cave_view(view, cut, cave_y)
             bounds = slice_bounds(self.size, cut, view)
             key = scale, bounds, cave_y if cave else None
@@ -109,7 +114,7 @@ class MapRenderer:
                 self.rendered[view] = key, pixels
             images[view] = self.rendered[view][1]
             if progress:
-                progress("Projections", len(images), len(VIEWS))
+                progress("Projections", len(images), len(views))
         return images
 
     def details(self, areas, *, cut=None, cave_y=None):

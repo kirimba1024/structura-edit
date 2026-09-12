@@ -38,6 +38,7 @@ class Task:
     protected: bool = False
     resources: bool = False
     replaces_document: bool = False
+    blocks_selection: bool = True
 
 
 def _open(args, context):
@@ -325,17 +326,17 @@ TASKS = {
     "overview_select": Task(_overview_select, "Choosing detail…"),
     "overview_surface": Task(_overview_surface, "Preparing destination…"),
     "open": Task(_open, "Opening…", replaces_document=True),
-    "world": Task(_world, "Loading world…", resources=True, replaces_document=True),
+    "world": Task(_world, "Loading world…", resources=True, replaces_document=True, blocks_selection=False),
     "save": Task(_save, "Saving…", protected=True),
     "apply": Task(_apply, "Applying…", protected=True),
     "history": Task(_history, "Restoring history…", protected=True),
-    "render": Task(_render, "Building preview…", resources=True),
+    "render": Task(_render, "Building preview…", resources=True, blocks_selection=False),
     "render_preview": Task(_render_preview, "Building preview…", resources=True),
     "export_review": Task(_export_review, "Checking export…"),
     "export": Task(_export, "Exporting…", protected=True),
-    "map": Task(_map, "", resources=True),
+    "map": Task(_map, "", resources=True, blocks_selection=False),
     "objects": Task(_objects, "Preparing object data…"),
-    "object_search": Task(_object_search, "Finding objects…"),
+    "object_search": Task(_object_search, "Finding objects…", blocks_selection=False),
     "nbt_targets": Task(_nbt_targets, "Collecting all search results…"),
     "nbt_batch": Task(_nbt_batch, "Preparing object data changes…"),
     "operation": Task(_operation, "Preparing change…"),
@@ -343,15 +344,15 @@ TASKS = {
     "planar": Task(_planar, "Selecting a flat face…"),
     "connected": Task(_connected, "Selecting connected blocks…"),
     "fragment_save": Task(_fragment_save, "Saving fragment…", protected=True),
-    "fragment_list": Task(_fragment_list, "Reading fragments…"),
+    "fragment_list": Task(_fragment_list, "Reading fragments…", blocks_selection=False),
     "fragment_load": Task(_fragment_load, "Loading fragment…"),
     "draft_save": Task(_draft_save, "Saving local draft…", protected=True),
-    "draft_list": Task(_draft_list, "Reading local drafts…"),
+    "draft_list": Task(_draft_list, "Reading local drafts…", blocks_selection=False),
     "draft_restore": Task(_draft_restore, "Recovering local draft…", replaces_document=True),
-    "catalog": Task(_catalog, "Reading material catalog…"),
-    "item_icons": Task(_item_icons, "", resources=True),
-    "changes": Task(_changes, "Collecting unsaved changes…"),
-    "backups": Task(_backups, "Reading backups…"),
+    "catalog": Task(_catalog, "Reading material catalog…", blocks_selection=False),
+    "item_icons": Task(_item_icons, "", resources=True, blocks_selection=False),
+    "changes": Task(_changes, "Collecting unsaved changes…", blocks_selection=False),
+    "backups": Task(_backups, "Reading backups…", blocks_selection=False),
     "restore_backup": Task(_backups, "Restoring backup…", protected=True),
     "conflicts": Task(_conflicts, "Checking the world for conflicts…"),
     "clipboard": Task(_clipboard, "Preparing clipboard…", resources=True),

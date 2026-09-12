@@ -20,7 +20,7 @@
 | Поиск и инспекция | `object_search.py`, `object_search_ui.py`; `inspection.py`/`inspection_ui.py`; NBT-поиск — `nbt_search.py`/`nbt_search_ui.py` |
 | Сцена и preview | `render_source.py`, `sections.py`, `preview.py` → `render_packets.py` → `view_pipeline.py` → `scene.py`; кэши — `section_cache.py`, `geometry_cache.py` |
 | VTK-ресурсы | `scene_geometry.py`, `scene_textures.py`, `scene_retirement.py`: bounded static actors, shared textures и порционное удаление |
-| Обзор мира | `overview_model.py`, `overview_ui.py`; сборка/хранение — `overview_build.py`, `overview_store.py`; VTK — `overview_scene.py` |
+| Обзор мира | `overview_model.py`, `overview_ui.py`; сборка/хранение — `overview_build.py`, `overview_store.py`; повторное использование — `overview_reuse.py`; VTK — `overview_scene.py` |
 | Карты и срез | `height_slice.py`; очередь — `camera_maps.py`, worker — `camera_map_render.py`, атлас — `map_cache.py`, вид — `map_canvas.py`/`map_layout.py`; detail — `map_detail.py`, cave — `map_environment.py`, markers — `map_entities.py`; мировой кэш — `map_image_cache.py` |
 | Ввод и оформление | `navigation.py`, `mouse_look.py`, `cocoa_mouse.py`; общие значения — `appearance.py`, кожа — `theme.py`, `data/editor.qss` |
 | Локальные данные | `local_store.py`, `patch_codec.py`, `drafts.py`, `fragments.py`; диагностика — `action_log.py` |
@@ -147,8 +147,11 @@ selection/operations, inspect/export/copy/place, history seek и draft. Меню
 кнопки и соответствующие handlers используют эти правила; protected task запрещает
 Discard, Apply ждёт показанную сцену. Специальные правила world/overview, ресурсных
 и модальных контроллеров остаются у них; объединять их только по проверенному сценарию.
-Мутации и поиск worker блокируют новый выбор; чтение мира, render и map сохраняют
-выбор показанных данных. Connected Select сохраняется до завершения поиска.
+Task.blocks_selection определяет блокировку выбора: мутации и изменение selection
+блокируют его; фоновые карты, иконки, каталоги и списки — нет. Scene хранит показанный
+снимок для picking во время замены области: координаты переводятся в текущую сессию,
+выбор блока принимается только при совпадении его состояния и наличии в новых границах.
+Connected Select сохраняется до завершения поиска.
 Выбор материала разрешён при готовом preview и инвалидирует его; просмотр объектов требует
 завершить preview. OperationPanel хранит Mix/Condition как значения, сохраняя Mix при смене операции.
 

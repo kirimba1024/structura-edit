@@ -141,7 +141,7 @@ class EditorWindow(QMainWindow):
         placement_ready = (self.document.session is not None and model is not None and not model.reason(self.document.session)
                            and (plan is None or bool(plan.change)))
         return editor_capabilities(self.document.session, busy=self.tasks.busy, protected=self.tasks.protected,
-                                   selection_busy=self.tasks.busy and self.tasks.kind not in ("world", "render", "map"),
+                                   selection_busy=self.tasks.selection_busy,
                                    selected=self.document.selected.current is not None, preview=self.document.pending,
                                    scene_ready=self.views.ready, placing=self.placement.active,
                                    repeating=self.repeat.active, stroke=self.paint.dragging, world=self.world.active,
@@ -556,7 +556,7 @@ class EditorWindow(QMainWindow):
         if self.placement.active:
             self.placement.pin(point)
             return
-        if not self.selection_actions.available() or self.document.pending is not None or self.scene.display_revision != self.document.session.revision:
+        if not self.selection_actions.available() or self.document.pending is not None or self.scene.display_revision is None:
             return
         if self.planar.active:
             self.planar.pick(self.scene.hit_at(self.document.session, point))
@@ -608,7 +608,7 @@ class EditorWindow(QMainWindow):
             self.overlay.set_hover(None)
             self.placement.hover(point)
             return
-        if point is None or not self.document.session or self.document.pending is not None or self.scene.display_revision != self.document.session.revision:
+        if point is None or not self.document.session or self.document.pending is not None or self.scene.display_revision is None:
             self.overlay.set_hover(None)
             self.inspection.hover(self.document.session)
             if self.document.selected.preview is not None:
@@ -674,7 +674,7 @@ class EditorWindow(QMainWindow):
 
     def sample_material(self, point):
         if (not self.document.session or self.tasks.busy or self.document.pending is not None or self.placement.active
-                or self.scene.display_revision != self.document.session.revision):
+                or self.scene.display_revision is None):
             return
         hit = self.scene.hit_at(self.document.session, point)
         if hit is not None:

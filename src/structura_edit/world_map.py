@@ -1,13 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 from collections import OrderedDict
 from math import floor, log2
-from time import monotonic
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
-from .overview_model import SETTLE_MILLISECONDS
 from .overview_store import MAP_SPAN
 from .map_image_cache import MapImageCache
 
@@ -15,11 +13,12 @@ from .map_image_cache import MapImageCache
 class WorldMap(QWidget):
     navigate = Signal(object)
     failed = Signal(str)
+    images_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.snapshot = None
-        self.images = {}
+        self.images = OrderedDict()
         self.view_states = OrderedDict()
         self.base = {}
         self.center = (0.0, 0.0)
@@ -31,7 +30,7 @@ class WorldMap(QWidget):
         self.target = None
         self.loaded = None
         self.future = None
-        self.deadline = 0.0
+        self.viewport = None
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="overview-map")
         self.cache = MapImageCache()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
@@ -54,6 +53,7 @@ class WorldMap(QWidget):
         self.target = self.loaded = None
         self.images.clear()
         self.base = self._images(snapshot["maps"]) if snapshot else {}
+        self.images_changed.emit()
         if snapshot:
             key = identity(snapshot)
             if key in self.view_states:
@@ -106,9 +106,14 @@ class WorldMap(QWidget):
     def request(self):
         if self.snapshot is None:
             return
-        level = min(self.snapshot["metadata"]["map_level"], max(0, floor(log2(1 / self.scale))))
-        lower = self.world_at(QPointF(0, 0))
-        upper = self.world_at(QPointF(self.width(), self.height()))
+        if self.viewport is None:
+            scale = self.scale
+            lower = self.world_at(QPointF(0, 0))
+            upper = self.world_at(QPointF(self.width(), self.height()))
+        else:
+            lower, upper, scale = self.viewport
+        metadata = self.snapshot["metadata"]
+        level = min(metadata["map_level"], max(metadata.get("map_min_level", 0), floor(log2(1 / scale))))
         bounds = self.snapshot["metadata"]["bounds"]
         lower = tuple(max(value, bounds[0][axis]) for value, axis in zip(lower, (0, 2)))
         upper = tuple(min(value, bounds[1][axis]) for value, axis in zip(upper, (0, 2)))
@@ -120,10 +125,7 @@ class WorldMap(QWidget):
             level += 1
         keys = tuple((level, x, z) for x in ranges[0] for z in ranges[1])
         target = self.snapshot["path"], keys
-        if target != self.target:
-            if self.target is None or self.target == self.loaded:
-                self.deadline = monotonic() + SETTLE_MILLISECONDS / 1000
-            self.target = target
+        self.target = target
 
     def tick(self):
         if self.future is not None and self.future[1].done():
@@ -132,14 +134,20 @@ class WorldMap(QWidget):
             try:
                 images = future.result()
                 if self.snapshot is not None and target[0] == self.snapshot["path"]:
-                    self.images = images
+                    for key, image in images.items():
+                        self.images[key] = image
+                        self.images.move_to_end(key)
+                    size = sum(image.sizeInBytes() for image in self.images.values())
+                    while size > self.cache.limit and self.images:
+                        size -= self.images.popitem(last=False)[1].sizeInBytes()
                     self.loaded = target
+                    self.images_changed.emit()
                     self.update()
             except Exception as error:
                 if target == self.target:
                     self.loaded = target
                     self.failed.emit(str(error))
-        if self.snapshot and self.isVisible() and self.future is None and self.target != self.loaded and monotonic() >= self.deadline:
+        if self.snapshot and (self.isVisible() or self.viewport is not None) and self.future is None and self.target != self.loaded:
             self.future = self.target, self.executor.submit(self.cache.read, *self.target)
 
     def paintEvent(self, event):
@@ -149,7 +157,7 @@ class WorldMap(QWidget):
         for offset in range(-self.height(), self.width(), 20):
             painter.drawLine(offset, self.height(), offset + self.height(), 0)
         for collection in (self.base, self.images):
-            for (level, x, z), image in collection.items():
+            for (level, x, z), image in sorted(collection.items(), reverse=True):
                 span = MAP_SPAN * 2**level
                 rect = QRectF(self.screen_at((x * span, z * span)), self.screen_at(((x + 1) * span, (z + 1) * span)))
                 if rect.intersects(QRectF(self.rect())):

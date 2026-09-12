@@ -34,6 +34,8 @@ class MapLayout:
 
     def tile_rect(self, view):
         width, height = self.canvas.width(), self.canvas.height()
+        if not self.large:
+            return QRectF(0, 0, width, height) if view == "top" else QRectF()
         if self.large and self.focused:
             strip = min(MAP_ICON_SIZE, height // 5, width // 5)
             if view == self.focused:
@@ -50,6 +52,8 @@ class MapLayout:
     def area(self, view):
         source = projection_rect(self.canvas.origin, self.canvas.size_blocks, view)
         tile = self.tile_rect(view)
+        if tile.isEmpty():
+            return QRectF()
         if not self.large or self.focused is not None and self.focused != view:
             width, height = plane_size(self.framed_size, view)
             width, height = min(width, COMPACT_SPAN), min(height, COMPACT_SPAN)

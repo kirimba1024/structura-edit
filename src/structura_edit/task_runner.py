@@ -27,6 +27,10 @@ class TaskRunner:
     def protected(self):
         return self.kind is not None and task_definition(self.kind).protected
 
+    @property
+    def selection_busy(self):
+        return self.busy and (self.kind is None or task_definition(self.kind).blocks_selection)
+
     def submit(self, kind, callback, **args):
         return self._submit(kind, callback, args, lambda task_id: self.worker.submit(kind, task_id=task_id, **args))
 

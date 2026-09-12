@@ -115,7 +115,9 @@ class OverviewController(QObject):
             return
         identity = self._world_identity()
         directory = snapshot_directory(storage_root(), *identity)
+        pending, self.document_preparation = self.document_preparation, None
         self.cancel()
+        self.document_preparation = pending
         if self.worker.busy:
             self.worker.close()
             self.job = None
@@ -133,8 +135,8 @@ class OverviewController(QObject):
             return
         metadata = snapshot["metadata"]
         if metadata["volatile"] and metadata["document_id"] != self.window.document.session._id:
-            self.progress.finish()
-            self.message.emit("Cached overview contains edits from another session · Build overview to refresh it")
+            self.build_queued = True
+            self.message.emit("Preparing a fresh overview for this session…")
             return
         if snapshot["path"] not in self.leases:
             self.leases[snapshot["path"]] = snapshot_lease(snapshot["path"])
@@ -151,6 +153,9 @@ class OverviewController(QObject):
             self.progress.start("Preparing view")
             self.refine()
         else:
+            if self.document_preparation is not None:
+                self.build_queued = True
+                return
             self.progress.finish()
             self.message.emit("Overview uses a different height slice · Update overview to match this view")
         if self.compatible():
@@ -272,6 +277,17 @@ class OverviewController(QObject):
 
     def prepare_document(self, request, ready):
         session = request.session
+        identity = self._world_identity(session)
+        if identity is not None and self.auto and (self.snapshot is None or self.identity != identity):
+            self.cancel()
+            self.snapshot = None
+            self.identity = identity
+            self.map_below = 120 if identity[1] == "minecraft:the_nether" else None
+            self.window.minimap.set_overview(None)
+            self.document_preparation = request, ready
+            self.progress.start("Preparing world")
+            self._open_cached()
+            return
         if self.snapshot is None or self.identity != self._world_identity(session) or not self.compatible(request.height):
             self.document_ready = request, True
             ready()
@@ -331,7 +347,11 @@ class OverviewController(QObject):
             identity = self.identity
             self._submit("overview_open", {"path": str(directory / filename)}, lambda result: self._opened(result, identity))
         except (OSError, ValueError, KeyError) as error:
-            self.failed.emit(f"Could not open the overview: {error}")
+            self.build_queued = self.auto
+            if self.auto:
+                self.message.emit("Preparing a fresh overview…")
+            else:
+                self.failed.emit(f"Could not open the overview: {error}")
 
     def tick(self):
         pending = self.document_preparation or self.document_ready
@@ -370,7 +390,8 @@ class OverviewController(QObject):
                     self._failed(payload)
         if self.open_queued and not self.worker.busy:
             self._open_cached()
-        if self.build_queued and not self.worker.busy and self.window.views.ready and not self.window.tasks.busy:
+        if (self.build_queued and not self.worker.busy and not self.window.tasks.busy
+                and (self.window.views.ready or self.document_preparation is not None)):
             self.build()
         if (not self.compatible() or self.document_ready is not None or not self.window.world.active
                 or self.identity != self._world_identity()):

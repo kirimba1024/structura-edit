@@ -2,7 +2,7 @@ import sqlite3
 from typing import NamedTuple
 
 from .map_images import MAX_MAP_PIXELS, MapRenderer
-from .map_projection import cave_view
+from .map_projection import VIEWS, cave_view
 from .resources import refresh_resources, resolve_assets
 
 
@@ -30,9 +30,8 @@ def render_camera_maps(request, cut, large, previous, cache_path, areas=(), auto
     renderer = previous.renderer
     if automatic:
         cut = renderer.environment.cut(cut)
-    budget = MAX_MAP_PIXELS if large else min(MAX_MAP_PIXELS, max(256_000, sum(
-        renderer.size[a] * renderer.size[b] * 2 for a, b in ((0, 1), (0, 2), (1, 2)))))
-    images = renderer.images(cut=cut, max_pixels=budget, cave_y=cave_y)
+    views = VIEWS if large else ("top",)
+    images = renderer.images(cut=cut, max_pixels=MAX_MAP_PIXELS, cave_y=cave_y, views=views)
     atlas, notice = None, ""
     state = CameraMapState(key, renderer)
     if large and request.height.mode == "all":

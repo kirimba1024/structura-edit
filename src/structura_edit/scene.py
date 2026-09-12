@@ -1,7 +1,7 @@
 import numpy as np
 import pyvista as pv
 
-from .picking import pick_block
+from .picking import Hit, pick_block
 from .loading import replacement_sizes
 from .appearance import GHOST_OPACITY, REMOVAL, REMOVAL_OPACITY
 from .scene_geometry import add_geometry_steps, remove_geometry
@@ -19,6 +19,7 @@ class Scene:
         self.ghost_actors = {}
         self.removed_bytes = {}
         self.display_revision = None
+        self.display_state = None
         self.entity_bounds = {}
         self.entity_keys = ()
         self.entity_markers = []
@@ -38,6 +39,7 @@ class Scene:
         self.signatures.clear()
         self.removed_bytes.clear()
         self.display_revision = None
+        self.display_state = None
         self.entity_bounds = {}
         self.entity_keys = ()
         self.entity_markers = []
@@ -152,7 +154,25 @@ class Scene:
         self.plotter.render()
 
     def hit_at(self, session, point):
-        return pick_block(session, *self.ray_at(point), height=self.height)
+        hit = self._block_hit(session, self.ray_at(point))
+        return hit if self._current_hit(session, hit) else None
+
+    def _block_hit(self, session, ray):
+        displayed = self.display_state or session
+        offset = np.asarray(getattr(displayed, "origin", (0, 0, 0))) - getattr(session, "origin", (0, 0, 0))
+        hit = pick_block(displayed, np.asarray(ray[0]) - offset, ray[1], height=self.height)
+        return Hit(tuple(int(p + d) for p, d in zip(hit.position, offset)), hit.normal) if hit else None
+
+    def _current_hit(self, session, hit):
+        if hit is None or not all(0 <= p < size for p, size in zip(hit.position, session.size)):
+            return False
+        if self.display_state is None:
+            return True
+        displayed = self.display_state
+        if displayed._id != session._id:
+            return False
+        position = tuple(p + new - old for p, new, old in zip(hit.position, session.origin, displayed.origin))
+        return displayed.state_at(position) == session.state_at(hit.position)
 
     def entity_at(self, session, point):
         return self.target_at(session, point)[1]
@@ -161,9 +181,13 @@ class Scene:
         from .entity_picking import nearest_entity
 
         ray = self.ray_at(point)
-        block = pick_block(session, *ray, height=self.height)
+        block = self._block_hit(session, ray)
         entity = nearest_entity(self.entity_keys, self.entity_boxes, *ray, block=block)
-        return (None, entity) if entity is not None else (block, None)
+        if entity is not None:
+            if self.display_state is not None and entity not in session._entities:
+                return None, None
+            return None, entity
+        return (block, None) if self._current_hit(session, block) else (None, None)
 
     def ray_at(self, point):
         renderer = self.plotter.renderer

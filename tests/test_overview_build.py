@@ -61,6 +61,48 @@ def test_map_reduction_preserves_known_void_and_ignores_unknown_color():
     assert (result[1, 1] == 0).all()
 
 
+def test_unchanged_snapshot_reuses_geometry_and_textured_maps(tmp_path, monkeypatch):
+    world = create_overview_world(tmp_path / "world")
+    directory = tmp_path / "overview"
+    first = build_overview(world, "minecraft:overworld", directory)
+    def unexpected(*args, **kwargs):
+        pytest.fail("Unchanged snapshot was recalculated")
+    monkeypatch.setattr("structura_edit.overview_build.build_geometry", unexpected)
+    monkeypatch.setattr("structura_edit.overview_build.simplify_lod", unexpected)
+    monkeypatch.setattr("structura_edit.overview_maps.column_image", unexpected)
+    second = build_overview(world, "minecraft:overworld", directory)
+    assert first["nodes"] == second["nodes"]
+    assert first["metadata"]["map_min_level"] == second["metadata"]["map_min_level"] == -4
+    with closing(OverviewStore(first["path"])) as a, closing(OverviewStore(second["path"])) as b:
+        for table in ("meshes", "maps", "surfaces"):
+            assert sorted(a.db.execute(f"SELECT * FROM {table}")) == sorted(b.db.execute(f"SELECT * FROM {table}"))
+
+
+def test_incremental_edit_and_neighbor_tiles_match_clean_rebuild(tmp_path, monkeypatch):
+    import structura_edit.overview_maps as maps
+
+    world = create_overview_world(tmp_path / "world")
+    directory = tmp_path / "overview"
+    build_overview(world, "minecraft:overworld", directory)
+    session = open_source(world, center=(8, 8, 8), radius=1, vertical_radius=16, include_entities=False)
+    position = tuple(p - o for p, o in zip((15, 5, 0), session.origin))
+    session.apply(session.set_block(position, "minecraft:gold_block"))
+    arguments = dict(edits=session.world_changes.patch, document_id=session._id, revision=session.revision)
+    columns = []
+    original = maps.column_image
+    def counted(store, x, z, *args):
+        columns.append((x, z))
+        return original(store, x, z, *args)
+    monkeypatch.setattr(maps, "column_image", counted)
+    incremental = build_overview(world, session.dimension, directory, **arguments)
+    assert set(columns) == {(0, 0), (1, 0)}
+    fresh = build_overview(world, session.dimension, tmp_path / "fresh", **arguments)
+    assert incremental["nodes"] == fresh["nodes"]
+    with closing(OverviewStore(incremental["path"])) as a, closing(OverviewStore(fresh["path"])) as b:
+        for table in ("meshes", "maps", "surfaces"):
+            assert sorted(a.db.execute(f"SELECT * FROM {table}")) == sorted(b.db.execute(f"SELECT * FROM {table}"))
+
+
 def test_snapshot_includes_unsaved_edits_and_builds_a_real_cut_surface(tmp_path):
     world = create_overview_world(tmp_path / "world")
     session = open_source(world, center=(8, 8, 8), radius=0, vertical_radius=16, include_entities=False)
