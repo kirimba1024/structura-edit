@@ -27,15 +27,24 @@ class CameraMaps(QObject):
     def target(self):
         if self.context is None:
             return None
-        cut = camera_cut(self.canvas.position, self.context.state.size) if self.sliced or self.automatic else None
-        return context_key(self.context), cut, self.canvas.layout.large, detail_areas(self.canvas), self.automatic, (camera_cut(self.canvas.position, self.context.state.size)[1] if self.canvas.dimension else None)
+        large = self.canvas.layout.large
+        cut = camera_cut(self.canvas.position, self.context.state.size) if large and (self.sliced or self.automatic) else None
+        cave_y = camera_cut(self.canvas.position, self.context.state.size)[1] if large and self.canvas.dimension else None
+        return context_key(self.context), cut, large, detail_areas(self.canvas), large and self.automatic, cave_y
+
+    @property
+    def needs_projection(self):
+        prepared = (self.canvas.overview and self.canvas.overview_surface and self.canvas.overview_current
+                    and self.canvas.height_mode == 'all')
+        return self.active and (self.canvas.layout.large or not prepared)
 
     @property
     def busy(self):
-        return self.future is not None or self.active and self.target() != self.shown
+        return self.future is not None or self.needs_projection and self.target() != self.shown
 
     def request(self, request):
         self.context = request
+        self.canvas.overview_current = not getattr(request.state, 'dirty', True)
         self.canvas.height_mode = getattr(request.height, 'mode', 'all')
         self.update()
 
@@ -55,7 +64,7 @@ class CameraMaps(QObject):
                 previous, images, atlas, notice, details, cut, cave_y = future.result()
                 if self.context is not None and target[0] == context_key(self.context):
                     self.previous = previous
-                    if self.active:
+                    if self.needs_projection and target[2] == self.canvas.layout.large:
                         self.canvas.set_images(images)
                         self.canvas.set_details(details)
                         self.canvas.map_cut = cut
@@ -70,7 +79,7 @@ class CameraMaps(QObject):
                     self.shown = target
                     self.failed.emit(f"Map unavailable: {error}")
         target = self.target()
-        if self.future is None and self.active and target is not None and target != self.shown:
+        if self.future is None and self.needs_projection and target is not None and target != self.shown:
             self.running = target
             self.future = self.executor.submit(render_camera_maps, self.context, target[1], target[2], self.previous, self.cache.path, target[3], target[4], target[5])
         if not self.busy:

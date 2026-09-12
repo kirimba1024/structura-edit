@@ -49,7 +49,7 @@ Windows CI использует Mesa software OpenGL; native navigation,
 имели ширину 1028 px. Минимальная ширина самого редактора — 1104 px.
 
 Совместимость зависимостей проверяется отдельно от workspace: импорт должен идти
-из wheels, а не editable checkout. Edit 0.1.0a3 требует core 0.6.2/render 0.8.3:
+из wheels, а не editable checkout. Edit 0.1.0a4 требует core 0.6.3/render 0.8.3:
 прежние опубликованные версии не содержали обязательных API. Собственный
 [CI редактора](../.github/workflows/verify.yml) собирает wheel, устанавливает его
 с опубликованными зависимостями на Linux/macOS/Windows и проверяет версии,

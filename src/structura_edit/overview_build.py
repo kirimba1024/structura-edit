@@ -15,12 +15,13 @@ from structura_render.lod_geometry import merge_lods, simplify_lod
 
 from .file_state import resource_stamp
 from .height_slice import HeightSlice
-from .overview_maps import build_map_pyramid
+from .overview_maps import MAP_MIN_LEVEL, build_map_pyramid
 from .overview_geometry import overview_geometry
 from .overview_model import OverviewNode, parent_key, tile_bounds
 from .overview_store import OVERVIEW_VERSION, OverviewStore, clip_overview_source, load_manifest
 from .resources import resolve_assets, texture_bank
 from .overview_cache import snapshot_build_slot
+from .overview_reuse import GEOMETRY_VERSION, OverviewReuse
 from .preview import build_geometry
 
 
@@ -82,7 +83,8 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
             store.set_metadata(version=OVERVIEW_VERSION, complete=False, world=str(world.path), dimension=dimension,
                                created=time(), assets=str(assets), resources=resources, below_y=below_y,
                                name=world.name, chunks=len(columns), document_id=document_id, revision=revision,
-                               height=asdict(height), assets_option=assets_option, volatile=bool(edits))
+                               height=asdict(height), assets_option=assets_option, volatile=bool(edits),
+                               geometry_version=GEOMETRY_VERSION)
             store.set_metadata(terrain_stamp=initial_stamp)
             for done, (cx, cz) in enumerate(columns, 1):
                 store.db.execute("INSERT INTO columns VALUES (?,?)", (cx, cz))
@@ -100,10 +102,16 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
                 raise ValueError("The saved chunks contain no supported block sections")
             lower = tuple(min(key[axis] for key in keys) * 16 for axis in range(3))
             upper = tuple((max(key[axis] for key in keys) + 1) * 16 for axis in range(3))
-            nodes, notices = {}, set()
+            reuse = OverviewReuse(store, directory)
+            nodes, notices = {}, set(reuse.warnings)
             occupied = [tuple(row[:3]) for row in store.db.execute("SELECT x,y,z,data FROM blocks ORDER BY x,y,z")
                         if np.any(np.frombuffer(zlib.decompress(row[3]), np.int32) >= 0)]
             for done, key in enumerate(occupied, 1):
+                reused = reuse.mesh((0, *key))
+                if reused is not None:
+                    nodes[reused.key] = reused
+                    progress("Building detail", done, len(occupied))
+                    continue
                 origin = tuple(value * 16 for value in key)
                 source = store.read_region(tuple(v - 1 for v in origin), tuple(v + 17 for v in origin))
                 clip_overview_source(source, origin[1] - 1, height)
@@ -132,6 +140,12 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
                     groups.setdefault(parent_key(child), []).append(child)
                 parents = set()
                 for done, (key, keys) in enumerate(sorted(groups.items()), 1):
+                    reused = reuse.mesh(key, keys)
+                    if reused is not None:
+                        nodes[key] = reused
+                        parents.add(key)
+                        progress(f"Building distance {level}/{maximum}", done, len(groups))
+                        continue
                     origin, _ = tile_bounds(key)
                     parts, size = [], 0
                     for child in keys:
@@ -152,10 +166,11 @@ def _build_snapshot(path, dimension, directory, *, assets, progress, chunks, bel
                     progress(f"Building distance {level}/{maximum}", done, len(groups))
                 children = parents
                 store.db.commit()
-            map_level = build_map_pyramid(store, columns, texture_bank(assets), progress, below_y, height)
+            map_level = build_map_pyramid(store, columns, texture_bank(assets), progress, below_y, height, reuse=reuse)
             if initial_stamp != terrain_stamp(region) or resources != resource_stamp(assets):
                 raise ValueError("World or textures changed during preparation; refresh the overview")
-            store.set_metadata(complete=True, bounds=(lower, upper), map_level=map_level, tiles=len(nodes), warnings=sorted(notices))
+            store.set_metadata(complete=True, bounds=(lower, upper), map_level=map_level, map_min_level=MAP_MIN_LEVEL,
+                               tiles=len(nodes), warnings=sorted(notices))
             store.db.commit()
         result = load_manifest(destination)
         temporary = directory / "current.json.tmp"

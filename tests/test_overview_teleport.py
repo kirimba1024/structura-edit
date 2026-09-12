@@ -7,6 +7,27 @@ from structura_edit.overview_model import DetailIntent, DetailTarget
 from structura_edit.overview_ui import OverviewController
 
 
+def test_initial_world_waits_for_snapshot_and_visible_tiles():
+    identity = ("world", "minecraft:overworld")
+    request, ready = object(), Mock()
+    window = SimpleNamespace(minimap=SimpleNamespace(set_overview=Mock()), views=SimpleNamespace(current=request))
+    controller = SimpleNamespace(window=window, snapshot=None, auto=True, identity=None,
+                                 cancel=Mock(), _world_identity=lambda session: identity,
+                                 progress=SimpleNamespace(start=Mock()), _open_cached=Mock())
+    requested = SimpleNamespace(session=object())
+    window.views.current = requested
+    OverviewController.prepare_document(controller, requested, ready)
+    assert controller.document_preparation == (requested, ready)
+    controller._open_cached.assert_called_once()
+    ready.assert_not_called()
+    intent = DetailIntent()
+    generation = intent.request(DetailTarget.at((0, 0, 0), 1080, 60))
+    controller.intent = intent
+    OverviewController._publish(controller, generation)
+    ready.assert_called_once_with()
+    assert controller.document_preparation is None and controller.document_ready == (requested, False)
+
+
 @pytest.mark.parametrize("arrival", ["selection", "upload"])
 @pytest.mark.parametrize("motion", ["position", "direction", "none"])
 def test_completed_overview_cannot_teleport_over_new_camera_input(arrival, motion):

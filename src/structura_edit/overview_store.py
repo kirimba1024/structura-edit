@@ -22,7 +22,7 @@ from .overview_model import OverviewNode, TILE_SPAN
 from .array_codec import encode_arrays as encode_arrays
 
 
-OVERVIEW_VERSION = 7
+OVERVIEW_VERSION = 8
 MAX_SNAPSHOT_BYTES = 8 * 1024**3
 MAP_SPAN = 128
 
@@ -55,7 +55,7 @@ def snapshot_directory(root, world, dimension):
 class OverviewStore:
     def __init__(self, path, *, create=False):
         self.path = Path(path).expanduser().resolve()
-        self.db = sqlite3.connect(str(self.path) if create else self.path.as_uri() + "?mode=ro", uri=not create)
+        self.db = sqlite3.connect(self.path.as_uri() + ("?mode=rwc" if create else "?mode=ro"), uri=True)
         if create:
             self.db.executescript("""
                 PRAGMA page_size=4096;

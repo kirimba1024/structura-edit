@@ -26,6 +26,8 @@ class MapCanvas(QWidget):
         self.cave_y = None
         self.tiles = {}
         self.overview = {}
+        self.overview_tiles = {}
+        self.overview_current = False
         self.overview_surface = False
         self.height_mode = 'all'
         self.origin = (0, 0, 0)
@@ -124,23 +126,31 @@ class MapCanvas(QWidget):
     def image_rect(self, rect, view, transform=None):
         return (transform or self.layout.transform(view)).mapRect(rect)
 
+    def draw_overview(self, painter, images, transform, rect):
+        for (level, x, z), image in sorted(images.items(), reverse=True):
+            span = MAP_SPAN * 2**level
+            target = transform.mapRect(QRectF(x * span, z * span, span, span))
+            if target.intersects(rect):
+                painter.drawImage(target, image)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
         painter.fillRect(self.rect(), QColor(MAP_BACKGROUND))
         for view, label in zip(VIEWS, LABELS):
             rect = self.tile_rect(view)
+            if rect.isEmpty():
+                continue
             transform = self.layout.transform(view)
             painter.save()
             painter.setClipRect(rect)
             if self.dimension:
                 painter.fillRect(rect, QBrush(QColor(BORDER), Qt.BrushStyle.BDiagPattern))
-            if view == "top" and self.map_cut is None and self.height_mode == 'all' and self.overview_surface:
-                for (level, x, z), image in self.overview.items():
-                    span = MAP_SPAN * 2**level
-                    target = transform.mapRect(QRectF(x * span, z * span, span, span))
-                    if target.intersects(rect):
-                        painter.drawImage(target, image)
+            surface = view == "top" and self.map_cut is None and self.height_mode == 'all' and self.overview_surface
+            if surface:
+                self.draw_overview(painter, self.overview, transform, rect)
+                if not self.overview_current:
+                    self.draw_overview(painter, self.overview_tiles, transform, rect)
             if self.layout.large:
                 for (tile_view, x, y), image in self.tiles.items():
                     if tile_view == view:
@@ -160,6 +170,8 @@ class MapCanvas(QWidget):
                 source = projection_rect(self.origin, self.size_blocks, view)
                 target = self.image_rect(QRectF(source.left() + x0, source.top() + y0, x1 - x0, y1 - y0), view, transform)
                 painter.drawImage(target, image)
+            if surface and self.overview_current:
+                self.draw_overview(painter, self.overview_tiles, transform, rect)
             if self.selection is not None:
                 lower, upper = self.selection
                 selection = QRectF(self.screen_point(lower, view, transform), self.screen_point(upper, view, transform)).normalized()

@@ -26,6 +26,8 @@ class MiniMap(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.canvas = MapCanvas()
         self.world_map = WorldMap()
+        self.world_map.images_changed.connect(self._overview_images)
+        self.canvas.view_changed.connect(self._overview_request)
         self.map_stack = QStackedWidget()
         self.map_stack.addWidget(self.canvas)
         self.map_stack.addWidget(self.world_map)
@@ -128,6 +130,10 @@ class MiniMap(QWidget):
         if large == self.large:
             return
         self.canvas.layout.large = large
+        if not large:
+            self.canvas.map_cut = self.canvas.cave_y = None
+            self.canvas.set_images({})
+            self.maps.shown = None
         self.canvas.press = None
         self.canvas.unsetCursor()
         self._update_layout()
@@ -136,20 +142,23 @@ class MiniMap(QWidget):
         self.canvas.view_changed.emit()
 
     def _update_layout(self):
+        world = self.large and self.world_mode.isChecked()
+        self.map_stack.setCurrentWidget(self.world_map if world else self.canvas)
         self.map_stack.setVisible(not self.collapsed)
-        self.radar.setVisible(not self.collapsed and not self.world_mode.isChecked())
+        self.radar.setVisible(not self.collapsed and not world)
         self.load_here.setVisible(not self.collapsed and bool(self.canvas.dimension))
         self.header.setText("Map" if self.large else "MAP +" if self.collapsed else "MAP −")
         self.expand.setText("M ×" if self.large else "M +")
         self.expand.setToolTip("Close map (M / Escape)" if self.large else "Expand map (M)")
         self.center.setVisible(self.large)
-        self.maps.active = not self.collapsed and not self.world_mode.isChecked()
+        self.mode.setVisible(self.large and not self.world_mode.isChecked())
+        self.world_mode.setVisible(self.large and self.world_map.snapshot is not None)
+        self.maps.active = not self.collapsed and not world
         self.maps.update()
         self.reposition()
         self.expanded_changed.emit(not self.collapsed)
 
     def set_overview(self, snapshot):
-        self.canvas.overview = self.world_map._images(snapshot["maps"]) if snapshot else {}
         self.canvas.overview_surface = bool(snapshot and snapshot['metadata']['height']['mode'] == 'all'
                                             and snapshot['metadata']['below_y'] is None)
         self.canvas.update()
@@ -160,19 +169,31 @@ class MiniMap(QWidget):
         self._world_toggled()
 
     def _world_toggled(self):
-        active = self.world_mode.isChecked()
-        self.map_stack.setCurrentWidget(self.world_map if active else self.canvas)
-        self.mode.setVisible(not active)
         self._update_layout()
+
+    def _overview_images(self):
+        self.canvas.overview = self.world_map.base.copy()
+        self.canvas.overview_tiles = self.world_map.images.copy()
+        self.canvas.update()
+
+    def _overview_request(self):
+        if self.collapsed or self.large and self.world_mode.isChecked():
+            self.world_map.viewport = None
+        else:
+            area = self.canvas.layout.area("top")
+            rect = self.canvas.tile_rect("top")
+            self.world_map.viewport = ((area.left(), area.top()), (area.right(), area.bottom()),
+                                       max(.001, rect.width() / max(.001, area.width())))
+        self.world_map.request()
 
     def reposition(self):
         parent = self.parentWidget()
         available = max(1, parent.width() - self.right_inset)
         width = parent.width() if self.large else min(available, 288)
-        height = parent.height() if self.large else MAP_HEADER_HEIGHT + (0 if self.collapsed else 2 * width // 3)
+        height = parent.height() if self.large else MAP_HEADER_HEIGHT + (0 if self.collapsed else width)
         if not self.large and not self.collapsed and self.canvas.dimension:
             height += MAP_HEADER_HEIGHT
-        if not self.large and not self.collapsed and not self.world_mode.isChecked():
+        if not self.large and not self.collapsed:
             height += MAP_HEADER_HEIGHT
         self.setFixedSize(width, height)
         self.move(0 if self.large else available - width, 0)
@@ -188,6 +209,7 @@ class MiniMap(QWidget):
         self.canvas.size_blocks = session.size
         self.canvas.origin = session.origin
         self.canvas.dimension = getattr(session, "dimension", None)
+        self.canvas.overview_current = not session.dirty
         self.canvas.images.clear()
         self.canvas.image_pixels.clear()
         self.canvas.map_cut = None
@@ -202,6 +224,7 @@ class MiniMap(QWidget):
     def set_camera(self, position, direction):
         self.canvas.position, self.canvas.direction = tuple(position), tuple(direction)
         self.world_map.set_camera(tuple(p + o for p, o in zip(position, self.canvas.origin)), direction)
+        self._overview_request()
         outside = any(p < 0 or p >= size for p, size in zip(position, self.canvas.size_blocks))
         text = "Outside · Load here" if outside else "Load here · F5"
         if self.load_here.text() != text:
