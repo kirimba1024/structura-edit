@@ -14,7 +14,7 @@ from .drafts_ui import DraftController
 from .fragments_ui import FragmentController
 from .paint_ui import PaintController
 from .controls import CellLabel
-from .appearance import CONTROL_HEIGHT, GRID
+from .appearance import GRID
 from .theme import apply_theme
 from .jobs import Worker
 from .task_runner import TaskRunner
@@ -213,7 +213,6 @@ class EditorWindow(QMainWindow):
         self.statusBar().addWidget(self.error_button)
         self.error_button.hide()
         self.statusBar().setSizeGripEnabled(False)
-        self.statusBar().setFixedHeight(CONTROL_HEIGHT + GRID)
         self.refresh_button = QToolButton()
         self.refresh_button.setDefaultAction(self.menus.actions["refresh"])
         self.refresh_button.setText("Load here · F5")
@@ -237,6 +236,8 @@ class EditorWindow(QMainWindow):
         self.status_content.addWidget(self.progress_panel)
         self.progress_panel.visibility_changed.connect(
             lambda visible: self.status_content.setCurrentWidget(self.progress_panel if visible else self.status))
+        height = self.statusBar().sizeHint().height()
+        self.statusBar().setFixedHeight((height + GRID - 1) // GRID * GRID)
 
     def _connect_ui(self):
         self.minimap.canvas.picked.connect(self.map_click)

@@ -21,17 +21,17 @@ def test_progress_stays_in_status_bar_without_moving_the_viewport(qt_app):
         qt_app.processEvents()
         assert window.plotter.geometry() == viewport
         assert window.size() == QSize(1104, 700)
-        window.grab().save("/private/tmp/structura-overview-progress-layout.png")
         rects = []
         for widget in (window.overview.button, window.refresh_button, window.save_button, window.progress):
             rect = QRect(widget.mapTo(window, QPoint()), widget.size())
             assert window.rect().contains(rect), (type(widget).__name__, rect, window.rect())
+            status_rect = QRect(widget.mapTo(window.statusBar(), QPoint()), widget.size())
+            assert window.statusBar().rect().contains(status_rect)
             assert all(not rect.intersects(other) for other in rects), (type(widget).__name__, rect, rects)
             rects.append(rect)
         for progress in (window.progress, window.overview.progress):
             assert QLabel.text(progress.label) == "Building detail"
             assert QLabel.text(progress.count) == "12,345/62,424"
-        window.grab().save("/private/tmp/structura-overview-progress-layout.png")
         assert window.progress.isVisible() and not window.overview.progress.isVisible()
         assert window.progress_panel.parent() is window.status_content
         window.progress.finish()
