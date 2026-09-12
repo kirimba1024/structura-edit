@@ -5,7 +5,7 @@ from functools import lru_cache
 import numpy as np
 
 from structura_render.geometry import TexturedMesh
-from structura_render.lod_geometry import merge_lods, spatially_order_lod, split_lod
+from structura_render.lod_geometry import merge_lods
 from structura_render.atlas import merge_mesh_atlases
 
 from .overview_model import tile_bounds
@@ -100,4 +100,4 @@ def read_batch(store, key, textures):
     meshes = merge_mesh_atlases(meshes)
     for mesh in meshes:
         mesh.texture_key = texture_identity(mesh.image)
-    return prepare_geometry(dict(origin=origin, colored=split_lod(spatially_order_lod(merge_lods(lods))), meshes=meshes, flat=flat))
+    return prepare_geometry(dict(origin=origin, lod=merge_lods(lods), meshes=meshes, flat=flat))

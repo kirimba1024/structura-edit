@@ -7,9 +7,11 @@
   },
   "publication": {
     "render_pr": "https://github.com/kirimba1024/structura-render/pull/1",
-    "render_commit": "5c35d0034fc80c1ace05a12d0d27beb1945ad89c",
-    "render_ci": "Linux, macOS, Windows and all extras passed",
-    "release": "Merge and publication authorized by user; renderer PR merged, release pending."
+    "render_commit": "0f57b911243bf1f44b624803cec59e9b3be7a098",
+    "render_ci": "Linux, macOS, Windows, extras and interoperability passed; 0.8.3 published to PyPI.",
+    "release": "Source publication authorized; editor installed-package CI is checked before merge and prerelease.",
+    "quad_pr": "https://github.com/kirimba1024/structura-render/pull/2",
+    "render_release": "https://github.com/kirimba1024/structura-render/releases/tag/v0.8.3"
   },
   "environment": {
     "python": "3.9.6",
@@ -40,6 +42,17 @@
       "render": "0.8.3",
       "edit": "0.1.0a3",
       "source": "built local wheels, --no-deps target install; imported modules resolve under isolated target"
+    },
+    "quad_regressions": {
+      "render": 16,
+      "edit": 52,
+      "vtk": "CPU triangulation only; no render window"
+    },
+    "publication_content": {
+      "credentials": "No private-key or known access-token patterns in added lines.",
+      "payload": "No worlds, snapshots, caches or credential files in changes or wheels.",
+      "privacy": "Removed local machine path and real-world benchmark coordinates from unpublished commit before upload.",
+      "scope": "Changed content and runtime network imports, not a full dependency security audit."
     }
   },
   "overview": {
@@ -292,5 +305,39 @@
     "Overview reopen timing measures manifest only.",
     "Root geometry is larger than previous QEM; distant voxel downsampling remains an optimization task.",
     "No computer use or native input tests; user performs visual acceptance."
+  ],
+  "quad_packets": [
+    {
+      "case": "start",
+      "prepared_bytes": 167448064,
+      "packets": 305,
+      "quads": 2209330,
+      "triangles": 691876,
+      "seconds": 1.619569625
+    },
+    {
+      "case": "forest",
+      "prepared_bytes": 167643920,
+      "packets": 309,
+      "quads": 2212972,
+      "triangles": 689220,
+      "seconds": 1.597393
+    },
+    {
+      "case": "cave",
+      "prepared_bytes": 169473120,
+      "packets": 304,
+      "quads": 2161293,
+      "triangles": 675428,
+      "seconds": 1.6849030830000005
+    },
+    {
+      "case": "distant",
+      "prepared_bytes": 167858368,
+      "packets": 316,
+      "quads": 2182569,
+      "triangles": 714916,
+      "seconds": 1.609128708
+    }
   ]
 }

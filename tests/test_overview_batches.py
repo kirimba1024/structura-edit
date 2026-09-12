@@ -1,6 +1,7 @@
 from collections import Counter
 
 import numpy as np
+from structura_render.geometry import triangulate_quads
 
 from overview_fixture import create_overview_world
 from structura_edit.overview_batches import detail_batches, read_batches
@@ -10,6 +11,8 @@ from structura_edit.overview_store import read_meshes
 
 
 def triangles(points, indices, origin):
+    if indices.shape[1] == 4:
+        indices = triangulate_quads(indices)
     return Counter(tuple(sorted(tuple(point) for point in triangle)) for triangle in (points + origin)[indices])
 
 
@@ -53,3 +56,30 @@ def test_packed_buffers_preserve_world_triangles_and_texture_coordinates(tmp_pat
                     mesh = SimpleNamespace(points=packet.points, quads=packet.indices, uv=packet.uv, image=packet.image)
                     actual_uv.update(textured_faces(mesh, data['origin']))
         assert actual == expected and actual_uv == expected_uv
+
+
+def test_lod_rectangle_packets_reach_vtk_with_correct_winding_and_without_source_buffers():
+    from vtkmodules.util.numpy_support import vtk_to_numpy
+    from vtkmodules.vtkFiltersCore import vtkTriangleFilter
+    from structura_render.lod_geometry import LodMesh
+    from structura_edit.render_packets import prepare_geometry
+    from structura_edit.scene_geometry import packet_actor
+
+    points = np.array(((0, 0, 0), (3, 0, 0), (3, 2, 0), (0, 2, 0)), np.float32)
+    lod = LodMesh(points, np.array(((0, 1, 2), (0, 2, 3)), np.uint32), np.full((4, 4), 255, np.uint8))
+    prepared = prepare_geometry(dict(lod=lod, meshes=[], flat=[]))
+    assert 'lod' not in prepared and 'colored' not in prepared
+    packet, = prepared['packets']
+    assert packet.indices.shape == (1, 4)
+    actor = packet_actor(packet, None)
+    data = actor.GetMapper().GetInput()
+    assert data.GetNumberOfPolys() == 1 and actor.GetProperty().GetBackfaceCulling()
+    triangulated = vtkTriangleFilter()
+    triangulated.SetInputData(data)
+    triangulated.Update()
+    output = triangulated.GetOutput()
+    vertices = vtk_to_numpy(output.GetPoints().GetData())
+    triangles = vtk_to_numpy(output.GetPolys().GetConnectivityArray()).reshape(-1, 3)
+    corners = vertices[triangles]
+    normals = np.cross(corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0])
+    assert np.array_equal(normals, ((0, 0, 6), (0, 0, 6)))

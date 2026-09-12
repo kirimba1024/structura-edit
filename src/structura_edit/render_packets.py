@@ -1,8 +1,10 @@
-from structura_render.packets import polygon_packets, textured_packets
+from structura_render.packets import lod_packets, polygon_packets, textured_packets
 
 
 def prepare_geometry(data, *, position=(0, 0, 0)):
     packets = [packet for mesh in data['meshes'] for packet in textured_packets(mesh)]
+    if 'lod' in data:
+        packets.extend(lod_packets(data['lod']))
     for points, faces, color in data['flat']:
         if len(faces):
             width = int(faces[0])
@@ -11,7 +13,7 @@ def prepare_geometry(data, *, position=(0, 0, 0)):
     for solid, points, faces, colors in data.get('colored', ()):
         packets.extend(polygon_packets(points, faces.reshape(-1, 4)[:, 1:],
                                        'OPAQUE' if solid else 'BLEND', colors=colors, cull=solid))
-    result = {key: value for key, value in data.items() if key not in ('meshes', 'flat', 'colored', 'layers')}
+    result = {key: value for key, value in data.items() if key not in ('meshes', 'flat', 'colored', 'layers', 'lod')}
     result['packets'] = packets
     result['position'] = position
     result['layers'] = {name: prepare_geometry(layer, position=position) for name, layer in data.get('layers', {}).items()}
